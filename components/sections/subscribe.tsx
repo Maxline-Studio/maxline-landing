@@ -56,13 +56,30 @@ export function Subscribe() {
   };
 
   return (
-    <section id="subscribe" className="py-20 md:py-28 bg-neutral-900 text-cream-50">
-      <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
+    <section id="subscribe" className="py-24 md:py-32 bg-neutral-900 text-cream-50 relative overflow-hidden">
+      {/* Décor : grand M serif en arrière-plan */}
+      <div
+        aria-hidden
+        className="absolute -left-20 -bottom-20 font-serif text-[20rem] text-cream-50 leading-none opacity-[0.03] pointer-events-none select-none"
+      >
+        M
+      </div>
+
+      <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
         <div className="text-center mb-10">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight">
-            Soyez prévenu du lancement
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <span className="h-px w-12 bg-primary-400" />
+            <span className="text-xs uppercase tracking-[0.2em] text-primary-400 font-semibold">
+              Liste d&apos;attente
+            </span>
+            <span className="h-px w-12 bg-primary-400" />
+          </div>
+          <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-tight">
+            Soyez prévenu
+            <br />
+            <em className="text-primary-400">du lancement</em>.
           </h2>
-          <p className="mt-4 text-lg text-neutral-300 max-w-xl mx-auto">
+          <p className="mt-6 text-lg text-neutral-300 max-w-xl mx-auto">
             Nous lançons en bêta privée d&apos;ici quelques semaines.
             Les premiers inscrits auront un accès gratuit prolongé.
           </p>

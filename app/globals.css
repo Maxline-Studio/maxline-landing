@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 @theme {
+  /* ─── Typo ─── */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
   /* ─── Couleurs primaires (Terracotta) ─── */
   --color-primary-50: #FDF6F3;
   --color-primary-100: #FBE9E1;
@@ -39,10 +44,6 @@
   --color-error-600: #9A2D2D;
   --color-info-500: #3F6F9F;
   --color-info-600: #2E5680;
-
-  /* ─── Typo ─── */
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* ─── Easing ─── */
   --ease-out-quint: cubic-bezier(0.16, 1, 0.3, 1);
@@ -94,6 +95,11 @@ body {
   font-size: 16px;
   line-height: 1.5;
   margin: 0;
+}
+
+/* Police serif pour les statements éditoriaux */
+.font-serif {
+  font-family: var(--font-serif);
 }
 
 /* Inputs ne zooment pas au focus sur iOS */
@@ -206,4 +212,45 @@ select {
 
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
+}
+
+/* Lift hover effect — pour boutons et cards */
+.lift-on-hover {
+  transition: transform 250ms var(--ease-out-quint), box-shadow 250ms var(--ease-out-quint);
+}
+
+.lift-on-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -8px rgba(196, 106, 69, 0.25);
+}
+
+/* Subtle 3D tilt pour les cards pricing */
+.tilt-on-hover {
+  transition: transform 400ms var(--ease-out-quint);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.tilt-on-hover:hover {
+  transform: perspective(1000px) rotateY(-2deg) rotateX(2deg) translateY(-4px);
+}
+
+/* Curseur natif masqué sur desktop quand le curseur custom est actif */
+@media (hover: hover) and (pointer: fine) {
+  html:not([data-no-custom-cursor]) body,
+  html:not([data-no-custom-cursor]) a,
+  html:not([data-no-custom-cursor]) button,
+  html:not([data-no-custom-cursor]) input,
+  html:not([data-no-custom-cursor]) textarea,
+  html:not([data-no-custom-cursor]) [role="button"] {
+    cursor: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body,
+  html a,
+  html button {
+    cursor: auto !important;
+  }
 }

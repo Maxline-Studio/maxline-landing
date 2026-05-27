@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer className="bg-neutral-900 text-cream-50 mt-24" role="contentinfo">
+    <footer className="bg-neutral-900 text-cream-50" role="contentinfo">
       <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 py-12 md:py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
@@ -86,15 +86,8 @@ export function Footer() {
                   contact@maxlinestudio.fr
                 </a>
               </li>
-              <li>
-                <a
-                  href="https://twitter.com/maxlinestudio"
-                  className="hover:text-cream-50 transition-colors"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Twitter / X
-                </a>
+              <li className="text-neutral-500 italic">
+                Réseaux à venir
               </li>
             </ul>
           </div>

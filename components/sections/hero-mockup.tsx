@@ -115,8 +115,8 @@ export function HeroMockup() {
         </div>
       </div>
 
-      {/* Sticker flottant */}
-      <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-primary-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg rotate-3">
+      {/* Sticker flottant - z-20 pour passer au-dessus du mockup */}
+      <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl rotate-3 ring-4 ring-cream-50/80">
         🚀 Prochainement
       </div>
 
