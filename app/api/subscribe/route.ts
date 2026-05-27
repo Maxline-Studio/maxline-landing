@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabaseServerClient } from "@/lib/supabase";
 import { Resend } from "resend";
+import { welcomeEmail, adminNotificationEmail } from "@/lib/email-templates";
 
 const subscribeSchema = z.object({
   email: z.string().email(),
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
 
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
-      { error: "Trop d'inscriptions depuis cette adresse. Réessayez plus tard." },
+      { error: "Trop d'inscriptions depuis cette adresse. Reessayez plus tard." },
       { status: 429 },
     );
   }
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
     payload = subscribeSchema.parse(body);
   } catch {
     return NextResponse.json(
-      { error: "Données invalides." },
+      { error: "Donnees invalides." },
       { status: 400 },
     );
   }
@@ -67,7 +68,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      // Email déjà inscrit ? On renvoie un succès (anti-énumération)
+      // Email deja inscrit ? On renvoie un succes (anti-enumeration)
       if (error.code === "23505") {
         return NextResponse.json({ success: true, alreadySubscribed: true });
       }
@@ -77,64 +78,53 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("[subscribe] DB error:", err);
     return NextResponse.json(
-      { error: "Erreur serveur, réessayez dans quelques instants." },
+      { error: "Erreur serveur, reessayez dans quelques instants." },
       { status: 500 },
     );
   }
 
-  // Envoi email de confirmation (optionnel — n'empêche pas le succès si Resend est down)
+  // Envoi emails (non-bloquant : si Resend echoue, l'inscription est quand meme OK)
   try {
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL;
-
     const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
 
     if (apiKey && fromEmail) {
       const resend = new Resend(apiKey);
 
-      // Email de bienvenue à l'utilisateur
-      // replyTo pointe vers l'email admin pour que les réponses arrivent à Maxence
-      // (la boîte contact@maxlinestudio.fr n'existe pas physiquement, c'est juste un expéditeur Resend)
+      // Email 1 : bienvenue a l'utilisateur
+      // L'expediteur est contact@maxlinestudio.fr (Resend), mais replyTo pointe vers
+      // l'admin (Gmail) car la boite contact@ n'existe pas physiquement.
+      const welcome = welcomeEmail();
       await resend.emails.send({
         from: fromEmail,
         to: payload.email,
         replyTo: adminEmail,
         subject: "Bienvenue dans la liste Maxline Studio 👋",
-        text: `Bonjour,
-
-Merci pour votre inscription à la liste de Maxline Studio.
-
-Vous serez parmi les premiers à savoir quand la bêta privée s'ouvrira (d'ici quelques semaines). Et comme vous êtes dans les premiers inscrits, vous aurez un accès gratuit prolongé.
-
-En attendant, n'hésitez pas à me suivre :
-- Twitter : https://twitter.com/maxlinestudio
-- Site : https://maxlinestudio.fr
-
-Si vous avez des questions ou des suggestions, répondez à cet email — je lis tout, je réponds à tout.
-
-— Maxence, fondateur de Maxline Studio
-`,
+        html: welcome.html,
+        text: welcome.text,
       });
 
-      // Notification à l'admin (Maxence)
+      // Email 2 : notification a l'admin
+      // replyTo = email de l'inscrit, ce qui permet de repondre directement.
       if (adminEmail) {
+        const notif = adminNotificationEmail({
+          email: payload.email,
+          source: payload.source,
+          ipHash: simpleHash(ip),
+        });
         await resend.emails.send({
           from: fromEmail,
           to: adminEmail,
-          replyTo: payload.email, // Permet de répondre directement au nouvel inscrit
-          subject: `🎉 Nouvelle inscription waitlist Maxline : ${payload.email}`,
-          text: `Nouvelle inscription :
-
-Email : ${payload.email}
-Source : ${payload.source}
-Date : ${new Date().toISOString()}
-IP hash : ${simpleHash(ip)}
-`,
+          replyTo: payload.email,
+          subject: `🎉 Nouvelle inscription Maxline : ${payload.email}`,
+          html: notif.html,
+          text: notif.text,
         });
       }
     }
   } catch (err) {
-    // Email failed, mais on a quand même l'email en DB
+    // Email failed, mais on a quand meme l'email en DB
     console.error("[subscribe] email error (non-blocking):", err);
   }
 
@@ -143,7 +133,7 @@ IP hash : ${simpleHash(ip)}
 
 /**
  * Hash simple pour anonymiser l'IP avant stockage (RGPD).
- * Pas un vrai hash crypto, juste pour éviter de stocker l'IP en clair.
+ * Pas un vrai hash crypto, juste pour eviter de stocker l'IP en clair.
  */
 function simpleHash(input: string): string {
   let hash = 0;
