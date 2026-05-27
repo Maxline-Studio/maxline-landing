@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { HandUnderline } from "@/components/hand-underline";
 
 export const metadata: Metadata = {
   title: "Pourquoi je crée Maxline Studio",
@@ -32,39 +33,43 @@ export default function PourquoiMaxlineStudio() {
   return (
     <>
       <Header />
-      <main id="main-content" className="py-12 md:py-20 bg-cream-50">
-        <article className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
+      <main id="main-content" className="py-12 md:py-20 bg-ivory-50 relative">
+        <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
+        <article className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
           <Link
             href="/blog"
-            className="inline-flex items-center gap-2 text-sm text-neutral-600 hover:text-neutral-900 mb-10"
+            className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-10 group"
           >
-            <ArrowLeft className="h-4 w-4" /> Tous les articles
+            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+            Tous les articles
           </Link>
 
           <header className="mb-12 md:mb-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="text-xs uppercase tracking-[0.2em] text-primary-600 font-semibold">
-                Journal · Article 01
-              </span>
-              <span className="h-px w-12 bg-primary-300" />
+              <span className="annotation">§ Article 01 · Journal</span>
             </div>
 
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-[1.1] text-neutral-900 mb-6">
+            <h1 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl leading-[1.05] tracking-[-0.02em] text-ink-900 mb-6">
               Pourquoi je crée{" "}
-              <em className="text-primary-600">Maxline Studio</em>.
+              <span className="font-display italic font-light text-rouge-500">
+                <HandUnderline variant="rouge" style="straight">
+                  Maxline Studio
+                </HandUnderline>
+              </span>
+              .
             </h1>
 
-            <div className="flex flex-wrap items-center gap-3 text-sm text-neutral-500">
+            <div className="flex flex-wrap items-center gap-3 text-sm font-mono uppercase tracking-widest text-ink-500">
               <time dateTime="2026-05-27">27 mai 2026</time>
-              <span className="h-1 w-1 rounded-full bg-neutral-300" />
+              <span className="h-1 w-1 rounded-full bg-ink-300" />
               <span>8 min de lecture</span>
-              <span className="h-1 w-1 rounded-full bg-neutral-300" />
+              <span className="h-1 w-1 rounded-full bg-ink-300" />
               <span>Par Maxence</span>
             </div>
           </header>
 
           <div className="space-y-7 text-lg text-neutral-800 leading-relaxed">
-            <p className="font-serif text-2xl md:text-3xl text-neutral-900 leading-snug border-l-2 border-primary-400 pl-6 my-12">
+            <p className="font-display italic font-light text-2xl md:text-3xl text-ink-900 leading-snug border-l-[3px] border-rouge-500 pl-6 my-12">
               Il y a un trou évident sur le marché français de la traduction
               vidéo. Voilà comment je suis tombé dedans, et pourquoi je décide
               de m&apos;y attaquer seul.
@@ -399,26 +404,24 @@ export default function PourquoiMaxlineStudio() {
             <p className="text-base text-neutral-500 mt-4">— Maxence</p>
           </div>
 
-          {/* CTA bas d'article */}
-          <aside className="mt-20 bg-white border border-neutral-200 rounded-2xl p-8 md:p-10">
+          {/* CTA bas d'article — fiche éditeur */}
+          <aside className="mt-20 bg-ivory-50 border-2 border-ink-900 rounded-sm p-8 md:p-10 shadow-[6px_6px_0_0_rgba(26,24,20,1)]">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-xs uppercase tracking-[0.2em] text-primary-600 font-semibold">
-                Pré-lancement ouvert
-              </span>
-              <span className="h-px w-12 bg-primary-300" />
+              <span className="annotation">§ Pré-lancement ouvert</span>
             </div>
-            <h2 className="font-serif text-2xl md:text-3xl leading-tight text-neutral-900 mb-3">
-              Suis la construction ou réserve ta place.
+            <h2 className="font-display font-medium text-2xl md:text-3xl leading-tight text-ink-900 mb-3 tracking-[-0.015em]">
+              Suis la construction,
+              <br />
+              <span className="font-display italic font-light text-rouge-500">
+                réserve ta place.
+              </span>
             </h2>
-            <p className="text-neutral-700 mb-6">
+            <p className="text-ink-700 mb-6 leading-relaxed">
               L&apos;inscription à la waitlist te donne l&apos;accès anticipé au
               MVP et le tarif d&apos;origine à vie, à 12 €/mois.
             </p>
-            <Link
-              href="/#subscribe"
-              className="inline-flex items-center gap-2 bg-primary-400 hover:bg-primary-300 text-neutral-900 font-bold px-6 py-3 rounded-sm transition-colors"
-            >
-              S&apos;inscrire à la waitlist
+            <Link href="/#subscribe" className="btn-pen text-base">
+              Réserver mon accès
               <ArrowRight className="h-4 w-4" />
             </Link>
           </aside>
