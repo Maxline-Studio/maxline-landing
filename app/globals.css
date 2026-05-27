@@ -150,3 +150,60 @@ select {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
+
+/* Animation fade-in pour les transitions de sous-titres */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 300ms var(--ease-out-quint) both;
+}
+
+/* Animation hover : ligne qui se trace (effet "souligné de sous-titre") */
+@keyframes draw-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.hover-line-draw {
+  position: relative;
+}
+
+.hover-line-draw::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 100%;
+  height: 2px;
+  background: var(--color-primary-500);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 300ms var(--ease-out-quint);
+}
+
+.hover-line-draw:hover::after {
+  transform: scaleX(1);
+}
+
+/* Animation de pulsation subtile pour les éléments d'attente */
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}

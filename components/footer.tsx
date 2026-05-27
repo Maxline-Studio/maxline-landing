@@ -7,12 +7,13 @@ export function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl font-extrabold tracking-tight">
-                MAXLINE
-              </span>
-              <span className="text-xl font-light text-primary-400 italic">
-                studio
+            <div className="flex items-center gap-2.5 mb-3">
+              <div className="h-8 w-8 rounded-lg bg-primary-400 flex items-center justify-center">
+                <span className="text-neutral-900 font-extrabold text-lg tracking-tight">M</span>
+              </div>
+              <span className="flex items-baseline gap-1.5 text-lg">
+                <span className="font-extrabold tracking-tight text-cream-50">MAXLINE</span>
+                <span className="font-light italic text-primary-400">studio</span>
               </span>
             </div>
             <p className="text-sm text-neutral-400 max-w-xs">

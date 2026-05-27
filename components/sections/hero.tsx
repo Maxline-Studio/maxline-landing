@@ -2,6 +2,7 @@ import { ArrowRight, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { HeroMockup } from "@/components/sections/hero-mockup";
 
 export function Hero() {
   return (
@@ -9,10 +10,25 @@ export function Hero() {
       id="hero"
       className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32"
     >
-      {/* Décor de fond (subtil) */}
+      {/* Background gradient subtil */}
       <div
         className="absolute inset-0 -z-10 bg-gradient-to-b from-cream-50 to-cream-100/50"
         aria-hidden
+      />
+
+      {/* Pattern de "subtitles" en arrière-plan (lignes horizontales très discrètes) */}
+      <div
+        className="absolute inset-0 -z-10 opacity-[0.025] pointer-events-none"
+        aria-hidden
+        style={{
+          backgroundImage: `repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 38px,
+            #25241F 38px,
+            #25241F 40px
+          )`,
+        }}
       />
 
       <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
@@ -28,7 +44,26 @@ export function Hero() {
               Vos vidéos françaises,
               <br />
               sous-titrées en{" "}
-              <span className="text-primary-500">anglais</span>
+              <span className="relative inline-block text-primary-500">
+                anglais
+                <svg
+                  className="absolute -bottom-2 left-0 w-full"
+                  height="10"
+                  viewBox="0 0 200 10"
+                  fill="none"
+                  preserveAspectRatio="none"
+                  aria-hidden
+                >
+                  <path
+                    d="M2 7 Q 50 1, 100 5 T 198 4"
+                    stroke="#C46A45"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    fill="none"
+                    opacity="0.6"
+                  />
+                </svg>
+              </span>
               <br />
               en 10 minutes.
             </h1>
@@ -60,74 +95,8 @@ export function Hero() {
             </p>
           </div>
 
-          {/* Colonne visuelle (preview) */}
-          <div className="relative">
-            <div
-              className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-neutral-200 bg-neutral-900"
-              role="img"
-              aria-label="Aperçu de l'éditeur Maxline Studio"
-            >
-              {/* Mockup interface */}
-              <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-900">
-                {/* Topbar */}
-                <div className="absolute top-0 inset-x-0 h-10 bg-neutral-800 border-b border-neutral-700 flex items-center px-4 gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="h-3 w-3 rounded-full bg-error-500" />
-                    <div className="h-3 w-3 rounded-full bg-warning-500" />
-                    <div className="h-3 w-3 rounded-full bg-success-500" />
-                  </div>
-                  <span className="ml-4 text-xs text-neutral-400 font-mono">
-                    maxlinestudio.fr/editor
-                  </span>
-                </div>
-
-                {/* Contenu mockup */}
-                <div className="pt-10 p-6 grid grid-cols-3 gap-4 h-full">
-                  <div className="col-span-2 bg-neutral-700/50 rounded-lg flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="h-16 w-16 mx-auto rounded-full bg-primary-500/20 border-2 border-primary-400 flex items-center justify-center">
-                        <div className="h-0 w-0 border-l-[12px] border-l-primary-400 border-y-8 border-y-transparent ml-1" />
-                      </div>
-                      <p className="mt-3 text-xs text-neutral-400 font-mono">
-                        00:42 / 12:34
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="bg-neutral-700/50 p-3 rounded-md">
-                      <p className="text-[10px] text-neutral-500 font-mono mb-1">
-                        00:00 - 00:03
-                      </p>
-                      <p className="text-xs text-neutral-300">
-                        Hello everyone, today we&apos;re...
-                      </p>
-                    </div>
-                    <div className="bg-primary-500/20 border-l-2 border-primary-400 p-3 rounded-md">
-                      <p className="text-[10px] text-primary-300 font-mono mb-1">
-                        00:03 - 00:07
-                      </p>
-                      <p className="text-xs text-neutral-200">
-                        ...how to translate your videos.
-                      </p>
-                    </div>
-                    <div className="bg-neutral-700/50 p-3 rounded-md">
-                      <p className="text-[10px] text-neutral-500 font-mono mb-1">
-                        00:07 - 00:10
-                      </p>
-                      <p className="text-xs text-neutral-300">
-                        Let&apos;s get started!
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Sticker flottant */}
-            <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 bg-primary-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg rotate-3">
-              🚀 Prochainement
-            </div>
-          </div>
+          {/* Mockup interactif animé */}
+          <HeroMockup />
         </div>
       </div>
     </section>

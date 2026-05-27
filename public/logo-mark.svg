@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Maxline">
+  <!-- Square background avec arrondi -->
+  <rect width="64" height="64" rx="14" fill="#C46A45"/>
+
+  <!-- Lettre M stylisée en blanc -->
+  <path d="M 16 18 L 16 46 M 16 18 L 32 38 L 48 18 M 48 18 L 48 46"
+        stroke="#FAF7F1"
+        stroke-width="4.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+
+  <!-- Petite ligne de "sous-titre" sous le M -->
+  <line x1="20" y1="50" x2="44" y2="50"
+        stroke="#FAF7F1"
+        stroke-width="2"
+        stroke-linecap="round"
+        opacity="0.7"/>
+</svg>

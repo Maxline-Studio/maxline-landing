@@ -35,14 +35,7 @@ export const metadata: Metadata = {
     title: "Vos vidéos françaises, sous-titrées en anglais en 10 minutes.",
     description:
       "L'outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en français, à 12 €/mois.",
-    images: [
-      {
-        url: "/og-default.png",
-        width: 1200,
-        height: 630,
-        alt: "Maxline Studio",
-      },
-    ],
+    // OG image générée dynamiquement par app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
