@@ -234,23 +234,3 @@ select {
 .tilt-on-hover:hover {
   transform: perspective(1000px) rotateY(-2deg) rotateX(2deg) translateY(-4px);
 }
-
-/* Curseur natif masqué sur desktop quand le curseur custom est actif */
-@media (hover: hover) and (pointer: fine) {
-  html:not([data-no-custom-cursor]) body,
-  html:not([data-no-custom-cursor]) a,
-  html:not([data-no-custom-cursor]) button,
-  html:not([data-no-custom-cursor]) input,
-  html:not([data-no-custom-cursor]) textarea,
-  html:not([data-no-custom-cursor]) [role="button"] {
-    cursor: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html body,
-  html a,
-  html button {
-    cursor: auto !important;
-  }
-}

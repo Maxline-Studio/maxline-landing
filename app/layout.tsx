@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import { CustomCursor } from "@/components/custom-cursor";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -78,7 +77,6 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Aller au contenu principal
         </a>
-        <CustomCursor />
         {children}
       </body>
     </html>
