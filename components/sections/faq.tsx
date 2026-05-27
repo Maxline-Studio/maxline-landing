@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { Plus, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HandUnderline } from "@/components/hand-underline";
 
 const faqs = [
   {
@@ -38,7 +39,7 @@ const faqs = [
   {
     question: "Quelles langues seront supportées ?",
     answer:
-      "Au lancement : français vers anglais uniquement (cible créateurs FR voulant percer à l'international). L'espagnol et l'allemand arriveront en v1 selon les retours utilisateurs. À terme, l'objectif est any-to-any.",
+      "Au lancement : français vers anglais uniquement (cible créateurs FR voulant percer à l'international). L'espagnol et l'allemand arriveront en v1 selon les retours utilisateurs.",
   },
   {
     question: "Y aura-t-il un doublage avec voix clonée ?",
@@ -57,7 +58,7 @@ interface FaqItemProps {
 
 function FaqItem({ question, answer, isOpen, onToggle, id }: FaqItemProps) {
   return (
-    <div className="border-b border-neutral-200 last:border-b-0">
+    <div className="border-b border-ivory-200 last:border-b-0">
       <h3>
         <button
           type="button"
@@ -65,18 +66,18 @@ function FaqItem({ question, answer, isOpen, onToggle, id }: FaqItemProps) {
           aria-expanded={isOpen}
           aria-controls={`${id}-content`}
           id={`${id}-button`}
-          className="w-full py-5 px-2 flex items-center justify-between gap-4 text-left hover:bg-cream-50 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cobalt-500"
+          className="w-full py-5 flex items-center justify-between gap-4 text-left transition-colors group focus-visible:outline-none"
         >
-          <span className="text-base md:text-lg font-semibold text-neutral-900">
+          <span className="font-display text-lg md:text-xl text-ink-900 group-hover:text-rouge-500 transition-colors">
             {question}
           </span>
-          <ChevronDown
-            className={cn(
-              "h-5 w-5 text-neutral-500 flex-shrink-0 transition-transform duration-200",
-              isOpen && "rotate-180",
+          <span className="flex-shrink-0 h-8 w-8 rounded-sm border border-ink-900 flex items-center justify-center group-hover:bg-ink-900 group-hover:text-ivory-50 transition-colors">
+            {isOpen ? (
+              <Minus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+            ) : (
+              <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden />
             )}
-            aria-hidden
-          />
+          </span>
         </button>
       </h3>
       <div
@@ -84,9 +85,9 @@ function FaqItem({ question, answer, isOpen, onToggle, id }: FaqItemProps) {
         role="region"
         aria-labelledby={`${id}-button`}
         hidden={!isOpen}
-        className="pb-5 px-2"
+        className="pb-6 pr-12"
       >
-        <p className="text-neutral-600 leading-relaxed">{answer}</p>
+        <p className="text-ink-600 leading-relaxed">{answer}</p>
       </div>
     </div>
   );
@@ -96,25 +97,33 @@ export function Faq() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="relative py-24 md:py-32 bg-white overflow-hidden">
-      <div className="absolute inset-0 -z-0 tape-lines-light pointer-events-none" aria-hidden />
+    <section
+      id="faq"
+      className="relative py-24 md:py-32 bg-ivory-50 overflow-hidden"
+    >
+      <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
       <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
-        <div className="mb-12">
+        <div className="mb-14">
           <div className="flex items-center gap-3 mb-6">
-            <span className="timecode-cobalt">CH. 07 · FAQ</span>
+            <span className="annotation">§07 · FAQ</span>
           </div>
-          <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-neutral-900 leading-[1.0] tracking-tighter">
+          <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">
             Questions
             <br />
-            <span className="slab-cobalt">fréquentes</span>.
+            <span className="font-display italic font-light text-rouge-500">
+              <HandUnderline variant="rouge" style="straight">
+                fréquentes
+              </HandUnderline>
+            </span>
+            .
           </h2>
-          <p className="mt-6 text-lg text-neutral-700">
+          <p className="mt-6 text-lg text-ink-600">
             Tout ce qu&apos;il faut savoir avant de s&apos;inscrire.
           </p>
         </div>
 
-        <div className="bg-cream-50 rounded-sm border-2 border-neutral-900 px-6 md:px-8">
+        <div>
           {faqs.map((faq, idx) => (
             <FaqItem
               key={idx}
@@ -127,11 +136,11 @@ export function Faq() {
           ))}
         </div>
 
-        <p className="mt-10 text-center text-sm text-neutral-700 font-mono uppercase tracking-widest">
+        <p className="mt-10 text-center text-sm text-ink-600">
           Une autre question ?{" "}
           <a
             href="mailto:contact@maxlinestudio.fr"
-            className="text-cobalt-600 hover:text-cobalt-700 underline underline-offset-4 decoration-2 font-bold"
+            className="link-pen"
           >
             Écrivez-nous
           </a>

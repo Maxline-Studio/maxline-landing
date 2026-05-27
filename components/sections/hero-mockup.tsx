@@ -1,137 +1,115 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Play } from "lucide-react";
 
-// Animation : les sous-titres défilent, démontrant le produit en action
-const SUBTITLES = [
-  { fr: "Bonjour, aujourd'hui on parle de...", en: "Hello, today we're talking about..." },
-  { fr: "...comment traduire vos vidéos.", en: "...how to translate your videos." },
-  { fr: "Allons-y !", en: "Let's get started!" },
+/**
+ * Mockup repensé : une page de cahier d'éditeur où la traduction FR→EN
+ * se fait en direct, sous-titre par sous-titre. Chaque ligne FR est
+ * rayée au stylo et la version EN apparaît en dessous.
+ */
+const ROWS = [
+  { tc: "00:00:02", fr: "Salut, aujourd'hui on parle de...", en: "Hi, today we're talking about..." },
+  { tc: "00:00:09", fr: "...comment traduire vos vidéos.", en: "...how to translate your videos." },
+  { tc: "00:00:14", fr: "Et c'est plus simple que prévu.", en: "And it's easier than you'd think." },
 ];
 
 export function HeroMockup() {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [showTranslation, setShowTranslation] = useState(false);
 
   useEffect(() => {
-    // Cycle : 1.5s en français, transition de 0.5s, 1.5s en anglais, switch ligne
-    const cycleMs = 3500;
-    const timer = setInterval(() => {
-      setShowTranslation((prev) => {
-        if (prev) {
-          // Switch to next subtitle when finishing English display
-          setActiveIdx((idx) => (idx + 1) % SUBTITLES.length);
-          return false;
-        }
-        return true;
-      });
-    }, cycleMs / 2);
-
-    return () => clearInterval(timer);
+    const t = setInterval(() => {
+      setActiveIdx((i) => (i + 1) % ROWS.length);
+    }, 2600);
+    return () => clearInterval(t);
   }, []);
 
   return (
     <div className="relative">
-      {/* Mockup window */}
-      <div
-        className="relative aspect-video rounded-2xl overflow-hidden shadow-2xl border border-neutral-200 bg-neutral-900"
-        role="img"
-        aria-label="Aperçu de l'éditeur Maxline Studio en action"
-      >
-        {/* Topbar fenêtre */}
-        <div className="absolute top-0 inset-x-0 h-10 bg-neutral-800 border-b border-neutral-700 flex items-center px-4 gap-2 z-10">
-          <div className="flex gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-error-500" />
-            <div className="h-3 w-3 rounded-full bg-warning-500" />
-            <div className="h-3 w-3 rounded-full bg-success-500" />
+      {/* Carte papier ivoire */}
+      <div className="relative bg-ivory-50 border-2 border-ink-900 rounded-sm overflow-hidden shadow-[8px_8px_0_0_rgba(26,24,20,1)]">
+        {/* En-tête de carnet */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-ink-900 bg-ivory-100">
+          <div className="flex items-center gap-2">
+            <div className="h-2.5 w-2.5 rounded-full bg-rouge-500" />
+            <div className="h-2.5 w-2.5 rounded-full bg-ivory-300" />
+            <div className="h-2.5 w-2.5 rounded-full bg-ivory-300" />
           </div>
-          <span className="ml-4 text-xs text-neutral-400 font-mono">
-            maxlinestudio.fr/editor
+          <span className="font-mono text-[10px] text-ink-500 uppercase tracking-widest">
+            transcription · v.0
           </span>
         </div>
 
-        {/* Contenu mockup */}
-        <div className="pt-10 p-6 grid grid-cols-3 gap-4 h-full bg-gradient-to-br from-neutral-800 to-neutral-900">
-          {/* Video preview side */}
-          <div className="col-span-2 bg-neutral-700/40 rounded-lg flex flex-col items-center justify-center relative overflow-hidden">
-            {/* Play button */}
-            <div className="h-16 w-16 rounded-full bg-primary-500/20 border-2 border-primary-400 flex items-center justify-center">
-              <Play className="h-7 w-7 text-primary-400 fill-primary-400 ml-1" />
-            </div>
+        {/* Page de cahier avec lignes */}
+        <div className="relative px-6 py-8 min-h-[340px]" style={{
+          backgroundImage:
+            "linear-gradient(to bottom, transparent 31px, rgba(26,24,20,0.06) 31px, rgba(26,24,20,0.06) 32px)",
+          backgroundSize: "100% 32px",
+        }}>
+          {/* Marge gauche rouge */}
+          <div className="absolute left-12 top-0 bottom-0 w-px bg-rouge-500/30" aria-hidden />
 
-            <p className="mt-3 text-xs text-neutral-400 font-mono">
-              00:42 / 12:34
-            </p>
+          <div className="space-y-5 relative">
+            {ROWS.map((row, i) => {
+              const active = i === activeIdx;
+              const past = i < activeIdx;
+              return (
+                <div key={i} className="flex gap-4 items-start">
+                  {/* Timecode dans la marge */}
+                  <span className="font-mono text-[10px] text-ink-400 pt-1 tabular-nums w-14 shrink-0">
+                    {row.tc}
+                  </span>
 
-            {/* Subtitle bar at the bottom of the video — animation key visuelle */}
-            <div className="absolute bottom-4 inset-x-4 min-h-[44px] flex items-center justify-center">
-              <div
-                key={`${activeIdx}-${showTranslation}`}
-                className="px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded text-white text-sm font-medium text-center max-w-full animate-fade-in"
-              >
-                {showTranslation
-                  ? SUBTITLES[activeIdx]?.en
-                  : SUBTITLES[activeIdx]?.fr}
-              </div>
-            </div>
+                  <div className="flex-1 min-w-0">
+                    {/* Ligne FR */}
+                    <div
+                      className={`text-[15px] leading-tight transition-colors duration-300 ${
+                        active || past
+                          ? "text-ink-400 pen-strike"
+                          : "text-ink-900"
+                      }`}
+                    >
+                      {row.fr}
+                    </div>
 
-            {/* Language indicator badge */}
-            <div className="absolute top-3 right-3 px-2 py-0.5 bg-neutral-900/80 backdrop-blur-sm rounded text-[10px] font-semibold text-cream-50 uppercase tracking-wider">
-              {showTranslation ? "EN" : "FR"}
-            </div>
+                    {/* Ligne EN — apparaît en dessous, rouge correcteur */}
+                    {(active || past) && (
+                      <div className="mt-1 text-[15px] leading-tight font-medium text-rouge-500 italic font-display animate-fade-in">
+                        ↳ {row.en}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* Subtitles list side */}
-          <div className="space-y-2">
-            {SUBTITLES.map((sub, idx) => (
-              <div
-                key={idx}
-                className={`p-2.5 rounded-md transition-all duration-300 ${
-                  idx === activeIdx
-                    ? "bg-primary-500/25 border-l-2 border-primary-400"
-                    : "bg-neutral-700/40 border-l-2 border-transparent"
-                }`}
-              >
-                <p
-                  className={`text-[9px] font-mono mb-1 ${
-                    idx === activeIdx ? "text-primary-300" : "text-neutral-500"
-                  }`}
-                >
-                  00:0{idx} - 00:0{idx + 1}
-                </p>
-                <p
-                  className={`text-xs leading-snug ${
-                    idx === activeIdx ? "text-neutral-100" : "text-neutral-400"
-                  }`}
-                >
-                  {showTranslation && idx === activeIdx
-                    ? sub.en
-                    : sub.fr}
-                </p>
-              </div>
-            ))}
-          </div>
+        {/* Pied de carte avec stats */}
+        <div className="flex items-center justify-between px-5 py-3 border-t border-ink-900 bg-ivory-100 font-mono text-[10px] uppercase tracking-widest text-ink-500">
+          <span>3 segments · 10 secondes</span>
+          <span className="text-rouge-500 flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-rouge-500 animate-pulse-soft" />
+            corrigé en direct
+          </span>
         </div>
       </div>
 
-      {/* Tag timecode flottant signature */}
-      <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary-400 text-neutral-900 px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold shadow-xl tracking-widest uppercase rotate-3 border-2 border-neutral-900 flex items-center gap-2">
-        <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
+      {/* Annotation marginale flottante haut-droite */}
+      <div className="absolute -top-4 -right-4 hidden sm:block bg-ink-900 text-ivory-50 px-3 py-1.5 rounded-sm font-mono text-[10px] uppercase tracking-widest font-bold rotate-3 shadow-lg">
         REC · à venir
       </div>
 
-      {/* Carte stats — style timecode */}
-      <div className="hidden lg:flex absolute -bottom-6 -left-6 bg-neutral-900 border-2 border-primary-400 rounded-sm shadow-2xl px-5 py-3 items-center gap-3">
-        <div className="h-10 w-10 rounded-sm bg-primary-400 flex items-center justify-center">
-          <span className="text-neutral-900 text-lg font-black">↻</span>
+      {/* Stat flottante bas-gauche */}
+      <div className="hidden lg:flex absolute -bottom-5 -left-5 bg-ivory-50 border-2 border-ink-900 px-4 py-3 items-center gap-3 rounded-sm shadow-[4px_4px_0_0_rgba(26,24,20,1)]">
+        <div className="h-9 w-9 rounded-sm bg-rouge-500 flex items-center justify-center text-ivory-50 font-display font-black text-lg">
+          ↻
         </div>
         <div>
-          <p className="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">
-            Traitement moyen
+          <p className="text-[10px] text-ink-500 font-mono uppercase tracking-widest">
+            Temps moyen
           </p>
-          <p className="text-sm font-bold text-cream-50 font-mono tabular-nums">
-            10:00 → 10:00
+          <p className="text-sm font-display font-bold text-ink-900 tabular-nums">
+            10 min → 10 min
           </p>
         </div>
       </div>

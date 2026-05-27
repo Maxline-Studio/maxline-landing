@@ -5,8 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { HandUnderline } from "@/components/hand-underline";
 
 const subscribeSchema = z.object({
   email: z.string().email("Adresse email invalide"),
@@ -16,7 +16,9 @@ const subscribeSchema = z.object({
 type SubscribeForm = z.infer<typeof subscribeSchema>;
 
 export function Subscribe() {
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const {
@@ -36,7 +38,10 @@ export function Subscribe() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.email, source: "landing-coming-soon" }),
+        body: JSON.stringify({
+          email: data.email,
+          source: "landing-coming-soon",
+        }),
       });
 
       const result = await res.json();
@@ -56,53 +61,50 @@ export function Subscribe() {
   };
 
   return (
-    <section id="subscribe" className="py-24 md:py-32 bg-neutral-900 text-cream-50 relative overflow-hidden">
-      {/* Tape lines */}
-      <div className="absolute inset-0 -z-0 tape-lines pointer-events-none" aria-hidden />
-
-      {/* M géant watermark */}
-      <div
-        aria-hidden
-        className="absolute -left-20 -bottom-20 font-display font-extrabold text-[24rem] text-primary-400 leading-none opacity-[0.04] pointer-events-none select-none"
-      >
-        M
-      </div>
+    <section
+      id="subscribe"
+      className="relative py-24 md:py-32 bg-ink-900 text-ivory-50 overflow-hidden"
+    >
+      <div className="absolute inset-0 paper-grain-ink pointer-events-none" aria-hidden />
 
       <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-6">
-            <span className="timecode">
-              <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
-              CH. 08 · LISTE D&apos;ATTENTE
-            </span>
+            <span className="annotation-filled">§08 · Réservation</span>
           </div>
-          <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-cream-50 leading-[1.0] tracking-tighter">
+          <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ivory-50 leading-[1.05] tracking-[-0.02em]">
             Soyez prévenu
             <br />
-            <span className="slab">du lancement</span>.
+            <span className="font-display italic font-light text-rouge-400">
+              <HandUnderline variant="ivory" style="straight">
+                du lancement
+              </HandUnderline>
+            </span>
+            .
           </h2>
-          <p className="mt-6 text-lg text-neutral-400 max-w-xl">
+          <p className="mt-6 text-lg text-ink-300 max-w-xl">
             La bêta privée ouvre d&apos;ici quelques semaines. Les premiers
-            inscrits auront un accès gratuit prolongé.
+            inscrits auront un accès gratuit prolongé et le tarif d&apos;origine
+            à vie.
           </p>
         </div>
 
         {status === "success" ? (
           <div
             role="status"
-            className="bg-primary-400 text-neutral-900 border-2 border-primary-400 rounded-sm p-6 md:p-8 max-w-xl"
+            className="bg-rouge-500 text-ivory-50 border-2 border-rouge-500 rounded-sm p-6 md:p-8 max-w-xl"
           >
             <div className="flex items-start gap-4">
               <CheckCircle2
-                className="h-10 w-10 text-neutral-900 flex-shrink-0"
+                className="h-10 w-10 text-ivory-50 flex-shrink-0"
                 strokeWidth={2.5}
                 aria-hidden
               />
               <div>
-                <h3 className="font-display font-extrabold text-xl text-neutral-900 mb-2">
+                <h3 className="font-display font-bold text-2xl text-ivory-50 mb-2">
                   C&apos;est noté.
                 </h3>
-                <p className="text-neutral-900">
+                <p className="text-ivory-50/90 leading-relaxed">
                   Vous recevrez un email dès que la bêta privée s&apos;ouvrira.
                   Pensez à vérifier vos spams pour la confirmation.
                 </p>
@@ -118,7 +120,7 @@ export function Subscribe() {
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1 relative">
                 <Mail
-                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-neutral-400 pointer-events-none"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400 pointer-events-none"
                   aria-hidden
                 />
                 <label htmlFor="email-subscribe" className="sr-only">
@@ -135,26 +137,24 @@ export function Subscribe() {
                       : "email-subscribe-help"
                   }
                   error={!!errors.email}
-                  className="pl-11 h-12 bg-neutral-800 border-neutral-700 text-cream-50 placeholder:text-neutral-500"
+                  className="pl-11 h-12 bg-ink-800 border-ink-700 text-ivory-50 placeholder:text-ink-400"
                   {...register("email")}
                 />
               </div>
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                size="lg"
-                isLoading={status === "loading"}
-                className="sm:w-auto w-full"
+                disabled={status === "loading"}
+                className="btn-pen text-base h-12 px-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {status === "loading" ? "Envoi..." : "Me prévenir"}
-              </Button>
+                {status === "loading" ? "Envoi…" : "Me prévenir"}
+              </button>
             </div>
 
             {errors.email && (
               <p
                 id="email-subscribe-error"
                 role="alert"
-                className="mt-2 text-sm text-error-500 flex items-center gap-1.5"
+                className="mt-2 text-sm text-rouge-400 flex items-center gap-1.5"
               >
                 <AlertCircle className="h-4 w-4" aria-hidden />
                 {errors.email.message}
@@ -164,16 +164,17 @@ export function Subscribe() {
             {!errors.email && status !== "error" && (
               <p
                 id="email-subscribe-help"
-                className="mt-3 text-xs text-neutral-400"
+                className="mt-3 text-xs text-ink-400"
               >
-                Aucun spam, désabonnement en 1 clic. Vos données restent en Europe.
+                Aucun spam, désabonnement en 1 clic. Vos données restent en
+                Europe.
               </p>
             )}
 
             {status === "error" && (
               <p
                 role="alert"
-                className="mt-2 text-sm text-error-500 flex items-center gap-1.5"
+                className="mt-2 text-sm text-rouge-400 flex items-center gap-1.5"
               >
                 <AlertCircle className="h-4 w-4" aria-hidden />
                 {errorMessage || "Une erreur est survenue, réessayez."}

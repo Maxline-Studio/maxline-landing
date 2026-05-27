@@ -1,106 +1,141 @@
 @import "tailwindcss";
 
+/* ============================================================
+ * Maxline Studio — Identité "Atelier du correcteur"
+ *
+ * Concept : Maxline est un éditeur soigneux qui annote tes mots
+ * pour les transformer. Le langage visuel emprunte au manuscrit
+ * français annoté : papier ivoire, stylo rouge de correcteur,
+ * encre bleue d'école.
+ *
+ * Règle d'or de couleur :
+ *   - Texte ink sur ivory          : 15.5:1 ✅ AAA
+ *   - Rouge correcteur sur ivory   : 5.4:1  ✅ AA   (titres, accents, CTA)
+ *   - Encre bleue sur ivory        : 11.8:1 ✅ AAA (liens, secondaires)
+ *   - Ivory sur ink                : 15.5:1 ✅ AAA (sections inversées)
+ *   - Rouge sur ink                : 3.5:1  marginal — uniquement en bloc CTA
+ *
+ * Aucune autre couleur n'est autorisée. Pas de lime. Pas de cobalt.
+ * Pas de jaune. Pas de gradient.
+ * ============================================================ */
+
 @theme {
   /* ─── Typo ─── */
   --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
-  /* Bricolage Grotesque remplace Instrument Serif. On garde l'alias --font-serif
-     pour ne pas casser les composants qui utilisent la classe font-serif —
-     c'est devenu notre face d'affichage. */
-  --font-serif: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
-  --font-display: var(--font-bricolage), "Bricolage Grotesque", system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), "Fraunces", Georgia, serif;
+  --font-display: var(--font-fraunces), "Fraunces", Georgia, serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  /* ─── Primaire — Lime électrique (l'accent signature Maxline) ─── */
-  /* 500 = couleur d'action (CTA) sur fond clair, lisible avec texte ink */
-  /* 400 = la teinte signature ultra-saturée, à utiliser comme highlight */
-  --color-primary-50: #F8FFE6;
-  --color-primary-100: #ECFFC4;
-  --color-primary-200: #DCFF98;
-  --color-primary-300: #CCFF66;
-  --color-primary-400: #C7FF3C;
-  --color-primary-500: #A8E61F;
-  --color-primary-600: #87BD11;
-  --color-primary-700: #66900A;
-  --color-primary-800: #4A6907;
-  --color-primary-900: #2C3F05;
+  /* ─── Ivory — fond papier chaud (remplace cream Anthropic) ─── */
+  --color-ivory-50: #F8F4E9;
+  --color-ivory-100: #F0EAD8;
+  --color-ivory-200: #E5DBC1;
+  --color-ivory-300: #D4C7A2;
+  --color-ivory-400: #BBA77F;
 
-  /* ─── Cobalt — bleu secondaire (live caption, broadcast) ─── */
-  --color-cobalt-50: #EEF1FF;
-  --color-cobalt-100: #DCE2FF;
-  --color-cobalt-200: #B6C2FF;
-  --color-cobalt-300: #8294FF;
-  --color-cobalt-400: #5366FF;
-  --color-cobalt-500: #1E3FFF;
-  --color-cobalt-600: #0E27D6;
-  --color-cobalt-700: #0820A8;
-  --color-cobalt-800: #0A1C7A;
-  --color-cobalt-900: #0B1750;
+  /* ─── Ink — encre quasi-noire, légèrement chaude ─── */
+  --color-ink-50: #F5F4F1;
+  --color-ink-100: #E8E6E0;
+  --color-ink-200: #CFCBC0;
+  --color-ink-300: #A8A293;
+  --color-ink-400: #7A7466;
+  --color-ink-500: #5C5247;
+  --color-ink-600: #3F3830;
+  --color-ink-700: #2C2820;
+  --color-ink-800: #1F1C17;
+  --color-ink-900: #1A1814;
 
-  /* ─── Neutres — Ink (encre profonde, légèrement chaude) ─── */
-  --color-neutral-50: #F4F4F2;
-  --color-neutral-100: #E5E5E0;
-  --color-neutral-200: #C9C9C2;
-  --color-neutral-300: #A2A29A;
-  --color-neutral-400: #777771;
-  --color-neutral-500: #545450;
-  --color-neutral-600: #3B3B38;
-  --color-neutral-700: #25251F;        /* surface ink claire */
-  --color-neutral-800: #16171A;        /* surface ink standard */
-  --color-neutral-900: #0E1110;        /* ink le plus profond — fond hero, fond carousel */
+  /* ─── Rouge correcteur (le stylo qui annote) ─── */
+  --color-rouge-50: #FCE8E5;
+  --color-rouge-100: #F8D2CC;
+  --color-rouge-200: #F0A89E;
+  --color-rouge-300: #E37D6F;
+  --color-rouge-400: #D85544;
+  --color-rouge-500: #C8392F;
+  --color-rouge-600: #A12B23;
+  --color-rouge-700: #7C211B;
+  --color-rouge-800: #581812;
+  --color-rouge-900: #361009;
 
-  /* ─── Cream renommé sémantiquement "papier" mais conservé en classes cream-* ─── */
-  /* On change la teinte : moins de jaune, plus de neutralité tiède pour se distinguer
-     du cream Anthropic. */
-  --color-cream-50: #F4F1E8;            /* fond papier principal — nouveau ton */
-  --color-cream-100: #E8E2D0;
-  --color-cream-200: #D5CAA8;
+  /* ─── Encre bleue (stylo Bic d'école) ─── */
+  --color-encre-50: #E7EAF2;
+  --color-encre-100: #C7CFE0;
+  --color-encre-200: #92A1C2;
+  --color-encre-300: #5570A1;
+  --color-encre-400: #2E4D85;
+  --color-encre-500: #1D3557;
+  --color-encre-600: #162943;
+  --color-encre-700: #0F1E33;
+  --color-encre-800: #0A1525;
+  --color-encre-900: #050B14;
 
-  /* ─── Sémantiques ─── */
+  /* ─── Alias rétrocompatibles ─── */
+  /* On garde les noms historiques pour ne pas casser les composants existants,
+     en réassignant aux nouvelles couleurs sémantiquement équivalentes. */
+  --color-primary-50: var(--color-rouge-50);
+  --color-primary-100: var(--color-rouge-100);
+  --color-primary-200: var(--color-rouge-200);
+  --color-primary-300: var(--color-rouge-300);
+  --color-primary-400: var(--color-rouge-400);
+  --color-primary-500: var(--color-rouge-500);
+  --color-primary-600: var(--color-rouge-600);
+  --color-primary-700: var(--color-rouge-700);
+  --color-primary-800: var(--color-rouge-800);
+  --color-primary-900: var(--color-rouge-900);
+
+  --color-cream-50: var(--color-ivory-50);
+  --color-cream-100: var(--color-ivory-100);
+  --color-cream-200: var(--color-ivory-200);
+
+  --color-neutral-50: var(--color-ink-50);
+  --color-neutral-100: var(--color-ink-100);
+  --color-neutral-200: var(--color-ink-200);
+  --color-neutral-300: var(--color-ink-300);
+  --color-neutral-400: var(--color-ink-400);
+  --color-neutral-500: var(--color-ink-500);
+  --color-neutral-600: var(--color-ink-600);
+  --color-neutral-700: var(--color-ink-700);
+  --color-neutral-800: var(--color-ink-800);
+  --color-neutral-900: var(--color-ink-900);
+
+  --color-cobalt-500: var(--color-encre-500);
+  --color-cobalt-600: var(--color-encre-600);
+  --color-cobalt-700: var(--color-encre-700);
+
+  /* ─── Sémantiques fonctionnelles ─── */
   --color-success-500: #4A7C59;
   --color-success-600: #3A6647;
-  --color-warning-500: #E8A33A;
-  --color-warning-600: #C2851E;
-  --color-error-500: #D14545;
-  --color-error-600: #A82F2F;
-  --color-info-500: #1E3FFF;
-  --color-info-600: #0E27D6;
+  --color-warning-500: #C8841F;
+  --color-warning-600: #A56712;
+  --color-error-500: #C8392F;
+  --color-error-600: #A12B23;
+  --color-info-500: #1D3557;
+  --color-info-600: #162943;
 
   /* ─── Easing ─── */
   --ease-out-quint: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
-/* Rôles applicatifs */
+/* ─── Rôles applicatifs ─── */
 :root {
-  --bg-app: var(--color-cream-50);
+  --bg-app: var(--color-ivory-50);
   --bg-surface: #FFFFFF;
-  --bg-ink: var(--color-neutral-900);
-  --text-primary: var(--color-neutral-900);
-  --text-secondary: var(--color-neutral-600);
-  --text-muted: var(--color-neutral-400);
-  --text-on-ink: var(--color-cream-50);
-  --border: var(--color-neutral-200);
-  --border-ink: var(--color-neutral-700);
-  --cta: var(--color-primary-400);       /* lime pleine puissance */
-  --cta-hover: var(--color-primary-500);
-  --cta-text: var(--color-neutral-900);  /* texte ink sur CTA lime */
-  --focus-ring: var(--color-primary-500);
-  --accent-cobalt: var(--color-cobalt-500);
+  --bg-ink: var(--color-ink-900);
+  --text-primary: var(--color-ink-900);
+  --text-secondary: var(--color-ink-500);
+  --text-muted: var(--color-ink-400);
+  --text-on-ink: var(--color-ivory-50);
+  --accent: var(--color-rouge-500);
+  --accent-hover: var(--color-rouge-600);
+  --link: var(--color-encre-500);
+  --link-hover: var(--color-encre-600);
+  --border: var(--color-ivory-200);
+  --border-strong: var(--color-ink-900);
+  --focus-ring: var(--color-rouge-500);
 }
 
-/* Dark mode (optionnel — pour sections sombres dans une page claire,
-   on bascule via .ink-surface plutôt que .dark) */
-.dark, .ink-surface {
-  --bg-app: var(--color-neutral-900);
-  --bg-surface: var(--color-neutral-800);
-  --text-primary: var(--color-cream-50);
-  --text-secondary: var(--color-neutral-300);
-  --text-muted: var(--color-neutral-400);
-  --border: var(--color-neutral-700);
-  --cta: var(--color-primary-400);
-  --cta-hover: var(--color-primary-300);
-}
-
-/* Reset + base */
+/* ─── Reset + base ─── */
 *,
 *::before,
 *::after {
@@ -119,48 +154,46 @@ body {
   background-color: var(--bg-app);
   color: var(--text-primary);
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0;
 }
 
-/* Classes typo display */
-.font-serif {
-  font-family: var(--font-display);
-  font-feature-settings: "ss01", "ss02";
-  letter-spacing: -0.02em;
-}
-
+/* ─── Typo display (Fraunces variable) ─── */
+.font-serif,
 .font-display {
   font-family: var(--font-display);
   font-feature-settings: "ss01", "ss02";
-  letter-spacing: -0.02em;
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
 }
 
-/* Inputs ne zooment pas au focus sur iOS */
-input,
-textarea,
-select {
+/* Variante "wonk" — l'axe expressif de Fraunces, donne du caractère */
+.font-display-wonk {
+  font-family: var(--font-display);
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  font-optical-sizing: auto;
+  letter-spacing: -0.015em;
+}
+
+/* Inputs ne zooment pas sur iOS */
+input, textarea, select {
   font-size: 16px;
 }
 
-/* Focus visible custom */
+/* Focus visible — anneau rouge correcteur */
 :focus-visible {
   outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: 4px;
+  outline-offset: 3px;
+  border-radius: 3px;
 }
 
-/* Sélection — lime sur ink */
 ::selection {
-  background-color: var(--color-primary-400);
-  color: var(--color-neutral-900);
+  background-color: var(--color-rouge-500);
+  color: var(--color-ivory-50);
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -168,314 +201,389 @@ select {
   }
 }
 
-/* Skip link */
+/* ─── Skip link ─── */
 .skip-link {
   position: absolute;
   top: -100px;
   left: 1rem;
-  background: var(--color-primary-400);
-  color: var(--color-neutral-900);
+  background: var(--color-rouge-500);
+  color: var(--color-ivory-50);
   font-weight: 700;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
+  border-radius: 4px;
   text-decoration: none;
   z-index: 100;
   transition: top 150ms;
 }
 
-.skip-link:focus {
-  top: 1rem;
-}
+.skip-link:focus { top: 1rem; }
 
-/* Chiffres tabulaires (timecodes, prix) */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* ─── RÈGLE COULEUR — à ne pas trahir ─── */
-/* Sur fond ink (dark) : lime, cream, cobalt-400 — tous OK pour texte */
-/* Sur fond cream/white (light) : ink #0E1110 ou cobalt-500 #1E3FFF UNIQUEMENT */
-/*   → JAMAIS de lime en texte fin sur fond clair (contraste 1.1:1 à 3:1) */
-/*   → Lime sur clair uniquement comme BLOC plein avec texte ink dessus */
+/* ═══════════════════════════════════════════════════════════════
+ * SIGNATURE VISUELLE — éléments récurrents qui font la marque
+ * ═══════════════════════════════════════════════════════════════ */
 
-/* ─── Signature visuelle : chip "timecode" ─── */
-/* Label slab façon viseur caméra : [00:01:24] */
-.timecode {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.3rem 0.6rem;
-  border-radius: 2px;
-  background: var(--color-primary-400);
-  color: var(--color-neutral-900);
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-/* Variante sombre — pour fond cream/white, le texte reste ink */
-.timecode-outline {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.3rem 0.6rem;
-  border-radius: 2px;
-  background: transparent;
-  border: 1.5px solid var(--color-neutral-900);
-  color: var(--color-neutral-900);
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-/* Variante cobalt — accent secondaire sur fond clair */
-.timecode-cobalt {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 0.3rem 0.6rem;
-  border-radius: 2px;
-  background: var(--color-cobalt-500);
-  color: #FFFFFF;
-  text-transform: uppercase;
-  line-height: 1;
-}
-
-/* Surligneur "sous-titre" — applique une bande lime sous un mot */
-.subtitle-highlight {
-  background: linear-gradient(180deg, transparent 0%, transparent 55%, var(--color-primary-400) 55%, var(--color-primary-400) 95%, transparent 95%);
-  padding: 0 0.15em;
-  font-weight: inherit;
-}
-
-/* Animation fade-in pour les transitions de sous-titres */
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 300ms var(--ease-out-quint) both;
-}
-
-/* Animation hover : ligne qui se trace (effet "souligné de sous-titre") */
-@keyframes draw-line {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-.hover-line-draw {
+/* ─── Annotation marginale ─── */
+/* Trait vertical rouge avec numéro en exposant, façon correcteur
+   qui marque un passage important dans la marge */
+.margin-mark {
   position: relative;
+  padding-left: 1.5rem;
 }
 
-.hover-line-draw::after {
+.margin-mark::before {
   content: "";
   position: absolute;
   left: 0;
-  bottom: -4px;
-  width: 100%;
-  height: 2px;
-  background: var(--color-primary-400);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 300ms var(--ease-out-quint);
+  top: 0.4em;
+  bottom: 0.4em;
+  width: 3px;
+  background: var(--color-rouge-500);
 }
 
-.hover-line-draw:hover::after {
-  transform: scaleX(1);
+.margin-mark-num {
+  position: absolute;
+  left: -0.4rem;
+  top: -0.6em;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: var(--color-rouge-500);
+  color: var(--color-ivory-50);
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
 }
 
-/* Animation de pulsation subtile pour les éléments d'attente */
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
+/* ─── Tag d'annotation ─── */
+.annotation {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.55rem;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--color-rouge-500);
+  background: transparent;
+  border: 1px solid var(--color-rouge-500);
+  border-radius: 2px;
 }
 
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
+.annotation-filled {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.55rem;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--color-ivory-50);
+  background: var(--color-rouge-500);
+  border-radius: 2px;
 }
 
-/* Lift hover effect — pour boutons et cards */
-.lift-on-hover {
-  transition: transform 250ms var(--ease-out-quint), box-shadow 250ms var(--ease-out-quint);
+.annotation-ink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 0.3rem 0.55rem;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--color-ivory-50);
+  background: var(--color-ink-900);
+  border-radius: 2px;
 }
 
-.lift-on-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 24px -8px rgba(199, 255, 60, 0.35);
-}
-
-/* Subtle 3D tilt pour les cards pricing */
-.tilt-on-hover {
-  transition: transform 400ms var(--ease-out-quint);
-  transform-style: preserve-3d;
-  perspective: 1000px;
-}
-
-.tilt-on-hover:hover {
-  transform: perspective(1000px) rotateY(-2deg) rotateX(2deg) translateY(-4px);
-}
-
-/* ─── Pattern de pellicule (film perforation) ─── */
-/* Utilisé en bordure haut/bas de certaines sections pour ancrer
-   le langage "studio vidéo" */
-.film-perforation {
-  background-image: radial-gradient(circle at 8px center, var(--color-neutral-900) 3px, transparent 3.5px);
-  background-size: 24px 100%;
-  background-repeat: repeat-x;
-  height: 14px;
-}
-
-.film-perforation-inverse {
-  background-image: radial-gradient(circle at 8px center, var(--color-cream-50) 3px, transparent 3.5px);
-  background-size: 24px 100%;
-  background-repeat: repeat-x;
-  height: 14px;
-}
-
-/* ─── Marquee de timecodes (déco de fond) ─── */
-@keyframes scroll-timecodes {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
-}
-
-.timecode-marquee {
-  animation: scroll-timecodes 60s linear infinite;
-  will-change: transform;
-}
-
-/* ─── Carousel : transitions ─── */
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(40px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.animate-slide-in-right {
-  animation: slide-in-right 500ms var(--ease-out-quint) both;
-}
-
-/* ─── Caret signature — clignote en fin de headline ─── */
+/* ─── Caret stylo — clignote en fin de headline ─── */
 @keyframes caret-blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
 
-.caret {
+.pen-caret {
   display: inline-block;
-  width: 0.55em;
-  height: 0.9em;
-  background: var(--color-primary-400);
-  margin-left: 0.1em;
-  vertical-align: -0.05em;
+  width: 3px;
+  height: 0.85em;
+  background: var(--color-rouge-500);
+  margin-left: 0.12em;
+  vertical-align: -0.08em;
   animation: caret-blink 1.05s steps(1) infinite;
 }
 
-.caret-ink {
-  background: var(--color-neutral-900);
+/* ─── Surligneur manuscrit (au lieu d'un bloc plein, un trait ondulé) ─── */
+@keyframes pen-draw {
+  from { stroke-dashoffset: 100%; }
+  to { stroke-dashoffset: 0; }
 }
 
-.caret-cobalt {
-  background: var(--color-cobalt-500);
-}
-
-/* ─── Tape lines — motif fond façon timeline de montage ─── */
-/* Remplace la grille mathématique : lignes horizontales fines.
-   Sémantiquement "timeline vidéo", pas papier millimétré. */
-.tape-lines {
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.06) 0px,
-      rgba(255, 255, 255, 0.06) 1px,
-      transparent 1px,
-      transparent 80px
-    );
-}
-
-.tape-lines-light {
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(14, 17, 16, 0.05) 0px,
-      rgba(14, 17, 16, 0.05) 1px,
-      transparent 1px,
-      transparent 80px
-    );
-}
-
-/* ─── Subtitle bar reveal — au hover des cards (élément signature) ─── */
-.card-subtitle-bar {
+.pen-underline {
   position: relative;
+  display: inline-block;
+  white-space: pre;
 }
 
-.card-subtitle-bar::after {
+.pen-underline::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  bottom: 0;
-  height: 4px;
-  background: var(--color-primary-400);
-  transform: scaleX(0);
-  transform-origin: left;
+  bottom: -0.15em;
+  height: 0.45em;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M1 5 Q 25 2, 50 4 T 99 3' stroke='%23C8392F' stroke-width='2.2' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+/* Variante pour ink-bg : trait en ivory */
+.pen-underline-ivory::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M1 5 Q 25 2, 50 4 T 99 3' stroke='%23F8F4E9' stroke-width='2.2' fill='none' stroke-linecap='round'/></svg>");
+}
+
+/* Variante encre bleue */
+.pen-underline-encre::after {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'><path d='M1 5 Q 25 2, 50 4 T 99 3' stroke='%231D3557' stroke-width='2.2' fill='none' stroke-linecap='round'/></svg>");
+}
+
+/* ─── Rature manuscrite — un mot barré au stylo rouge ─── */
+.pen-strike {
+  position: relative;
+  text-decoration: none;
+}
+
+.pen-strike::after {
+  content: "";
+  position: absolute;
+  left: -0.1em;
+  right: -0.1em;
+  top: 50%;
+  height: 0.18em;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 3' preserveAspectRatio='none'><path d='M0 1.5 L100 1.8' stroke='%23C8392F' stroke-width='2.2' fill='none' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  transform: rotate(-1.5deg);
+}
+
+/* ─── Cercle rouge manuscrit (entourer un mot) ─── */
+.pen-circle {
+  position: relative;
+  padding: 0.05em 0.35em;
+}
+
+.pen-circle::before {
+  content: "";
+  position: absolute;
+  inset: -0.2em -0.1em;
+  border: 2px solid var(--color-rouge-500);
+  border-radius: 50%;
+  transform: rotate(-2deg) scale(1.05, 1.1);
+  pointer-events: none;
+}
+
+/* ─── Surligneur de texte façon stabilo ─── */
+/* Un fond rouge pâle qui peut s'animer (croît de la gauche au scroll) */
+.highlighter {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    var(--color-rouge-100) 4%,
+    var(--color-rouge-100) 96%,
+    transparent 100%
+  );
+  padding: 0 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.highlighter-encre {
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    var(--color-encre-100) 4%,
+    var(--color-encre-100) 96%,
+    transparent 100%
+  );
+  padding: 0 0.15em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+ * ANIMATIONS
+ * ═══════════════════════════════════════════════════════════════ */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fade-in 350ms var(--ease-out-quint) both; }
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.55; }
+}
+.animate-pulse-soft { animation: pulse-soft 2s ease-in-out infinite; }
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in-right {
+  animation: slide-in-right 500ms var(--ease-out-quint) both;
+}
+
+@keyframes draw-underline {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ─── Hover lift (cards) ─── */
+.lift-on-hover {
+  transition: transform 350ms var(--ease-out-quint),
+              box-shadow 350ms var(--ease-out-quint);
+}
+.lift-on-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px -10px rgba(26, 24, 20, 0.18);
+}
+
+/* ─── Card avec annotation rouge qui se trace au hover ─── */
+.card-annotated {
+  position: relative;
+}
+.card-annotated::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 1.5rem;
+  bottom: 1.5rem;
+  width: 3px;
+  background: var(--color-rouge-500);
+  transform: scaleY(0);
+  transform-origin: top;
   transition: transform 500ms var(--ease-out-quint);
 }
-
-.card-subtitle-bar:hover::after,
-.group:hover .card-subtitle-bar::after {
-  transform: scaleX(1);
+.card-annotated:hover::before,
+.group:hover .card-annotated::before {
+  transform: scaleY(1);
 }
 
-/* ─── Slab — le grand bloc lime avec texte ink (signature affichage) ─── */
-.slab {
-  display: inline-block;
-  background: var(--color-primary-400);
-  color: var(--color-neutral-900);
-  padding: 0.05em 0.25em;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* ─── Lien souligné rouge animé ─── */
+.link-pen {
+  position: relative;
+  color: var(--color-encre-500);
+  font-weight: 600;
+}
+.link-pen::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--color-rouge-500);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 350ms var(--ease-out-quint);
+}
+.link-pen:hover::after { transform: scaleX(1); }
+
+/* ─── Bouton primaire (rouge correcteur) ─── */
+.btn-pen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: var(--color-rouge-500);
+  color: var(--color-ivory-50);
+  font-weight: 700;
+  padding: 0.85rem 1.5rem;
+  border-radius: 3px;
+  transition: all 200ms var(--ease-out-quint);
+  position: relative;
+  font-family: var(--font-sans);
+}
+.btn-pen:hover {
+  background: var(--color-rouge-600);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -6px rgba(200, 57, 47, 0.45);
+}
+.btn-pen:active { transform: translateY(0); }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: transparent;
+  color: var(--color-ink-900);
+  font-weight: 600;
+  padding: 0.85rem 1.5rem;
+  border: 1.5px solid var(--color-ink-900);
+  border-radius: 3px;
+  transition: all 200ms var(--ease-out-quint);
+}
+.btn-outline:hover {
+  background: var(--color-ink-900);
+  color: var(--color-ivory-50);
 }
 
-.slab-cobalt {
-  display: inline-block;
-  background: var(--color-cobalt-500);
-  color: #FFFFFF;
-  padding: 0.05em 0.25em;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* ─── Scroll progress bar (au top, rouge) ─── */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--color-rouge-500);
+  z-index: 100;
+  transition: width 80ms linear;
+  pointer-events: none;
 }
 
-.slab-ink {
-  display: inline-block;
-  background: var(--color-neutral-900);
-  color: var(--color-primary-400);
-  padding: 0.05em 0.25em;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* ─── Lignes manuscrites en fond (papier réglé) ─── */
+/* Lignes horizontales très subtiles tous les 32px — façon cahier d'école */
+.paper-lines {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 31px,
+    var(--color-ivory-200) 31px,
+    var(--color-ivory-200) 32px
+  );
+  background-size: 100% 32px;
+  opacity: 0.5;
+}
+
+.paper-lines-ink {
+  background-image: linear-gradient(
+    to bottom,
+    transparent 31px,
+    rgba(255, 255, 255, 0.05) 31px,
+    rgba(255, 255, 255, 0.05) 32px
+  );
+  background-size: 100% 32px;
+}
+
+/* ─── Grain papier (très subtil) ─── */
+.paper-grain {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+  mix-blend-mode: multiply;
+  opacity: 0.07;
+  pointer-events: none;
+}
+
+.paper-grain-ink {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/></svg>");
+  mix-blend-mode: screen;
+  opacity: 0.04;
+  pointer-events: none;
 }

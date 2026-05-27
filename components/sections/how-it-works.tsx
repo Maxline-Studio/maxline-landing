@@ -1,5 +1,6 @@
 import { Upload, Wand2, Download } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { HandUnderline } from "@/components/hand-underline";
 
 const steps = [
   {
@@ -32,86 +33,68 @@ export function HowItWorks() {
   return (
     <section
       id="how-it-works"
-      className="relative py-24 md:py-36 bg-neutral-900 text-cream-50 ink-surface overflow-hidden"
+      className="relative py-24 md:py-36 bg-ivory-50 overflow-hidden"
     >
-      {/* Tape lines en fond */}
-      <div className="absolute inset-0 -z-0 tape-lines pointer-events-none" aria-hidden />
-
-      {/* Glow accent cobalt */}
-      <div
-        className="absolute inset-0 -z-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 50% 40% at 80% 30%, rgba(30, 63, 255, 0.10) 0%, transparent 65%)",
-        }}
-      />
-
-      {/* Pellicule top */}
-      <div className="absolute top-0 inset-x-0 film-perforation-inverse opacity-25 pointer-events-none" />
+      <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
       <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <Reveal>
-          <div className="max-w-3xl mb-16 md:mb-24">
+          <div className="max-w-3xl mb-16 md:mb-20">
             <div className="flex items-center gap-3 mb-6">
-              <span className="timecode">
-                <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
-                CH. 01 · LE PROCESSUS
-              </span>
+              <span className="annotation">§02 · Le procédé</span>
             </div>
-            <h2 className="font-display text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter leading-[1.0] text-cream-50">
+            <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">
               Trois étapes.
               <br />
-              <span className="slab">Dix minutes.</span>
+              <span className="font-display italic font-light text-rouge-500">
+                <HandUnderline variant="rouge" style="straight">
+                  Dix minutes
+                </HandUnderline>
+                .
+              </span>
             </h2>
-            <p className="mt-6 text-lg text-neutral-400 leading-relaxed max-w-xl">
+            <p className="mt-6 text-lg text-ink-600 leading-relaxed max-w-xl">
               Pas plus. Pas moins. C&apos;est la promesse Maxline.
             </p>
           </div>
         </Reveal>
 
-        {/* Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-10">
           {steps.map((step, idx) => {
             const Icon = step.icon;
             return (
               <Reveal key={idx} delay={idx * 120}>
-                <article className="group relative h-full bg-neutral-800/60 border border-neutral-700 hover:border-primary-400 rounded-sm transition-all duration-300 card-subtitle-bar overflow-hidden">
-                  {/* Numéro géant en ink-slab */}
-                  <div className="absolute top-0 right-0 bg-primary-400 text-neutral-900 px-3 py-1 font-mono font-extrabold text-xs tracking-widest">
-                    {step.n}
-                  </div>
-
-                  <div className="p-8 md:p-10">
-                    {/* Icône en slate */}
-                    <div className="h-14 w-14 rounded-sm bg-neutral-900 border-2 border-primary-400 group-hover:bg-primary-400 group-hover:border-primary-400 flex items-center justify-center mb-8 transition-all duration-300">
+                <article className="group relative h-full bg-ivory-100 border border-ivory-200 hover:border-ink-900 transition-all duration-300 rounded-sm card-annotated p-8 md:p-10">
+                  {/* Grand numéro en Fraunces italique */}
+                  <div className="flex items-baseline justify-between mb-6">
+                    <span className="font-display italic font-light text-7xl text-ink-900/15 leading-none tabular-nums group-hover:text-rouge-500/30 transition-colors duration-300">
+                      {step.n}
+                    </span>
+                    <div className="h-12 w-12 rounded-sm bg-ivory-50 border-2 border-ink-900 group-hover:bg-rouge-500 group-hover:border-rouge-500 flex items-center justify-center transition-all duration-300">
                       <Icon
-                        className="h-7 w-7 text-primary-400 group-hover:text-neutral-900 transition-colors"
+                        className="h-6 w-6 text-ink-900 group-hover:text-ivory-50 transition-colors"
+                        strokeWidth={1.75}
                         aria-hidden
                       />
                     </div>
-
-                    {/* Timecode */}
-                    <div className="font-mono text-[10px] text-neutral-500 uppercase tracking-widest mb-3 tabular-nums">
-                      [ {step.timecode} ]
-                    </div>
-
-                    <h3 className="font-display text-2xl md:text-3xl font-bold text-cream-50 mb-4 leading-tight">
-                      {step.title}
-                    </h3>
-                    <p className="text-neutral-400 leading-relaxed">
-                      {step.description}
-                    </p>
                   </div>
+
+                  <div className="font-mono text-[10px] text-ink-500 uppercase tracking-widest mb-4 tabular-nums">
+                    [ {step.timecode} ]
+                  </div>
+
+                  <h3 className="font-display font-semibold text-2xl text-ink-900 mb-3 leading-tight">
+                    {step.title}
+                  </h3>
+                  <p className="text-ink-600 leading-relaxed">
+                    {step.description}
+                  </p>
                 </article>
               </Reveal>
             );
           })}
         </div>
       </div>
-
-      {/* Pellicule bas */}
-      <div className="absolute bottom-0 inset-x-0 film-perforation-inverse opacity-25 pointer-events-none" />
     </section>
   );
 }

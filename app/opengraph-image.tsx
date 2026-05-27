@@ -5,11 +5,10 @@ export const alt =
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const INK = "#0E1110";
-const LIME = "#C7FF3C";
-const PAPER = "#F1ECDF";
-const NEUTRAL_400 = "#777771";
-const NEUTRAL_700 = "#25251F";
+const IVORY = "#F8F4E9";
+const INK = "#1A1814";
+const ROUGE = "#C8392F";
+const INK_500 = "#5C5247";
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -22,109 +21,100 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "70px 80px",
-          background: INK,
-          fontFamily: "system-ui, -apple-system, sans-serif",
-          color: PAPER,
+          background: IVORY,
+          fontFamily: "Georgia, serif",
+          color: INK,
           position: "relative",
         }}
       >
-        {/* Subtile grille en fond */}
+        {/* Filet rouge en haut */}
         <div
           style={{
             position: "absolute",
-            inset: 0,
-            opacity: 0.08,
-            backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
-            backgroundSize: "60px 60px",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 6,
+            background: ROUGE,
             display: "flex",
           }}
         />
 
-        {/* Bande timecode supérieure */}
+        {/* Header avec logo */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            position: "relative",
           }}
         >
-          {/* Logo slate */}
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
               style={{
-                width: 64,
-                height: 64,
-                background: INK,
-                border: `3px solid ${LIME}`,
-                borderRadius: 4,
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                color: LIME,
-                fontSize: 42,
-                fontWeight: 800,
-                letterSpacing: "-0.04em",
+                position: "relative",
               }}
             >
-              M
-            </div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <div
+              <span
                 style={{
-                  display: "flex",
-                  fontSize: 36,
-                  fontWeight: 800,
+                  fontSize: 44,
+                  fontWeight: 900,
+                  color: INK,
                   letterSpacing: "-0.02em",
-                  color: PAPER,
-                  textTransform: "uppercase",
+                  display: "flex",
                 }}
               >
                 Maxline
-              </div>
-              <div
+              </span>
+              <span
                 style={{
+                  position: "absolute",
+                  right: -10,
+                  top: 4,
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  background: ROUGE,
                   display: "flex",
-                  fontSize: 14,
-                  fontWeight: 600,
-                  letterSpacing: "0.25em",
-                  color: NEUTRAL_400,
-                  textTransform: "uppercase",
                 }}
-              >
-                studio
-              </div>
+              />
             </div>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "0.25em",
+                color: INK_500,
+                textTransform: "uppercase",
+                borderLeft: `1px solid ${INK_500}`,
+                paddingLeft: 16,
+                marginLeft: 16,
+                display: "flex",
+              }}
+            >
+              studio
+            </span>
           </div>
 
-          {/* Tag timecode REC */}
+          {/* Tag annotation */}
           <div
             style={{
               display: "flex",
               alignItems: "center",
               gap: 10,
-              background: LIME,
-              color: INK,
+              background: ROUGE,
+              color: IVORY,
               padding: "8px 14px",
-              borderRadius: 2,
-              fontSize: 18,
-              fontWeight: 800,
+              borderRadius: 3,
+              fontSize: 16,
+              fontWeight: 700,
               letterSpacing: "0.15em",
               textTransform: "uppercase",
               fontFamily: "monospace",
             }}
           >
-            <div
-              style={{
-                width: 8,
-                height: 8,
-                borderRadius: 4,
-                background: INK,
-                display: "flex",
-              }}
-            />
-            REC · v.0 PRÉ-LANCEMENT
+            §00 · Pré-lancement
           </div>
         </div>
 
@@ -133,7 +123,7 @@ export default function OpengraphImage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 24,
+            gap: 20,
             position: "relative",
           }}
         >
@@ -141,28 +131,27 @@ export default function OpengraphImage() {
             style={{
               display: "flex",
               flexDirection: "column",
-              fontSize: 88,
-              fontWeight: 800,
-              letterSpacing: "-0.035em",
-              color: PAPER,
+              fontSize: 92,
+              fontWeight: 500,
+              letterSpacing: "-0.025em",
+              color: INK,
               lineHeight: 0.98,
               maxWidth: 1050,
             }}
           >
             <div style={{ display: "flex" }}>Vos vidéos françaises,</div>
             <div style={{ display: "flex" }}>sous-titrées en</div>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-              <div
-                style={{
-                  display: "flex",
-                  background: LIME,
-                  color: INK,
-                  padding: "0 16px",
-                }}
-              >
-                anglais
-              </div>
-              <div style={{ display: "flex", color: PAPER }}>.</div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 4,
+                fontStyle: "italic",
+                fontWeight: 300,
+              }}
+            >
+              <span style={{ display: "flex", color: ROUGE }}>anglais</span>
+              <span style={{ display: "flex", color: INK }}>.</span>
             </div>
           </div>
 
@@ -170,9 +159,10 @@ export default function OpengraphImage() {
             style={{
               display: "flex",
               fontSize: 26,
-              color: NEUTRAL_400,
+              color: INK_500,
               maxWidth: 900,
               marginTop: 16,
+              fontFamily: "system-ui",
             }}
           >
             L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
@@ -180,41 +170,40 @@ export default function OpengraphImage() {
           </div>
         </div>
 
-        {/* Bande de pied façon timecode strip */}
+        {/* Pied de page */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             paddingTop: 20,
-            borderTop: `2px solid ${NEUTRAL_700}`,
-            color: NEUTRAL_400,
-            fontSize: 20,
+            borderTop: `1px solid ${INK_500}`,
+            color: INK_500,
+            fontSize: 18,
             fontFamily: "monospace",
             textTransform: "uppercase",
-            letterSpacing: "0.15em",
-            position: "relative",
+            letterSpacing: "0.18em",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
               style={{
-                width: 10,
-                height: 10,
-                borderRadius: 5,
-                background: LIME,
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: ROUGE,
                 display: "flex",
               }}
             />
-            <div style={{ display: "flex", color: PAPER, fontWeight: 700 }}>
+            <div style={{ display: "flex", color: INK, fontWeight: 700 }}>
               maxlinestudio.fr
             </div>
           </div>
           <div
-            style={{ display: "flex", gap: 28, fontSize: 18, color: NEUTRAL_400 }}
+            style={{ display: "flex", gap: 28, fontSize: 16, color: INK_500 }}
           >
-            <div style={{ display: "flex" }}>00:00 / 10:00 · FR → EN</div>
-            <div style={{ display: "flex", color: LIME }}>RGPD · UE</div>
+            <div style={{ display: "flex" }}>FR → EN · 12 €/mois</div>
+            <div style={{ display: "flex", color: ROUGE }}>RGPD · UE</div>
           </div>
         </div>
       </div>

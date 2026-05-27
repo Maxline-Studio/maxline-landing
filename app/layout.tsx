@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Bricolage_Grotesque } from "next/font/google";
+import { Inter, Fraunces } from "next/font/google";
 import "./globals.css";
 import { ScrollProgress } from "@/components/scroll-progress";
 
@@ -9,17 +9,18 @@ const inter = Inter({
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
+const fraunces = Fraunces({
   subsets: ["latin"],
-  weight: ["200", "300", "400", "500", "600", "700", "800"],
-  variable: "--font-bricolage",
+  style: ["normal", "italic"],
+  variable: "--font-fraunces",
   display: "swap",
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://maxlinestudio.fr"),
   title: {
-    default: "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes",
+    default:
+      "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes",
     template: "%s | Maxline Studio",
   },
   description:
@@ -43,7 +44,6 @@ export const metadata: Metadata = {
     title: "Vos vidéos françaises, sous-titrées en anglais en 10 minutes.",
     description:
       "L'outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en français, à 12 €/mois.",
-    // OG image générée dynamiquement par app/opengraph-image.tsx
   },
   twitter: {
     card: "summary_large_image",
@@ -72,7 +72,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${bricolage.variable}`}>
+    <html lang="fr" className={`${inter.variable} ${fraunces.variable}`}>
       <body>
         <a href="#main-content" className="skip-link">
           Aller au contenu principal

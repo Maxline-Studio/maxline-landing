@@ -1,5 +1,6 @@
 import { Check } from "lucide-react";
 import { Reveal } from "@/components/reveal";
+import { HandUnderline } from "@/components/hand-underline";
 import { cn } from "@/lib/utils";
 
 const plans = [
@@ -56,83 +57,85 @@ export function PricingPreview() {
   return (
     <section
       id="pricing"
-      className="relative py-24 md:py-36 bg-white overflow-hidden"
+      className="relative py-24 md:py-36 bg-ivory-100 border-y border-ivory-200 overflow-hidden"
     >
-      <div className="absolute inset-0 -z-0 tape-lines-light pointer-events-none" aria-hidden />
+      <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
+      <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <Reveal>
           <div className="max-w-3xl mb-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="timecode-cobalt">CH. 06 · TARIFS</span>
+              <span className="annotation">§06 · Tarif</span>
             </div>
-            <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-neutral-900 leading-[1.0] tracking-tighter">
+            <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">
               Lisibles en{" "}
-              <span className="slab-cobalt">5 secondes</span>.
+              <span className="font-display italic font-light text-rouge-500">
+                <HandUnderline variant="rouge" style="straight">
+                  5 secondes
+                </HandUnderline>
+              </span>
+              .
             </h2>
-            <p className="mt-6 text-lg text-neutral-700 max-w-xl">
+            <p className="mt-6 text-lg text-ink-700 max-w-xl">
               Pas de minimum, pas de piège, pas d&apos;astérisque. Le prix que
-              tu vois est celui que tu payes.
+              vous voyez est celui que vous payez.
             </p>
           </div>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl">
           {plans.map((plan, idx) => (
-            <Reveal key={idx} delay={idx * 100}>
+            <Reveal key={idx} delay={idx * 120}>
               <article
                 className={cn(
-                  "relative h-full rounded-sm transition-all duration-300 card-subtitle-bar",
+                  "relative h-full rounded-sm transition-all duration-300 lift-on-hover",
                   plan.highlighted
-                    ? "bg-neutral-900 text-cream-50 border-2 border-primary-400 lg:scale-[1.03] shadow-2xl"
-                    : "bg-cream-50 border-2 border-neutral-900",
+                    ? "bg-ink-900 text-ivory-50 border-2 border-ink-900 lg:scale-[1.02] shadow-[8px_8px_0_0_rgba(200,57,47,1)]"
+                    : "bg-ivory-50 border-2 border-ink-900",
                 )}
               >
                 {plan.highlighted && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-400 text-neutral-900 px-3 py-1 font-mono font-bold text-[10px] uppercase tracking-widest border-2 border-neutral-900 rounded-sm">
+                  <div className="absolute -top-3 left-6 bg-rouge-500 text-ivory-50 px-3 py-1 font-mono font-bold text-[10px] uppercase tracking-widest">
                     ★ Recommandé
                   </div>
                 )}
 
                 <div className="p-8 md:p-10">
-                  {/* Header card */}
-                  <div className="mb-6">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <h3
-                        className={cn(
-                          "font-display font-extrabold text-3xl tracking-tighter",
-                          plan.highlighted ? "text-cream-50" : "text-neutral-900",
-                        )}
-                      >
-                        {plan.name}
-                      </h3>
-                    </div>
+                  {/* En-tête */}
+                  <div className="mb-6 pb-6 border-b border-current/15">
+                    <h3
+                      className={cn(
+                        "font-display italic text-3xl font-light tracking-tight mb-1",
+                        plan.highlighted ? "text-ivory-50" : "text-ink-900",
+                      )}
+                    >
+                      {plan.name}
+                    </h3>
                     <p
                       className={cn(
-                        "text-xs font-mono uppercase tracking-widest",
-                        plan.highlighted ? "text-primary-400" : "text-neutral-500",
+                        "font-mono text-[10px] uppercase tracking-widest",
+                        plan.highlighted ? "text-rouge-400" : "text-ink-500",
                       )}
                     >
                       {plan.subtitle}
                     </p>
                   </div>
 
-                  {/* Prix géant tabulaire */}
-                  <div className="mb-6 border-t border-b py-5"
-                       style={{ borderColor: plan.highlighted ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
-                    <div className="flex items-baseline gap-1">
+                  {/* Prix géant */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-1.5">
                       <span
                         className={cn(
-                          "text-5xl md:text-6xl font-display font-extrabold tabular-nums tracking-tighter",
-                          plan.highlighted ? "text-primary-400" : "text-neutral-900",
+                          "font-display font-bold text-6xl md:text-7xl tabular-nums leading-none tracking-tight",
+                          plan.highlighted ? "text-rouge-400" : "text-ink-900",
                         )}
                       >
                         {plan.price}
                       </span>
                       <span
                         className={cn(
-                          "text-lg font-mono",
-                          plan.highlighted ? "text-cream-50" : "text-neutral-700",
+                          "font-display italic text-lg",
+                          plan.highlighted ? "text-ivory-300" : "text-ink-600",
                         )}
                       >
                         {plan.period}
@@ -140,33 +143,35 @@ export function PricingPreview() {
                     </div>
                     <p
                       className={cn(
-                        "text-sm mt-2",
-                        plan.highlighted ? "text-neutral-400" : "text-neutral-700",
+                        "text-sm mt-3",
+                        plan.highlighted ? "text-ivory-300" : "text-ink-600",
                       )}
                     >
                       {plan.description}
                     </p>
                   </div>
 
-                  {/* Features */}
-                  <ul className="space-y-3">
+                  {/* Liste features */}
+                  <ul className="space-y-3 mb-2">
                     {plan.features.map((feature, i) => (
                       <li key={i} className="flex items-start gap-3 text-sm">
                         <span
                           className={cn(
                             "h-5 w-5 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5",
                             plan.highlighted
-                              ? "bg-primary-400 text-neutral-900"
-                              : "bg-neutral-900 text-primary-400",
+                              ? "bg-rouge-500 text-ivory-50"
+                              : "bg-ink-900 text-rouge-400",
                           )}
                         >
-                          <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                          <Check
+                            className="h-3 w-3"
+                            strokeWidth={3}
+                            aria-hidden
+                          />
                         </span>
                         <span
                           className={
-                            plan.highlighted
-                              ? "text-cream-50"
-                              : "text-neutral-800"
+                            plan.highlighted ? "text-ivory-50" : "text-ink-800"
                           }
                         >
                           {feature}
@@ -181,8 +186,8 @@ export function PricingPreview() {
         </div>
 
         <Reveal delay={400}>
-          <p className="mt-14 text-center text-sm text-neutral-700 font-mono uppercase tracking-widest">
-            › Première vidéo de moins de 5 min offerte au lancement · sans carte
+          <p className="mt-14 text-center text-sm text-ink-600 font-mono uppercase tracking-widest">
+            › Première vidéo de moins de 5 min offerte au lancement &middot; sans carte
           </p>
         </Reveal>
       </div>

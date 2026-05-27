@@ -2,65 +2,50 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { HandUnderline } from "@/components/hand-underline";
 import { HeroMockup } from "@/components/sections/hero-mockup";
 
 /**
- * Animation typo : bascule "english" → "anglais" en boucle continue.
- * Le mot est surligné en bloc lime ink — signature visuelle Maxline.
+ * Animation typo : le mot "english" devient "anglais" en boucle.
+ * Style : la version EN est rayée au stylo rouge, puis la version FR
+ * apparaît dessous comme une correction.
  */
-function TranslatingWord() {
-  const [showFinal, setShowFinal] = useState(false);
+function TranslatingPair() {
+  const [phase, setPhase] = useState<"english" | "transitioning" | "anglais">(
+    "english",
+  );
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setShowFinal((p) => !p);
-    }, 3000);
-    return () => clearInterval(timer);
+    const sequence = () => {
+      // english visible → rayé → anglais arrive
+      setTimeout(() => setPhase("transitioning"), 1800);
+      setTimeout(() => setPhase("anglais"), 2400);
+      // boucle
+      setTimeout(() => setPhase("english"), 6000);
+    };
+    sequence();
+    const interval = setInterval(sequence, 6000);
+    return () => clearInterval(interval);
   }, []);
 
-  return (
-    <span className="relative inline-flex items-center">
-      <span
-        key={showFinal ? "anglais" : "english"}
-        className="slab animate-fade-in inline-block"
-        style={{ minWidth: "4.5ch" }}
-      >
-        {showFinal ? "anglais" : "english"}
+  if (phase === "anglais") {
+    return (
+      <span className="font-display italic font-light text-rouge-500 animate-fade-in">
+        anglais
       </span>
-    </span>
-  );
-}
-
-/**
- * Bande de timecodes qui défile en haut du hero.
- * Évoque la timeline d'un éditeur vidéo, sans imiter Linear/Vercel.
- */
-function TimecodeStrip() {
-  const tcs = [
-    "00:00:00", "00:00:12", "00:00:24", "00:00:36", "00:00:48",
-    "00:01:00", "00:01:12", "00:01:24", "00:01:36", "00:01:48",
-    "00:02:00", "00:02:12",
-  ];
-  const loop = [...tcs, ...tcs];
-
+    );
+  }
+  if (phase === "transitioning") {
+    return (
+      <span className="font-display italic font-light text-ink-900 pen-strike">
+        english
+      </span>
+    );
+  }
   return (
-    <div className="absolute top-0 inset-x-0 overflow-hidden bg-neutral-900 border-b border-neutral-800 z-10">
-      <div className="timecode-marquee flex gap-12 py-2.5 whitespace-nowrap will-change-transform">
-        {loop.map((tc, i) => (
-          <span
-            key={i}
-            className="font-mono text-[10px] tracking-widest text-neutral-500 uppercase flex items-center gap-2 shrink-0"
-          >
-            <span className="h-1 w-1 rounded-full bg-primary-400" />
-            <span className="tabular-nums">{tc}</span>
-            <span className="text-neutral-700">/</span>
-            <span className="text-primary-400">FR → EN</span>
-          </span>
-        ))}
-      </div>
-    </div>
+    <span className="font-display italic font-light text-ink-900">
+      english
+    </span>
   );
 }
 
@@ -68,57 +53,50 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative overflow-hidden bg-neutral-900 text-cream-50 ink-surface"
+      className="relative overflow-hidden bg-ivory-50 pt-16 pb-24 md:pt-24 md:pb-32"
     >
-      <TimecodeStrip />
+      {/* Grain papier en fond */}
+      <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      {/* Tape lines — remplace la grille. Lignes horizontales discrètes. */}
-      <div className="absolute inset-0 -z-0 tape-lines pointer-events-none" aria-hidden />
+      {/* Lignes manuscrites discrètes en fond */}
+      <div className="absolute inset-0 paper-lines pointer-events-none opacity-40" aria-hidden />
 
-      {/* Glow ambient : cobalt en haut-gauche, lime en bas-droite */}
-      <div
-        className="absolute inset-0 -z-0 pointer-events-none"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 12% 8%, rgba(30, 63, 255, 0.20) 0%, transparent 65%), radial-gradient(ellipse 55% 45% at 88% 95%, rgba(199, 255, 60, 0.13) 0%, transparent 65%)",
-        }}
-      />
-
-      {/* Pellicule top */}
-      <div className="absolute top-[42px] inset-x-0 film-perforation-inverse opacity-25 pointer-events-none" />
-
-      <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 pt-28 pb-24 md:pt-32 md:pb-36">
-        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          {/* Texte */}
+      <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
+          {/* ─── Texte ─── */}
           <div className="lg:col-span-7 max-w-2xl">
-            {/* Label REC */}
+            {/* Annotation marginale en haut */}
             <div className="flex items-center gap-3 mb-10 animate-fade-in">
-              <span className="timecode">
-                <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
-                REC · PRÉ-LANCEMENT
+              <span className="annotation-filled">
+                <span className="h-1.5 w-1.5 rounded-full bg-ivory-50 animate-pulse-soft" />
+                Pré-lancement
               </span>
-              <span className="font-mono text-[11px] text-neutral-500 uppercase tracking-widest">
-                v.0 — beta dans 8 semaines
+              <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
+                MVP en 8 semaines
               </span>
             </div>
 
-            {/* Headline — typo display, caret clignotant à la fin */}
-            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter text-cream-50 leading-[0.95]">
+            {/* Headline — Fraunces, mix de droit et italique */}
+            <h1 className="font-display font-medium text-[2.6rem] sm:text-5xl md:text-6xl lg:text-[4.4rem] leading-[1.02] tracking-[-0.025em] text-ink-900">
               <span className="block">Vos vidéos</span>
-              <span className="block text-neutral-500">françaises,</span>
-              <span className="block">sous-titrées</span>
               <span className="block">
-                en <TranslatingWord />
-                <span className="caret" aria-hidden />
+                <HandUnderline variant="rouge" style="wavy">
+                  françaises
+                </HandUnderline>
+                ,
+              </span>
+              <span className="block mt-2">sous-titrées</span>
+              <span className="block">
+                en <TranslatingPair />
+                <span className="pen-caret" aria-hidden />
               </span>
             </h1>
 
-            {/* Sous-titre — texte simple lisible */}
-            <p className="mt-10 text-lg md:text-xl text-neutral-300 leading-relaxed max-w-xl">
+            {/* Sous-titre / explication */}
+            <p className="mt-10 text-lg md:text-xl text-ink-600 leading-relaxed max-w-xl">
               L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
               TikTok, en français, à{" "}
-              <span className="font-bold text-cream-50 font-mono tabular-nums">
+              <span className="font-semibold text-ink-900 tabular-nums">
                 12&nbsp;€/mois
               </span>
               . Sans piège.
@@ -128,41 +106,33 @@ export function Hero() {
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <a
                 href="#subscribe"
-                className={cn(
-                  buttonVariants({ variant: "primary", size: "lg" }),
-                  "group relative overflow-hidden font-bold",
-                )}
+                className="btn-pen group text-base"
               >
-                <span className="relative z-10 flex items-center gap-2">
-                  Être prévenu du lancement
-                  <ArrowRight
-                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                    aria-hidden
-                  />
-                </span>
+                Réserver mon accès
+                <ArrowRight
+                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                  aria-hidden
+                />
               </a>
               <a
                 href="#how-it-works"
-                className="inline-flex h-12 items-center gap-2 px-6 text-lg font-semibold text-cream-50 border border-neutral-700 hover:border-primary-400 hover:bg-neutral-800 rounded-md transition-colors"
+                className="btn-outline text-base"
               >
                 Voir comment ça marche
               </a>
             </div>
 
-            <p className="mt-6 text-sm text-neutral-500 font-mono tabular-nums">
-              › aucune carte demandée · 1 vidéo de 5 min offerte au lancement
+            <p className="mt-6 text-sm text-ink-500 font-mono">
+              › aucune carte demandée &middot; première vidéo offerte au lancement
             </p>
           </div>
 
-          {/* Mockup */}
+          {/* ─── Mockup ─── */}
           <div className="lg:col-span-5">
             <HeroMockup />
           </div>
         </div>
       </div>
-
-      {/* Pellicule bas */}
-      <div className="absolute bottom-0 inset-x-0 film-perforation-inverse opacity-25 pointer-events-none" />
     </section>
   );
 }

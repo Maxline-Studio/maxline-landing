@@ -15,17 +15,17 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-primary-400 text-neutral-900 hover:bg-primary-300 active:bg-primary-500",
+          "bg-rouge-500 text-ivory-50 hover:bg-rouge-600 active:bg-rouge-700",
         secondary:
-          "bg-transparent border border-neutral-800 text-neutral-900 hover:bg-neutral-900 hover:text-cream-50 active:bg-neutral-800",
+          "bg-transparent border border-ink-900 text-ink-900 hover:bg-ink-900 hover:text-ivory-50 active:bg-ink-800",
         ghost:
-          "bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200",
+          "bg-transparent text-ink-700 hover:bg-ivory-100 active:bg-ivory-200",
         destructive:
-          "bg-error-500 text-white hover:bg-error-600 active:bg-error-600",
+          "bg-rouge-500 text-ivory-50 hover:bg-rouge-600 active:bg-rouge-700",
         link:
-          "bg-transparent text-primary-700 underline-offset-4 hover:underline px-0 h-auto",
+          "bg-transparent text-encre-500 underline-offset-4 hover:underline px-0 h-auto",
         cobalt:
-          "bg-cobalt-500 text-cream-50 hover:bg-cobalt-600 active:bg-cobalt-700",
+          "bg-encre-500 text-ivory-50 hover:bg-encre-600 active:bg-encre-700",
       },
       size: {
         sm: "h-8 px-3 text-sm",

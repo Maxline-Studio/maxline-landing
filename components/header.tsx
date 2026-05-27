@@ -3,111 +3,74 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 /**
- * Header avec deux états :
- *   - top de page  : transparent sur ink hero, texte cream, lime accent
- *   - scrolled     : fond cream/blur, texte ink, lime hover underline
- *
- * Les liens portent un underline lime animé au hover (motion signature).
+ * Header — état unique, toujours sur fond ivory.
+ * Pas d'état "transparent sur hero" qui rendait tout illisible.
+ * Le hero démarre directement sous le header avec une bordure rouge.
  */
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 80);
-    };
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  // Couleurs des liens selon l'état
-  const linkText = scrolled ? "text-neutral-800" : "text-cream-50";
-  const linkHover = scrolled
-    ? "hover:text-neutral-900"
-    : "hover:text-primary-400";
-  const logoTextColor = scrolled ? "text-neutral-900" : "text-cream-50";
-  const logoSubColor = scrolled ? "text-neutral-500" : "text-primary-400";
-  const burgerColor = scrolled ? "text-neutral-800" : "text-cream-50";
 
   return (
     <header
-      className={cn(
-        "sticky top-0 z-30 w-full transition-all duration-300",
-        scrolled
-          ? "bg-cream-50/90 backdrop-blur-md border-b border-neutral-200"
-          : "bg-transparent",
-      )}
+      className={`sticky top-0 z-30 w-full bg-ivory-50/95 backdrop-blur-sm border-b border-ivory-200 transition-shadow ${
+        scrolled ? "shadow-[0_2px_24px_-12px_rgba(26,24,20,0.15)]" : ""
+      }`}
     >
+      {/* Filet rouge fin permanent au top — signature "manuscrit annoté" */}
+      <div className="h-[3px] bg-rouge-500 w-full" aria-hidden />
+
       <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <div className="flex h-16 md:h-18 items-center justify-between">
-          {/* Logo — slate de tournage */}
+          {/* ─── Logo : Maxline + point rouge en exposant ─── */}
           <Link
             href="/"
             className="flex items-center gap-3 group"
-            aria-label="Maxline Studio - accueil"
+            aria-label="Maxline Studio — accueil"
           >
-            <div
-              className={cn(
-                "h-10 w-10 border-2 border-primary-400 rounded-sm flex items-center justify-center transition-all duration-300 shrink-0",
-                "group-hover:rotate-3 group-hover:scale-105",
-                scrolled
-                  ? "bg-neutral-900"
-                  : "bg-neutral-900/40 backdrop-blur-sm",
-              )}
-            >
-              <span className="text-primary-400 font-display font-extrabold text-xl tracking-tighter leading-none">
-                M
-              </span>
-            </div>
-            <span className="flex items-baseline gap-1.5">
-              <span
-                className={cn(
-                  "font-display font-extrabold tracking-tight text-lg uppercase transition-colors",
-                  logoTextColor,
-                )}
-              >
+            <div className="relative flex items-center">
+              <span className="font-display font-black text-2xl md:text-[1.7rem] tracking-tight text-ink-900 leading-none">
                 Maxline
               </span>
               <span
-                className={cn(
-                  "font-mono text-[10px] uppercase tracking-[0.25em] mt-0.5 transition-colors",
-                  logoSubColor,
-                )}
-              >
-                studio
-              </span>
+                className="absolute -right-2.5 -top-0.5 h-2 w-2 rounded-full bg-rouge-500 group-hover:animate-pulse-soft"
+                aria-hidden
+              />
+            </div>
+            <span className="hidden sm:inline font-mono text-[10px] uppercase tracking-[0.25em] text-ink-500 border-l border-ivory-300 pl-3">
+              studio
             </span>
           </Link>
 
-          {/* Nav desktop avec underline lime au hover */}
-          <nav className="hidden md:flex items-center gap-8">
+          {/* ─── Nav desktop ─── */}
+          <nav className="hidden md:flex items-center gap-9">
             {[
-              { href: "/#how-it-works", label: "Comment ça marche", isLink: false },
-              { href: "/#pricing", label: "Tarifs", isLink: false },
-              { href: "/#faq", label: "FAQ", isLink: false },
-              { href: "/blog", label: "Journal", isLink: true },
+              { href: "/#how-it-works", label: "Procédé", external: false },
+              { href: "/#pricing", label: "Tarif", external: false },
+              { href: "/blog", label: "Journal", external: true },
+              { href: "/#faq", label: "FAQ", external: false },
             ].map((item) => {
-              const className = cn(
-                "relative text-sm font-medium transition-colors group/link",
-                linkText,
-                linkHover,
-              );
+              const className =
+                "relative text-sm font-medium text-ink-700 hover:text-ink-900 transition-colors group/link";
               const inner = (
                 <>
                   <span>{item.label}</span>
                   <span
-                    className="absolute left-0 right-0 -bottom-1.5 h-0.5 bg-primary-400 origin-left scale-x-0 group-hover/link:scale-x-100 transition-transform duration-300 ease-out"
                     aria-hidden
+                    className="absolute left-0 right-0 -bottom-1.5 h-[2px] bg-rouge-500 origin-left scale-x-0 group-hover/link:scale-x-100 transition-transform duration-300 ease-out"
                   />
                 </>
               );
-              return item.isLink ? (
+              return item.external ? (
                 <Link key={item.href} href={item.href} className={className}>
                   {inner}
                 </Link>
@@ -119,27 +82,24 @@ export function Header() {
             })}
           </nav>
 
-          {/* CTAs desktop */}
+          {/* ─── CTA desktop ─── */}
           <div className="hidden md:flex items-center gap-3">
             <a
               href="/#subscribe"
-              className={cn(
-                buttonVariants({ variant: "primary", size: "sm" }),
-                "font-bold shadow-[0_0_24px_-4px_rgba(199,255,60,0.5)]",
-              )}
+              className="btn-pen text-sm py-2 px-4"
             >
-              Être prévenu
+              Réserver mon accès
             </a>
           </div>
 
-          {/* Burger mobile */}
+          {/* ─── Burger mobile ─── */}
           <button
-            className={cn("md:hidden p-2 -mr-2 transition-colors", burgerColor)}
-            aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
-            aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 -mr-2 text-ink-800"
+            aria-label={mobileOpen ? "Fermer le menu" : "Ouvrir le menu"}
+            aria-expanded={mobileOpen}
+            onClick={() => setMobileOpen(!mobileOpen)}
           >
-            {mobileMenuOpen ? (
+            {mobileOpen ? (
               <X className="h-6 w-6" aria-hidden />
             ) : (
               <Menu className="h-6 w-6" aria-hidden />
@@ -147,35 +107,26 @@ export function Header() {
           </button>
         </div>
 
-        {/* Menu mobile */}
-        {mobileMenuOpen && (
+        {/* ─── Menu mobile ─── */}
+        {mobileOpen && (
           <nav
-            className={cn(
-              "md:hidden border-t py-4 space-y-1",
-              scrolled
-                ? "border-neutral-200 bg-cream-50/95 backdrop-blur-md"
-                : "border-neutral-800 bg-neutral-900/95 backdrop-blur-md -mx-4 px-4",
-            )}
+            className="md:hidden border-t border-ivory-200 py-4 space-y-1 bg-ivory-50"
             aria-label="Navigation principale"
           >
             {[
-              { href: "/#how-it-works", label: "Comment ça marche", isLink: false },
-              { href: "/#pricing", label: "Tarifs", isLink: false },
-              { href: "/#faq", label: "FAQ", isLink: false },
+              { href: "/#how-it-works", label: "Procédé" },
+              { href: "/#pricing", label: "Tarif" },
               { href: "/blog", label: "Journal", isLink: true },
+              { href: "/#faq", label: "FAQ" },
             ].map((item) => {
-              const className = cn(
-                "block px-3 py-3 text-base font-medium rounded-sm transition-colors",
-                scrolled
-                  ? "text-neutral-800 hover:bg-neutral-200"
-                  : "text-cream-50 hover:bg-neutral-800",
-              );
+              const className =
+                "block px-3 py-3 text-base font-medium text-ink-800 hover:bg-ivory-100 rounded-sm transition-colors";
               return item.isLink ? (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={className}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setMobileOpen(false)}
                 >
                   {item.label}
                 </Link>
@@ -184,26 +135,20 @@ export function Header() {
                   key={item.href}
                   href={item.href}
                   className={className}
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setMobileOpen(false)}
                 >
                   {item.label}
                 </a>
               );
             })}
             <div className="pt-4 px-2">
-              <Button
-                variant="primary"
-                size="md"
-                className="w-full font-bold"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  document
-                    .getElementById("subscribe")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
+              <a
+                href="/#subscribe"
+                onClick={() => setMobileOpen(false)}
+                className="btn-pen w-full"
               >
-                Être prévenu du lancement
-              </Button>
+                Réserver mon accès
+              </a>
             </div>
           </nav>
         )}
