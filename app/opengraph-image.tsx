@@ -15,8 +15,7 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: "80px 80px",
-          background:
-            "linear-gradient(135deg, #FAF7F1 0%, #FBE9E1 100%)",
+          background: "linear-gradient(135deg, #FAF7F1 0%, #FBE9E1 100%)",
           fontFamily: "system-ui, -apple-system, sans-serif",
         }}
       >
@@ -42,6 +41,7 @@ export default function OpengraphImage() {
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <div
               style={{
+                display: "flex",
                 fontSize: 36,
                 fontWeight: 800,
                 letterSpacing: "-0.02em",
@@ -52,6 +52,7 @@ export default function OpengraphImage() {
             </div>
             <div
               style={{
+                display: "flex",
                 fontSize: 30,
                 fontWeight: 300,
                 fontStyle: "italic",
@@ -73,6 +74,7 @@ export default function OpengraphImage() {
         >
           <div
             style={{
+              display: "flex",
               fontSize: 76,
               fontWeight: 800,
               letterSpacing: "-0.03em",
@@ -81,23 +83,18 @@ export default function OpengraphImage() {
               maxWidth: 1000,
             }}
           >
-            Vos vidéos françaises,
-            <br />
-            sous-titrées en{" "}
-            <span style={{ color: "#C46A45" }}>anglais</span>
-            <br />
-            en 10 minutes.
+            Vos vidéos françaises, sous-titrées en anglais en 10 minutes.
           </div>
 
           <div
             style={{
+              display: "flex",
               fontSize: 28,
               color: "#4F4E48",
               maxWidth: 900,
             }}
           >
-            L'outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en
-            français, à 12 €/mois.
+            L&apos;outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en français, à 12 €/mois.
           </div>
         </div>
 
@@ -120,11 +117,11 @@ export default function OpengraphImage() {
                 background: "#C46A45",
               }}
             />
-            <span style={{ fontWeight: 600 }}>maxlinestudio.fr</span>
+            <div style={{ display: "flex", fontWeight: 600 }}>maxlinestudio.fr</div>
           </div>
           <div style={{ display: "flex", gap: 24 }}>
-            <span>🇫🇷 Français natif</span>
-            <span>🔒 RGPD &amp; UE</span>
+            <div style={{ display: "flex" }}>🇫🇷 Français natif</div>
+            <div style={{ display: "flex" }}>🔒 RGPD &amp; UE</div>
           </div>
         </div>
       </div>
