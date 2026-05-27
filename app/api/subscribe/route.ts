@@ -87,13 +87,18 @@ export async function POST(request: Request) {
     const apiKey = process.env.RESEND_API_KEY;
     const fromEmail = process.env.RESEND_FROM_EMAIL;
 
+    const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
+
     if (apiKey && fromEmail) {
       const resend = new Resend(apiKey);
 
-      // Email à l'utilisateur
+      // Email de bienvenue à l'utilisateur
+      // replyTo pointe vers l'email admin pour que les réponses arrivent à Maxence
+      // (la boîte contact@maxlinestudio.fr n'existe pas physiquement, c'est juste un expéditeur Resend)
       await resend.emails.send({
         from: fromEmail,
         to: payload.email,
+        replyTo: adminEmail,
         subject: "Bienvenue dans la liste Maxline Studio 👋",
         text: `Bonjour,
 
@@ -111,12 +116,12 @@ Si vous avez des questions ou des suggestions, répondez à cet email — je lis
 `,
       });
 
-      // Notification à l'admin
-      const adminEmail = process.env.ADMIN_NOTIFY_EMAIL;
+      // Notification à l'admin (Maxence)
       if (adminEmail) {
         await resend.emails.send({
           from: fromEmail,
           to: adminEmail,
+          replyTo: payload.email, // Permet de répondre directement au nouvel inscrit
           subject: `🎉 Nouvelle inscription waitlist Maxline : ${payload.email}`,
           text: `Nouvelle inscription :
 
