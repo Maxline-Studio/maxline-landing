@@ -48,29 +48,35 @@ export function Header() {
           {/* Nav desktop */}
           <nav className="hidden md:flex items-center gap-8">
             <a
-              href="#how-it-works"
+              href="/#how-it-works"
               className="text-sm font-medium text-neutral-700 hover:text-neutral-900 transition-colors"
             >
               Comment ça marche
             </a>
             <a
-              href="#pricing"
+              href="/#pricing"
               className="text-sm font-medium text-neutral-700 hover:text-neutral-900 transition-colors"
             >
               Tarifs
             </a>
             <a
-              href="#faq"
+              href="/#faq"
               className="text-sm font-medium text-neutral-700 hover:text-neutral-900 transition-colors"
             >
               FAQ
             </a>
+            <Link
+              href="/blog"
+              className="text-sm font-medium text-neutral-700 hover:text-neutral-900 transition-colors"
+            >
+              Journal
+            </Link>
           </nav>
 
           {/* CTAs desktop */}
           <div className="hidden md:flex items-center gap-3">
             <a
-              href="#subscribe"
+              href="/#subscribe"
               className={cn(buttonVariants({ variant: "primary", size: "sm" }))}
             >
               Être prévenu du lancement
@@ -99,26 +105,33 @@ export function Header() {
             aria-label="Navigation principale"
           >
             <a
-              href="#how-it-works"
+              href="/#how-it-works"
               className="block px-2 py-3 text-base font-medium text-neutral-700 hover:bg-neutral-100 rounded-md"
               onClick={() => setMobileMenuOpen(false)}
             >
               Comment ça marche
             </a>
             <a
-              href="#pricing"
+              href="/#pricing"
               className="block px-2 py-3 text-base font-medium text-neutral-700 hover:bg-neutral-100 rounded-md"
               onClick={() => setMobileMenuOpen(false)}
             >
               Tarifs
             </a>
             <a
-              href="#faq"
+              href="/#faq"
               className="block px-2 py-3 text-base font-medium text-neutral-700 hover:bg-neutral-100 rounded-md"
               onClick={() => setMobileMenuOpen(false)}
             >
               FAQ
             </a>
+            <Link
+              href="/blog"
+              className="block px-2 py-3 text-base font-medium text-neutral-700 hover:bg-neutral-100 rounded-md"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Journal
+            </Link>
             <div className="pt-4 px-2">
               <Button
                 variant="primary"

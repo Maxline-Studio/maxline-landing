@@ -26,19 +26,24 @@ export function Footer() {
             <h3 className="text-sm font-semibold mb-4 text-cream-50">Produit</h3>
             <ul className="space-y-2 text-sm text-neutral-400">
               <li>
-                <a href="#how-it-works" className="hover:text-cream-50 transition-colors">
+                <a href="/#how-it-works" className="hover:text-cream-50 transition-colors">
                   Comment ça marche
                 </a>
               </li>
               <li>
-                <a href="#pricing" className="hover:text-cream-50 transition-colors">
+                <a href="/#pricing" className="hover:text-cream-50 transition-colors">
                   Tarifs
                 </a>
               </li>
               <li>
-                <a href="#faq" className="hover:text-cream-50 transition-colors">
+                <a href="/#faq" className="hover:text-cream-50 transition-colors">
                   FAQ
                 </a>
+              </li>
+              <li>
+                <Link href="/blog" className="hover:text-cream-50 transition-colors">
+                  Journal
+                </Link>
               </li>
             </ul>
           </div>
