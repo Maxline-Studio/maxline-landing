@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Couleurs primaires (Terracotta) ─── */
+  --color-primary-50: #FDF6F3;
+  --color-primary-100: #FBE9E1;
+  --color-primary-200: #F6CDB8;
+  --color-primary-300: #EDA88A;
+  --color-primary-400: #E08660;
+  --color-primary-500: #C46A45;
+  --color-primary-600: #A55236;
+  --color-primary-700: #84402C;
+  --color-primary-800: #5F2F22;
+  --color-primary-900: #3D1F17;
+
+  /* ─── Neutres (Charbon) ─── */
+  --color-neutral-50: #F8F8F7;
+  --color-neutral-100: #EDEDEB;
+  --color-neutral-200: #D8D7D3;
+  --color-neutral-300: #B7B6B0;
+  --color-neutral-400: #918F88;
+  --color-neutral-500: #6D6B65;
+  --color-neutral-600: #4F4E48;
+  --color-neutral-700: #383731;
+  --color-neutral-800: #25241F;
+  --color-neutral-900: #131310;
+
+  /* ─── Crème (accent doux) ─── */
+  --color-cream-50: #FAF7F1;
+  --color-cream-100: #F2EBD9;
+  --color-cream-200: #E5D5AC;
+
+  /* ─── Sémantiques ─── */
+  --color-success-500: #4A7C59;
+  --color-success-600: #3A6647;
+  --color-warning-500: #D9863F;
+  --color-warning-600: #B8702E;
+  --color-error-500: #BC3B3B;
+  --color-error-600: #9A2D2D;
+  --color-info-500: #3F6F9F;
+  --color-info-600: #2E5680;
+
+  /* ─── Typo ─── */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* ─── Easing ─── */
+  --ease-out-quint: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Rôles applicatifs */
+:root {
+  --bg-app: var(--color-cream-50);
+  --bg-surface: #FFFFFF;
+  --text-primary: var(--color-neutral-800);
+  --text-secondary: var(--color-neutral-600);
+  --text-muted: var(--color-neutral-400);
+  --border: var(--color-neutral-200);
+  --cta: var(--color-primary-500);
+  --cta-hover: var(--color-primary-600);
+  --focus-ring: var(--color-primary-400);
+}
+
+/* Dark mode */
+.dark {
+  --bg-app: var(--color-neutral-900);
+  --bg-surface: var(--color-neutral-800);
+  --text-primary: var(--color-neutral-50);
+  --text-secondary: var(--color-neutral-300);
+  --text-muted: var(--color-neutral-500);
+  --border: var(--color-neutral-700);
+  --cta: var(--color-primary-400);
+  --cta-hover: var(--color-primary-500);
+}
+
+/* Reset + base */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Inputs ne zooment pas au focus sur iOS */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+/* Focus visible custom */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Sélection */
+::selection {
+  background-color: var(--color-primary-200);
+  color: var(--color-primary-900);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip link */
+.skip-link {
+  position: absolute;
+  top: -100px;
+  left: 1rem;
+  background: var(--color-primary-500);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  z-index: 100;
+  transition: top 150ms;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Chiffres tabulaires (timecodes, prix) */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
