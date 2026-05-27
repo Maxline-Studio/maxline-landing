@@ -416,7 +416,7 @@ export default function PourquoiMaxlineStudio() {
             </p>
             <Link
               href="/#subscribe"
-              className="inline-flex items-center gap-2 bg-primary-500 hover:bg-primary-600 text-cream-50 font-medium px-6 py-3 rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 bg-primary-400 hover:bg-primary-300 text-neutral-900 font-bold px-6 py-3 rounded-sm transition-colors"
             >
               S&apos;inscrire à la waitlist
               <ArrowRight className="h-4 w-4" />

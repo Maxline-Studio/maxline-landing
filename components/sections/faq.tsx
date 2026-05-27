@@ -65,7 +65,7 @@ function FaqItem({ question, answer, isOpen, onToggle, id }: FaqItemProps) {
           aria-expanded={isOpen}
           aria-controls={`${id}-content`}
           id={`${id}-button`}
-          className="w-full py-5 px-2 flex items-center justify-between gap-4 text-left hover:bg-neutral-50 transition-colors rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+          className="w-full py-5 px-2 flex items-center justify-between gap-4 text-left hover:bg-cream-50 transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cobalt-500"
         >
           <span className="text-base md:text-lg font-semibold text-neutral-900">
             {question}
@@ -96,18 +96,25 @@ export function Faq() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <section id="faq" className="py-20 md:py-28 bg-white">
-      <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-neutral-900 tracking-tight">
-            Questions fréquentes
+    <section id="faq" className="relative py-24 md:py-32 bg-white overflow-hidden">
+      <div className="absolute inset-0 -z-0 tape-lines-light pointer-events-none" aria-hidden />
+
+      <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="timecode-cobalt">CH. 07 · FAQ</span>
+          </div>
+          <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-neutral-900 leading-[1.0] tracking-tighter">
+            Questions
+            <br />
+            <span className="slab-cobalt">fréquentes</span>.
           </h2>
-          <p className="mt-4 text-lg text-neutral-600">
+          <p className="mt-6 text-lg text-neutral-700">
             Tout ce qu&apos;il faut savoir avant de s&apos;inscrire.
           </p>
         </div>
 
-        <div className="bg-cream-50 rounded-2xl border border-neutral-200 px-6 md:px-8">
+        <div className="bg-cream-50 rounded-sm border-2 border-neutral-900 px-6 md:px-8">
           {faqs.map((faq, idx) => (
             <FaqItem
               key={idx}
@@ -120,15 +127,14 @@ export function Faq() {
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-neutral-600">
+        <p className="mt-10 text-center text-sm text-neutral-700 font-mono uppercase tracking-widest">
           Une autre question ?{" "}
           <a
             href="mailto:contact@maxlinestudio.fr"
-            className="text-primary-600 hover:text-primary-700 underline underline-offset-2"
+            className="text-cobalt-600 hover:text-cobalt-700 underline underline-offset-4 decoration-2 font-bold"
           >
             Écrivez-nous
           </a>
-          .
         </p>
       </div>
     </section>

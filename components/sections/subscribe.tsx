@@ -57,55 +57,62 @@ export function Subscribe() {
 
   return (
     <section id="subscribe" className="py-24 md:py-32 bg-neutral-900 text-cream-50 relative overflow-hidden">
-      {/* Décor : grand M serif en arrière-plan */}
+      {/* Tape lines */}
+      <div className="absolute inset-0 -z-0 tape-lines pointer-events-none" aria-hidden />
+
+      {/* M géant watermark */}
       <div
         aria-hidden
-        className="absolute -left-20 -bottom-20 font-serif text-[20rem] text-cream-50 leading-none opacity-[0.03] pointer-events-none select-none"
+        className="absolute -left-20 -bottom-20 font-display font-extrabold text-[24rem] text-primary-400 leading-none opacity-[0.04] pointer-events-none select-none"
       >
         M
       </div>
 
       <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
-        <div className="text-center mb-10">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <span className="h-px w-12 bg-primary-400" />
-            <span className="text-xs uppercase tracking-[0.2em] text-primary-400 font-semibold">
-              Liste d&apos;attente
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="timecode">
+              <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
+              CH. 08 · LISTE D&apos;ATTENTE
             </span>
-            <span className="h-px w-12 bg-primary-400" />
           </div>
-          <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-tight">
+          <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-cream-50 leading-[1.0] tracking-tighter">
             Soyez prévenu
             <br />
-            <em className="text-primary-400">du lancement</em>.
+            <span className="slab">du lancement</span>.
           </h2>
-          <p className="mt-6 text-lg text-neutral-300 max-w-xl mx-auto">
-            Nous lançons en bêta privée d&apos;ici quelques semaines.
-            Les premiers inscrits auront un accès gratuit prolongé.
+          <p className="mt-6 text-lg text-neutral-400 max-w-xl">
+            La bêta privée ouvre d&apos;ici quelques semaines. Les premiers
+            inscrits auront un accès gratuit prolongé.
           </p>
         </div>
 
         {status === "success" ? (
           <div
             role="status"
-            className="bg-success-500/10 border border-success-500/30 rounded-xl p-6 md:p-8 text-center max-w-xl mx-auto"
+            className="bg-primary-400 text-neutral-900 border-2 border-primary-400 rounded-sm p-6 md:p-8 max-w-xl"
           >
-            <CheckCircle2
-              className="h-12 w-12 text-success-500 mx-auto mb-4"
-              aria-hidden
-            />
-            <h3 className="text-xl font-semibold text-cream-50 mb-2">
-              C&apos;est noté ! 👋
-            </h3>
-            <p className="text-neutral-300">
-              Vous recevrez un email dès que la bêta privée s&apos;ouvrira.
-              Vérifiez vos spams pour la confirmation.
-            </p>
+            <div className="flex items-start gap-4">
+              <CheckCircle2
+                className="h-10 w-10 text-neutral-900 flex-shrink-0"
+                strokeWidth={2.5}
+                aria-hidden
+              />
+              <div>
+                <h3 className="font-display font-extrabold text-xl text-neutral-900 mb-2">
+                  C&apos;est noté.
+                </h3>
+                <p className="text-neutral-900">
+                  Vous recevrez un email dès que la bêta privée s&apos;ouvrira.
+                  Pensez à vérifier vos spams pour la confirmation.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="max-w-xl mx-auto"
+            className="max-w-xl"
             noValidate
           >
             <div className="flex flex-col sm:flex-row gap-3">

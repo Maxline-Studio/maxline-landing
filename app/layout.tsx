@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
+import { ScrollProgress } from "@/components/scroll-progress";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -76,6 +77,7 @@ export default function RootLayout({
         <a href="#main-content" className="skip-link">
           Aller au contenu principal
         </a>
+        <ScrollProgress />
         {children}
       </body>
     </html>

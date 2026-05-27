@@ -91,14 +91,16 @@ export function CreatorVoices() {
       {/* Bande pellicule top */}
       <div className="absolute top-0 inset-x-0 film-perforation-inverse opacity-25 pointer-events-none" />
 
-      {/* Background : grille subtile */}
+      {/* Tape lines en fond — pas de grille */}
+      <div className="absolute inset-0 -z-0 tape-lines pointer-events-none" aria-hidden />
+
+      {/* Glow cobalt subtil */}
       <div
-        className="absolute inset-0 -z-0 opacity-[0.05] pointer-events-none"
+        className="absolute inset-0 -z-0 pointer-events-none"
         aria-hidden
         style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
+          background:
+            "radial-gradient(ellipse 60% 40% at 20% 30%, rgba(30, 63, 255, 0.12) 0%, transparent 65%)",
         }}
       />
 

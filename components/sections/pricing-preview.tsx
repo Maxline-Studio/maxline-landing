@@ -1,5 +1,4 @@
 import { Check } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/reveal";
 import { cn } from "@/lib/utils";
 
@@ -7,8 +6,8 @@ const plans = [
   {
     name: "Crédits",
     subtitle: "Pay-as-you-go",
-    price: "Dès 8 €",
-    period: "",
+    price: "Dès 8",
+    period: "€",
     description: "Pour les usages ponctuels",
     features: [
       "Pack 30 min — 8 €",
@@ -22,8 +21,8 @@ const plans = [
   {
     name: "Starter",
     subtitle: "Le plus populaire",
-    price: "12 €",
-    period: "/mois",
+    price: "12",
+    period: "€/mois",
     description: "Pour les créateurs réguliers",
     features: [
       "120 minutes de vidéo / mois",
@@ -34,13 +33,12 @@ const plans = [
       "Sans engagement",
     ],
     highlighted: true,
-    badge: "⭐ Recommandé",
   },
   {
     name: "Plus",
     subtitle: "Pour aller plus loin",
-    price: "24 €",
-    period: "/mois",
+    price: "24",
+    period: "€/mois",
     description: "Pour les créateurs très actifs",
     features: [
       "360 minutes de vidéo / mois",
@@ -56,85 +54,135 @@ const plans = [
 
 export function PricingPreview() {
   return (
-    <section id="pricing" className="py-24 md:py-32 bg-white relative">
-      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
+    <section
+      id="pricing"
+      className="relative py-24 md:py-36 bg-white overflow-hidden"
+    >
+      <div className="absolute inset-0 -z-0 tape-lines-light pointer-events-none" aria-hidden />
+
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
         <Reveal>
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <span className="h-px w-12 bg-primary-300" />
-              <span className="text-xs uppercase tracking-[0.2em] text-primary-600 font-semibold">
-                Tarifs
-              </span>
-              <span className="h-px w-12 bg-primary-300" />
+          <div className="max-w-3xl mb-16">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="timecode-cobalt">CH. 06 · TARIFS</span>
             </div>
-            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-neutral-900 leading-tight">
+            <h2 className="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl text-neutral-900 leading-[1.0] tracking-tighter">
               Lisibles en{" "}
-              <em className="text-primary-600">5 secondes</em>.
+              <span className="slab-cobalt">5 secondes</span>.
             </h2>
-            <p className="mt-6 text-lg text-neutral-600">
-              Pas de minimum, pas de piège, pas d&apos;astérisque.
+            <p className="mt-6 text-lg text-neutral-700 max-w-xl">
+              Pas de minimum, pas de piège, pas d&apos;astérisque. Le prix que
+              tu vois est celui que tu payes.
             </p>
           </div>
         </Reveal>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
           {plans.map((plan, idx) => (
             <Reveal key={idx} delay={idx * 100}>
               <article
                 className={cn(
-                  "relative bg-white rounded-2xl p-8 border-2 h-full tilt-on-hover",
+                  "relative h-full rounded-sm transition-all duration-300 card-subtitle-bar",
                   plan.highlighted
-                    ? "border-primary-500 shadow-2xl shadow-primary-200/40 lg:scale-105"
-                    : "border-neutral-200 hover:border-neutral-300",
+                    ? "bg-neutral-900 text-cream-50 border-2 border-primary-400 lg:scale-[1.03] shadow-2xl"
+                    : "bg-cream-50 border-2 border-neutral-900",
                 )}
               >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge variant="primary">{plan.badge}</Badge>
+                {plan.highlighted && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary-400 text-neutral-900 px-3 py-1 font-mono font-bold text-[10px] uppercase tracking-widest border-2 border-neutral-900 rounded-sm">
+                    ★ Recommandé
                   </div>
                 )}
 
-                <div className="mb-6">
-                  <h3 className="font-serif text-3xl text-neutral-900">
-                    {plan.name}
-                  </h3>
-                  <p className="text-sm text-neutral-500 mt-1 italic">{plan.subtitle}</p>
-                </div>
+                <div className="p-8 md:p-10">
+                  {/* Header card */}
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <h3
+                        className={cn(
+                          "font-display font-extrabold text-3xl tracking-tighter",
+                          plan.highlighted ? "text-cream-50" : "text-neutral-900",
+                        )}
+                      >
+                        {plan.name}
+                      </h3>
+                    </div>
+                    <p
+                      className={cn(
+                        "text-xs font-mono uppercase tracking-widest",
+                        plan.highlighted ? "text-primary-400" : "text-neutral-500",
+                      )}
+                    >
+                      {plan.subtitle}
+                    </p>
+                  </div>
 
-                <div className="mb-6">
-                  <div className="flex items-baseline">
-                    <span className="text-4xl md:text-5xl font-extrabold text-neutral-900 tabular-nums">
-                      {plan.price}
-                    </span>
-                    {plan.period && (
-                      <span className="text-lg text-neutral-500 ml-1">
+                  {/* Prix géant tabulaire */}
+                  <div className="mb-6 border-t border-b py-5"
+                       style={{ borderColor: plan.highlighted ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }}>
+                    <div className="flex items-baseline gap-1">
+                      <span
+                        className={cn(
+                          "text-5xl md:text-6xl font-display font-extrabold tabular-nums tracking-tighter",
+                          plan.highlighted ? "text-primary-400" : "text-neutral-900",
+                        )}
+                      >
+                        {plan.price}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-lg font-mono",
+                          plan.highlighted ? "text-cream-50" : "text-neutral-700",
+                        )}
+                      >
                         {plan.period}
                       </span>
-                    )}
+                    </div>
+                    <p
+                      className={cn(
+                        "text-sm mt-2",
+                        plan.highlighted ? "text-neutral-400" : "text-neutral-700",
+                      )}
+                    >
+                      {plan.description}
+                    </p>
                   </div>
-                  <p className="text-sm text-neutral-600 mt-2">{plan.description}</p>
-                </div>
 
-                <ul className="space-y-3 mb-2">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3 text-sm">
-                      <Check
-                        className="h-5 w-5 text-success-500 flex-shrink-0 mt-0.5"
-                        aria-hidden
-                      />
-                      <span className="text-neutral-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                  {/* Features */}
+                  <ul className="space-y-3">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-3 text-sm">
+                        <span
+                          className={cn(
+                            "h-5 w-5 rounded-sm flex items-center justify-center flex-shrink-0 mt-0.5",
+                            plan.highlighted
+                              ? "bg-primary-400 text-neutral-900"
+                              : "bg-neutral-900 text-primary-400",
+                          )}
+                        >
+                          <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+                        </span>
+                        <span
+                          className={
+                            plan.highlighted
+                              ? "text-cream-50"
+                              : "text-neutral-800"
+                          }
+                        >
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </article>
             </Reveal>
           ))}
         </div>
 
         <Reveal delay={400}>
-          <p className="mt-12 text-center text-sm text-neutral-500 italic">
-            Votre première vidéo de moins de 5 minutes sera offerte au lancement,
-            sans carte demandée.
+          <p className="mt-14 text-center text-sm text-neutral-700 font-mono uppercase tracking-widest">
+            › Première vidéo de moins de 5 min offerte au lancement · sans carte
           </p>
         </Reveal>
       </div>

@@ -192,17 +192,23 @@ select {
   font-variant-numeric: tabular-nums;
 }
 
+/* ─── RÈGLE COULEUR — à ne pas trahir ─── */
+/* Sur fond ink (dark) : lime, cream, cobalt-400 — tous OK pour texte */
+/* Sur fond cream/white (light) : ink #0E1110 ou cobalt-500 #1E3FFF UNIQUEMENT */
+/*   → JAMAIS de lime en texte fin sur fond clair (contraste 1.1:1 à 3:1) */
+/*   → Lime sur clair uniquement comme BLOC plein avec texte ink dessus */
+
 /* ─── Signature visuelle : chip "timecode" ─── */
-/* Utilisée comme label de section : [00:01:24] */
+/* Label slab façon viseur caméra : [00:01:24] */
 .timecode {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
-  padding: 0.25rem 0.55rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 2px;
   background: var(--color-primary-400);
   color: var(--color-neutral-900);
@@ -210,19 +216,37 @@ select {
   line-height: 1;
 }
 
+/* Variante sombre — pour fond cream/white, le texte reste ink */
 .timecode-outline {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   font-family: var(--font-mono);
   font-size: 0.7rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
-  padding: 0.25rem 0.55rem;
+  padding: 0.3rem 0.6rem;
   border-radius: 2px;
   background: transparent;
-  border: 1px solid var(--color-primary-400);
-  color: var(--color-primary-500);
+  border: 1.5px solid var(--color-neutral-900);
+  color: var(--color-neutral-900);
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+/* Variante cobalt — accent secondaire sur fond clair */
+.timecode-cobalt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.6rem;
+  border-radius: 2px;
+  background: var(--color-cobalt-500);
+  color: #FFFFFF;
   text-transform: uppercase;
   line-height: 1;
 }
@@ -354,4 +378,104 @@ select {
 
 .animate-slide-in-right {
   animation: slide-in-right 500ms var(--ease-out-quint) both;
+}
+
+/* ─── Caret signature — clignote en fin de headline ─── */
+@keyframes caret-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.9em;
+  background: var(--color-primary-400);
+  margin-left: 0.1em;
+  vertical-align: -0.05em;
+  animation: caret-blink 1.05s steps(1) infinite;
+}
+
+.caret-ink {
+  background: var(--color-neutral-900);
+}
+
+.caret-cobalt {
+  background: var(--color-cobalt-500);
+}
+
+/* ─── Tape lines — motif fond façon timeline de montage ─── */
+/* Remplace la grille mathématique : lignes horizontales fines.
+   Sémantiquement "timeline vidéo", pas papier millimétré. */
+.tape-lines {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.06) 0px,
+      rgba(255, 255, 255, 0.06) 1px,
+      transparent 1px,
+      transparent 80px
+    );
+}
+
+.tape-lines-light {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(14, 17, 16, 0.05) 0px,
+      rgba(14, 17, 16, 0.05) 1px,
+      transparent 1px,
+      transparent 80px
+    );
+}
+
+/* ─── Subtitle bar reveal — au hover des cards (élément signature) ─── */
+.card-subtitle-bar {
+  position: relative;
+}
+
+.card-subtitle-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--color-primary-400);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 500ms var(--ease-out-quint);
+}
+
+.card-subtitle-bar:hover::after,
+.group:hover .card-subtitle-bar::after {
+  transform: scaleX(1);
+}
+
+/* ─── Slab — le grand bloc lime avec texte ink (signature affichage) ─── */
+.slab {
+  display: inline-block;
+  background: var(--color-primary-400);
+  color: var(--color-neutral-900);
+  padding: 0.05em 0.25em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.slab-cobalt {
+  display: inline-block;
+  background: var(--color-cobalt-500);
+  color: #FFFFFF;
+  padding: 0.05em 0.25em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.slab-ink {
+  display: inline-block;
+  background: var(--color-neutral-900);
+  color: var(--color-primary-400);
+  padding: 0.05em 0.25em;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
