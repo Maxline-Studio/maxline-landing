@@ -115,19 +115,24 @@ export function HeroMockup() {
         </div>
       </div>
 
-      {/* Sticker flottant - z-20 pour passer au-dessus du mockup */}
-      <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary-500 text-white px-4 py-2 rounded-full text-xs font-semibold shadow-xl rotate-3 ring-4 ring-cream-50/80">
-        🚀 Prochainement
+      {/* Tag timecode flottant signature */}
+      <div className="absolute -top-3 -right-3 md:-top-4 md:-right-4 z-20 bg-primary-400 text-neutral-900 px-3 py-1.5 rounded-sm text-[11px] font-mono font-bold shadow-xl tracking-widest uppercase rotate-3 border-2 border-neutral-900 flex items-center gap-2">
+        <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
+        REC · à venir
       </div>
 
-      {/* Stats flottantes (preuve visuelle) */}
-      <div className="hidden lg:flex absolute -bottom-6 -left-6 bg-white border border-neutral-200 rounded-xl shadow-xl px-5 py-3 items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-success-500/10 flex items-center justify-center">
-          <span className="text-success-600 text-lg">✓</span>
+      {/* Carte stats — style timecode */}
+      <div className="hidden lg:flex absolute -bottom-6 -left-6 bg-neutral-900 border-2 border-primary-400 rounded-sm shadow-2xl px-5 py-3 items-center gap-3">
+        <div className="h-10 w-10 rounded-sm bg-primary-400 flex items-center justify-center">
+          <span className="text-neutral-900 text-lg font-black">↻</span>
         </div>
         <div>
-          <p className="text-xs text-neutral-500 font-medium">Traitement moyen</p>
-          <p className="text-sm font-bold text-neutral-900">~10 min pour 10 min</p>
+          <p className="text-[10px] text-neutral-400 font-mono uppercase tracking-widest">
+            Traitement moyen
+          </p>
+          <p className="text-sm font-bold text-cream-50 font-mono tabular-nums">
+            10:00 → 10:00
+          </p>
         </div>
       </div>
     </div>

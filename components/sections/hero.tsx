@@ -1,15 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { HeroMockup } from "@/components/sections/hero-mockup";
 
 /**
- * Word qui se "traduit" en direct.
- * Cycle : "english" → fade → "anglais" → reste.
+ * Animation typo : le mot bascule de "english" à "anglais"
+ * avec un highlight lime façon sous-titre.
  */
 function TranslatingWord() {
   const [phase, setPhase] = useState<"initial" | "transitioning" | "final">(
@@ -17,8 +16,8 @@ function TranslatingWord() {
   );
 
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase("transitioning"), 1100);
-    const t2 = setTimeout(() => setPhase("final"), 1500);
+    const t1 = setTimeout(() => setPhase("transitioning"), 1300);
+    const t2 = setTimeout(() => setPhase("final"), 1700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -26,9 +25,9 @@ function TranslatingWord() {
   }, []);
 
   return (
-    <span className="relative inline-block text-primary-500">
+    <span className="relative inline-block">
       <span
-        className="inline-block transition-all duration-500"
+        className="inline-block transition-all duration-500 subtitle-highlight"
         style={{
           opacity: phase === "transitioning" ? 0 : 1,
           transform:
@@ -38,29 +37,48 @@ function TranslatingWord() {
       >
         {phase === "final" ? "anglais" : "english"}
       </span>
-      <svg
-        className="absolute -bottom-2 left-0 w-full pointer-events-none"
-        height="10"
-        viewBox="0 0 200 10"
-        fill="none"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <path
-          d="M2 7 Q 50 1, 100 5 T 198 4"
-          stroke="#C46A45"
-          strokeWidth="3"
-          strokeLinecap="round"
-          fill="none"
-          opacity="0.7"
-          style={{
-            strokeDasharray: 200,
-            strokeDashoffset: phase === "final" ? 0 : 200,
-            transition: "stroke-dashoffset 1.2s cubic-bezier(0.16,1,0.3,1) 0.4s",
-          }}
-        />
-      </svg>
     </span>
+  );
+}
+
+/**
+ * Bande de timecodes qui défile en fond (motif signature Maxline).
+ * Lisible mais discret — pour ancrer le métier subtil.
+ */
+function TimecodeStrip() {
+  const timecodes = [
+    "00:00:00",
+    "00:00:12",
+    "00:00:24",
+    "00:00:36",
+    "00:00:48",
+    "00:01:00",
+    "00:01:12",
+    "00:01:24",
+    "00:01:36",
+    "00:01:48",
+    "00:02:00",
+    "00:02:12",
+  ];
+  // Dupliqué pour boucle infinie sans saut
+  const loop = [...timecodes, ...timecodes];
+
+  return (
+    <div className="absolute top-0 inset-x-0 overflow-hidden border-b border-neutral-800/40 bg-neutral-900/95 z-10">
+      <div className="timecode-marquee flex gap-12 py-2.5 whitespace-nowrap will-change-transform">
+        {loop.map((tc, i) => (
+          <span
+            key={i}
+            className="font-mono text-[10px] tracking-widest text-neutral-400 uppercase flex items-center gap-2"
+          >
+            <span className="h-1 w-1 rounded-full bg-primary-400" />
+            {tc}
+            <span className="text-neutral-600">/</span>
+            <span className="text-primary-400">FR → EN</span>
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -68,60 +86,69 @@ export function Hero() {
   return (
     <section
       id="hero"
-      className="relative overflow-hidden pt-12 pb-20 md:pt-20 md:pb-32"
+      className="relative overflow-hidden bg-neutral-900 text-cream-50 ink-surface"
     >
-      {/* Background : aurora gradient subtle */}
+      <TimecodeStrip />
+
+      {/* Pellicule en haut, juste sous la bande timecode */}
+      <div className="absolute top-[42px] inset-x-0 film-perforation-inverse opacity-30 pointer-events-none" />
+
+      {/* Background : lueur cobalt en haut à gauche, lueur lime en bas à droite */}
       <div
-        className="absolute inset-0 -z-10"
+        className="absolute inset-0 -z-0"
         aria-hidden
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 20% 0%, rgba(196, 106, 69, 0.12) 0%, transparent 60%), radial-gradient(ellipse 70% 50% at 80% 100%, rgba(228, 213, 172, 0.4) 0%, transparent 60%), linear-gradient(180deg, #FAF7F1 0%, #FAF7F1 100%)",
+            "radial-gradient(ellipse 70% 50% at 15% 10%, rgba(30, 63, 255, 0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 45% at 85% 90%, rgba(199, 255, 60, 0.10) 0%, transparent 60%)",
         }}
       />
 
-      {/* Grain texture overlay — donne du caractère */}
+      {/* Grille subtile en fond */}
       <div
-        className="absolute inset-0 -z-10 opacity-[0.04] pointer-events-none mix-blend-multiply"
+        className="absolute inset-0 -z-0 opacity-[0.07] pointer-events-none"
         aria-hidden
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+            "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+          backgroundSize: "60px 60px",
         }}
       />
 
-      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-          {/* Colonne texte */}
-          <div className="max-w-2xl">
-            <Badge variant="cream" className="mb-6 animate-fade-in">
-              <Sparkles className="h-3.5 w-3.5" aria-hidden />
-              <span>Lancement officiel à venir</span>
-            </Badge>
-
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-neutral-900 leading-[1.05]">
-              Vos vidéos françaises,
-              <br />
-              sous-titrées en{" "}
-              <TranslatingWord />
-              <br />
-              en{" "}
-              <span className="relative inline-block">
-                <span className="font-serif italic font-normal text-primary-600">
-                  10 minutes
-                </span>
-                <span className="text-neutral-900">.</span>
+      <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 pt-28 pb-24 md:pt-32 md:pb-32">
+        <div className="grid lg:grid-cols-12 gap-12 lg:gap-16 items-center">
+          {/* Colonne texte (7 colonnes sur grand écran) */}
+          <div className="lg:col-span-7 max-w-2xl">
+            {/* Label timecode signature */}
+            <div className="flex items-center gap-3 mb-8 animate-fade-in">
+              <span className="timecode">
+                <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 animate-pulse-soft" />
+                REC · PRÉ-LANCEMENT
               </span>
+              <span className="font-mono text-xs text-neutral-400 uppercase tracking-wider">
+                v.0 — beta
+              </span>
+            </div>
+
+            <h1 className="font-display text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] font-bold tracking-tighter text-cream-50 leading-[0.95]">
+              Vos vidéos
+              <br />
+              <span className="text-neutral-400">françaises,</span>
+              <br />
+              sous-titrées
+              <br />
+              en <TranslatingWord />.
             </h1>
 
-            <p className="mt-6 text-lg md:text-xl text-neutral-600 leading-relaxed max-w-xl">
-              L&apos;outil de sous-titrage vidéo pour créateurs YouTube et TikTok,
-              en français, à{" "}
-              <span className="font-semibold text-neutral-800">12 €/mois</span>.
-              Sans piège.
+            <p className="mt-10 text-lg md:text-xl text-neutral-300 leading-relaxed max-w-xl">
+              L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
+              TikTok, en français, à{" "}
+              <span className="font-semibold text-cream-50 font-mono tabular-nums">
+                12&nbsp;€/mois
+              </span>
+              . Sans piège.
             </p>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <div className="mt-10 flex flex-col sm:flex-row gap-3">
               <a
                 href="#subscribe"
                 className={cn(
@@ -129,30 +156,36 @@ export function Hero() {
                   "group relative overflow-hidden",
                 )}
               >
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="relative z-10 flex items-center gap-2 font-bold">
                   Être prévenu du lancement
-                  <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" aria-hidden />
+                  <ArrowRight
+                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  />
                 </span>
-                {/* Shine effect at hover */}
-                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:translate-x-full transition-transform duration-700" />
               </a>
               <a
                 href="#how-it-works"
-                className={cn(buttonVariants({ variant: "ghost", size: "lg" }))}
+                className="inline-flex h-12 items-center gap-2 px-6 text-lg font-semibold text-cream-50 border border-neutral-700 hover:bg-neutral-800 rounded-md transition-colors"
               >
                 Voir comment ça marche
               </a>
             </div>
 
-            <p className="mt-4 text-sm text-neutral-500">
-              Aucune carte demandée · 1 vidéo de 5 min offerte au lancement
+            <p className="mt-6 text-sm text-neutral-500 font-mono tabular-nums">
+              › aucune carte demandée · 1 vidéo de 5 min offerte au lancement
             </p>
           </div>
 
-          {/* Mockup interactif animé */}
-          <HeroMockup />
+          {/* Mockup à droite (5 colonnes) */}
+          <div className="lg:col-span-5">
+            <HeroMockup />
+          </div>
         </div>
       </div>
+
+      {/* Pellicule bas du hero */}
+      <div className="absolute bottom-0 inset-x-0 film-perforation-inverse opacity-30 pointer-events-none" />
     </section>
   );
 }

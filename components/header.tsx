@@ -24,24 +24,30 @@ export function Header() {
       className={cn(
         "sticky top-0 z-30 w-full transition-all duration-200",
         scrolled
-          ? "bg-cream-50/85 backdrop-blur-md border-b border-neutral-200"
+          ? "bg-cream-50/90 backdrop-blur-md border-b border-neutral-200"
           : "bg-transparent",
       )}
     >
       <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <div className="flex h-14 md:h-16 items-center justify-between">
-          {/* Logo */}
+          {/* Logo — encadré comme un slate de tournage */}
           <Link
             href="/"
             className="flex items-center gap-2.5 group"
             aria-label="Maxline Studio - accueil"
           >
-            <div className="h-8 w-8 rounded-lg bg-primary-500 flex items-center justify-center transition-transform group-hover:scale-105">
-              <span className="text-cream-50 font-extrabold text-lg tracking-tight">M</span>
+            <div className="h-9 w-9 bg-neutral-900 border-2 border-primary-400 rounded-sm flex items-center justify-center transition-transform group-hover:rotate-3">
+              <span className="text-primary-400 font-display font-extrabold text-xl tracking-tight leading-none">
+                M
+              </span>
             </div>
-            <span className="flex items-baseline gap-1.5 text-xl">
-              <span className="font-extrabold tracking-tight text-neutral-900">MAXLINE</span>
-              <span className="font-light italic text-primary-500">studio</span>
+            <span className="flex items-baseline gap-1.5">
+              <span className="font-display font-extrabold tracking-tight text-neutral-900 text-lg uppercase">
+                Maxline
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500 mt-0.5">
+                studio
+              </span>
             </span>
           </Link>
 

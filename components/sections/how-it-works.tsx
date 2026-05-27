@@ -63,8 +63,8 @@ export function HowItWorks() {
                     {step.accent}
                   </div>
 
-                  <div className="h-14 w-14 rounded-xl bg-primary-100 group-hover:bg-primary-500 flex items-center justify-center mb-6 transition-colors duration-300">
-                    <Icon className="h-7 w-7 text-primary-600 group-hover:text-cream-50 transition-colors" aria-hidden />
+                  <div className="h-14 w-14 rounded-sm bg-cream-50 border-2 border-neutral-900 group-hover:bg-primary-400 group-hover:border-primary-400 flex items-center justify-center mb-6 transition-all duration-300">
+                    <Icon className="h-7 w-7 text-neutral-900 transition-colors" aria-hidden />
                   </div>
 
                   <h3 className="font-serif text-2xl text-neutral-900 mb-3">

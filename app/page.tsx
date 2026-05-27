@@ -4,6 +4,7 @@ import { Hero } from "@/components/sections/hero";
 import { Manifesto } from "@/components/sections/manifesto";
 import { HowItWorks } from "@/components/sections/how-it-works";
 import { Differentiators } from "@/components/sections/differentiators";
+import { CreatorVoices } from "@/components/sections/creator-voices";
 import { Promises } from "@/components/sections/promises";
 import { PricingPreview } from "@/components/sections/pricing-preview";
 import { Faq } from "@/components/sections/faq";
@@ -18,6 +19,7 @@ export default function HomePage() {
         <Manifesto />
         <HowItWorks />
         <Differentiators />
+        <CreatorVoices />
         <Promises />
         <PricingPreview />
         <Faq />

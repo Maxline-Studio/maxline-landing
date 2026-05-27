@@ -1,8 +1,15 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes";
+export const alt =
+  "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+const INK = "#0E1110";
+const LIME = "#C7FF3C";
+const PAPER = "#F1ECDF";
+const NEUTRAL_400 = "#777771";
+const NEUTRAL_700 = "#25251F";
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -14,53 +21,110 @@ export default function OpengraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: "80px 80px",
-          background: "linear-gradient(135deg, #FAF7F1 0%, #FBE9E1 100%)",
+          padding: "70px 80px",
+          background: INK,
           fontFamily: "system-ui, -apple-system, sans-serif",
+          color: PAPER,
+          position: "relative",
         }}
       >
-        {/* Header avec wordmark */}
-        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        {/* Subtile grille en fond */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            opacity: 0.08,
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.6) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
+            display: "flex",
+          }}
+        />
+
+        {/* Bande timecode supérieure */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            position: "relative",
+          }}
+        >
+          {/* Logo slate */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div
+              style={{
+                width: 64,
+                height: 64,
+                background: INK,
+                border: `3px solid ${LIME}`,
+                borderRadius: 4,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: LIME,
+                fontSize: 42,
+                fontWeight: 800,
+                letterSpacing: "-0.04em",
+              }}
+            >
+              M
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 36,
+                  fontWeight: 800,
+                  letterSpacing: "-0.02em",
+                  color: PAPER,
+                  textTransform: "uppercase",
+                }}
+              >
+                Maxline
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: "0.25em",
+                  color: NEUTRAL_400,
+                  textTransform: "uppercase",
+                }}
+              >
+                studio
+              </div>
+            </div>
+          </div>
+
+          {/* Tag timecode REC */}
           <div
             style={{
-              width: 56,
-              height: 56,
-              background: "#C46A45",
-              borderRadius: 12,
               display: "flex",
               alignItems: "center",
-              justifyContent: "center",
-              color: "#FAF7F1",
-              fontSize: 36,
+              gap: 10,
+              background: LIME,
+              color: INK,
+              padding: "8px 14px",
+              borderRadius: 2,
+              fontSize: 18,
               fontWeight: 800,
-              letterSpacing: "-0.05em",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              fontFamily: "monospace",
             }}
           >
-            M
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
             <div
               style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: INK,
                 display: "flex",
-                fontSize: 36,
-                fontWeight: 800,
-                letterSpacing: "-0.02em",
-                color: "#25241F",
               }}
-            >
-              MAXLINE
-            </div>
-            <div
-              style={{
-                display: "flex",
-                fontSize: 30,
-                fontWeight: 300,
-                fontStyle: "italic",
-                color: "#C46A45",
-              }}
-            >
-              studio
-            </div>
+            />
+            REC · v.0 PRÉ-LANCEMENT
           </div>
         </div>
 
@@ -69,59 +133,88 @@ export default function OpengraphImage() {
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 32,
+            gap: 24,
+            position: "relative",
           }}
         >
           <div
             style={{
               display: "flex",
-              fontSize: 76,
+              flexDirection: "column",
+              fontSize: 88,
               fontWeight: 800,
-              letterSpacing: "-0.03em",
-              color: "#25241F",
-              lineHeight: 1.05,
-              maxWidth: 1000,
+              letterSpacing: "-0.035em",
+              color: PAPER,
+              lineHeight: 0.98,
+              maxWidth: 1050,
             }}
           >
-            Vos vidéos françaises, sous-titrées en anglais en 10 minutes.
+            <div style={{ display: "flex" }}>Vos vidéos françaises,</div>
+            <div style={{ display: "flex" }}>sous-titrées en</div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <div
+                style={{
+                  display: "flex",
+                  background: LIME,
+                  color: INK,
+                  padding: "0 16px",
+                }}
+              >
+                anglais
+              </div>
+              <div style={{ display: "flex", color: PAPER }}>.</div>
+            </div>
           </div>
 
           <div
             style={{
               display: "flex",
-              fontSize: 28,
-              color: "#4F4E48",
+              fontSize: 26,
+              color: NEUTRAL_400,
               maxWidth: 900,
+              marginTop: 16,
             }}
           >
-            L&apos;outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en français, à 12 €/mois.
+            L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
+            TikTok, en français, à 12 €/mois. Sans piège.
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Bande de pied façon timecode strip */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            color: "#4F4E48",
-            fontSize: 22,
+            paddingTop: 20,
+            borderTop: `2px solid ${NEUTRAL_700}`,
+            color: NEUTRAL_400,
+            fontSize: 20,
+            fontFamily: "monospace",
+            textTransform: "uppercase",
+            letterSpacing: "0.15em",
+            position: "relative",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
             <div
               style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                background: "#C46A45",
+                width: 10,
+                height: 10,
+                borderRadius: 5,
+                background: LIME,
+                display: "flex",
               }}
             />
-            <div style={{ display: "flex", fontWeight: 600 }}>maxlinestudio.fr</div>
+            <div style={{ display: "flex", color: PAPER, fontWeight: 700 }}>
+              maxlinestudio.fr
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 24 }}>
-            <div style={{ display: "flex" }}>🇫🇷 Français natif</div>
-            <div style={{ display: "flex" }}>🔒 RGPD &amp; UE</div>
+          <div
+            style={{ display: "flex", gap: 28, fontSize: 18, color: NEUTRAL_400 }}
+          >
+            <div style={{ display: "flex" }}>00:00 / 10:00 · FR → EN</div>
+            <div style={{ display: "flex", color: LIME }}>RGPD · UE</div>
           </div>
         </div>
       </div>
