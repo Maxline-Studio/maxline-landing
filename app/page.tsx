@@ -6,6 +6,7 @@ import { HowItWorks } from "@/components/sections/how-it-works";
 import { Differentiators } from "@/components/sections/differentiators";
 import { CreatorVoices } from "@/components/sections/creator-voices";
 import { Promises } from "@/components/sections/promises";
+import { Atelier } from "@/components/sections/atelier";
 import { PricingPreview } from "@/components/sections/pricing-preview";
 import { Faq } from "@/components/sections/faq";
 import { Subscribe } from "@/components/sections/subscribe";
@@ -21,6 +22,7 @@ export default function HomePage() {
         <Differentiators />
         <CreatorVoices />
         <Promises />
+        <Atelier />
         <PricingPreview />
         <Faq />
         <Subscribe />

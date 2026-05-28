@@ -55,6 +55,7 @@ export function Header() {
           <nav className="hidden md:flex items-center gap-9">
             {[
               { href: "/#how-it-works", label: "Procédé", external: false },
+              { href: "/#atelier", label: "L'Atelier", external: false },
               { href: "/#pricing", label: "Tarif", external: false },
               { href: "/blog", label: "Journal", external: true },
               { href: "/#faq", label: "FAQ", external: false },
@@ -115,6 +116,7 @@ export function Header() {
           >
             {[
               { href: "/#how-it-works", label: "Procédé" },
+              { href: "/#atelier", label: "L'Atelier" },
               { href: "/#pricing", label: "Tarif" },
               { href: "/blog", label: "Journal", isLink: true },
               { href: "/#faq", label: "FAQ" },

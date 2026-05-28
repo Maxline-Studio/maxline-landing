@@ -46,6 +46,11 @@ const faqs = [
     answer:
       "Pas au lancement (focus sur la qualité du sous-titrage). En v2 si la traction le justifie, avec ElevenLabs en backend et consentement vocal explicite. Pas de lip-sync deepfake, jamais.",
   },
+  {
+    question: "Comment fonctionne l'Atelier (système de fidélité) ?",
+    answer:
+      "Vos minutes utilisées s'accumulent à vie. Vous progressez dans 4 rangs — Apprenti, Correcteur, Éditeur en chef, Maître d'œuvre — et à chaque palier votre outil s'enrichit de fonctions, priorités et bonus offerts (minutes supplémentaires tous les 3 mois, bonus anniversaire, exports débloqués, etc.). Inclus dans tous les plans, sans frais. Aucun reset, jamais. Le système complet est documenté en transparence : seuils, mécaniques et calculs accessibles à tous.",
+  },
 ];
 
 interface FaqItemProps {
