@@ -50,7 +50,7 @@ export default async function VideosPage({
   ];
 
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-5xl">
+    <div className="px-6 md:px-10 py-8 md:py-12 max-w-7xl">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-4">

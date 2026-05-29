@@ -40,7 +40,7 @@ export default async function DashboardPage() {
   const progress = rankProgress(profile.lifetime_minutes_used);
 
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-6xl">
+    <div className="px-6 md:px-10 py-8 md:py-12 max-w-[1500px]">
       {/* Salutation */}
       <div className="mb-12">
         <div className="flex items-center gap-3 mb-4">

@@ -40,7 +40,7 @@ export default async function BillingPage({
     profile.credits_minutes;
 
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-5xl">
+    <div className="px-6 md:px-10 py-8 md:py-12 max-w-7xl">
       <div className="mb-10">
         <div className="flex items-center gap-3 mb-4">
           <span className="annotation">§ Facturation</span>

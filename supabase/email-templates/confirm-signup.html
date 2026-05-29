@@ -1,0 +1,93 @@
+<!--
+  Template Supabase Auth — "Confirm signup" (à la charte Atelier du correcteur).
+
+  À coller dans : Supabase Dashboard → Authentication → Email Templates →
+  "Confirm signup" → champ "Message body (HTML)".
+
+  IMPORTANT — le lien utilise le motif token_hash qui pointe vers NOTRE route
+  /auth/confirm : cela connecte automatiquement l'utilisateur après vérification
+  (verifyOtp pose la session) ET déclenche la réclamation du parrainage.
+  Prérequis dashboard :
+    - Authentication → URL Configuration → Site URL = https://www.maxlinestudio.fr
+    - Redirect URLs : ajouter https://www.maxlinestudio.fr/auth/confirm
+  NB : tant que le SMTP custom (Resend) n'est pas configuré, l'expéditeur reste
+  "noreply@mail.app.supabase.io". Le contenu, lui, est déjà à la marque.
+-->
+<!DOCTYPE html>
+<html lang="fr">
+  <body style="margin:0;padding:0;background-color:#F8F4E9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1A1814;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#F8F4E9;">
+      <tr>
+        <td align="center" style="padding:32px 16px;">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;width:100%;background-color:#FFFFFF;border-radius:4px;overflow:hidden;border:1px solid #E5DBC1;">
+
+            <!-- Filet rouge correcteur -->
+            <tr><td style="height:4px;background-color:#C8392F;line-height:4px;font-size:0;">&nbsp;</td></tr>
+
+            <!-- Header -->
+            <tr>
+              <td style="padding:24px 32px;border-bottom:1px solid #E5DBC1;">
+                <span style="font-family:Georgia,serif;font-size:22px;font-weight:900;letter-spacing:-0.02em;color:#1A1814;">
+                  Maxline<span style="display:inline-block;width:7px;height:7px;background-color:#C8392F;border-radius:50%;vertical-align:top;margin-left:3px;margin-top:2px;"></span>
+                  <span style="font-family:'Menlo','Consolas',monospace;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.25em;color:#5C5247;margin-left:10px;padding-left:10px;border-left:1px solid #E5DBC1;">studio</span>
+                </span>
+              </td>
+            </tr>
+
+            <!-- Contenu -->
+            <tr>
+              <td style="padding:32px;">
+                <p style="margin:0 0 20px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#C8392F;">
+                  § Confirmation d'inscription
+                </p>
+
+                <h1 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:30px;font-weight:500;letter-spacing:-0.02em;color:#1A1814;line-height:1.15;">
+                  Bienvenue dans l'atelier.
+                </h1>
+
+                <p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:#5C5247;">
+                  Il reste une étape : confirmez votre adresse e-mail. Un clic, et votre atelier s'ouvre — vous serez connecté automatiquement.
+                </p>
+
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:28px 0;">
+                  <tr>
+                    <td style="background-color:#C8392F;border-radius:3px;">
+                      <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup"
+                         style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:#F8F4E9;text-decoration:none;letter-spacing:0.01em;">
+                        Confirmer mon adresse
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:0 0 8px 0;font-size:13px;line-height:1.6;color:#5C5247;">
+                  Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :
+                </p>
+                <p style="margin:0 0 24px 0;font-size:12px;line-height:1.5;word-break:break-all;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup" style="color:#1D3557;text-decoration:underline;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup</a>
+                </p>
+
+                <p style="margin:0;font-size:13px;line-height:1.65;color:#5C5247;">
+                  Vous n'êtes pas à l'origine de cette inscription ? Ignorez simplement cet e-mail.
+                </p>
+
+                <p style="margin:28px 0 0 0;font-family:Georgia,serif;font-style:italic;font-size:15px;color:#1A1814;">
+                  — Maxence,<br />
+                  <span style="font-family:-apple-system,sans-serif;font-style:normal;font-size:13px;color:#5C5247;">fondateur de Maxline Studio</span>
+                </p>
+              </td>
+            </tr>
+
+            <!-- Footer -->
+            <tr>
+              <td style="padding:24px 32px;background-color:#F0EAD8;border-top:1px solid #E5DBC1;font-size:12px;color:#5C5247;line-height:1.6;">
+                <p style="margin:0;">Maxline Studio &middot; Hébergé en France &amp; UE</p>
+              </td>
+            </tr>
+
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
