@@ -12,6 +12,8 @@
  * Toujours fournir versions HTML + texte (fallback clients sans HTML).
  */
 
+import { RANK_LABELS, RANK_PERKS, type Rank } from "@/lib/atelier";
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://maxlinestudio.fr";
 
 // ─────────────────────────────────────────────────────────────────
@@ -280,6 +282,139 @@ Vous recevez cet email parce que vous venez de créer un compte sur Maxline Stud
 Maxline Studio · ${APP_URL.replace("https://", "")} · Hébergé en France & UE`;
 
   return { html, text };
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Email — Bonus / progression Atelier (rang, streak, anniversaire,
+//  parrainage, cadeau, compensation). Un seul template, variant par type.
+// ─────────────────────────────────────────────────────────────────
+
+export type AtelierEmailType =
+  | "rank_promotion"
+  | "streak_bonus"
+  | "anniversary"
+  | "referral_inviter"
+  | "referral_invitee"
+  | "gift_random"
+  | "compensation";
+
+export function atelierBonusEmail({
+  type,
+  minutes = 0,
+  toRank,
+  name,
+}: {
+  type: AtelierEmailType;
+  minutes?: number;
+  toRank?: Rank;
+  name?: string;
+}) {
+  const hi = name ? `${name}, ` : "";
+  const m = Math.round(minutes);
+
+  let annotation: string;
+  let subject: string;
+  let heading: string;
+  let body: string;
+  let bodyText: string;
+
+  switch (type) {
+    case "rank_promotion": {
+      const label = toRank ? RANK_LABELS[toRank] : "un nouveau rang";
+      const perks = toRank ? RANK_PERKS[toRank] : [];
+      annotation = "Nouveau rang";
+      subject = `Vous êtes maintenant ${label} dans l'Atelier`;
+      heading = `Vous êtes maintenant ${label}.`;
+      const perksHtml = perks
+        .map(
+          (p) =>
+            `<li style="margin-bottom:6px;">${p}</li>`,
+        )
+        .join("");
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}votre travail vous fait monter dans la hiérarchie de l'Atelier. Ce rang vous ouvre :</p>
+        <ul style="margin:0 0 8px 0;padding-left:20px;font-size:15px;line-height:1.5;color:${COLORS.inkSoft};">${perksHtml}</ul>`;
+      bodyText = `${hi}votre travail vous fait monter dans l'Atelier. Nouveau rang : ${label}.\n${perks.map((p) => `- ${p}`).join("\n")}`;
+      break;
+    }
+    case "streak_bonus":
+      annotation = "Bonus de continuité";
+      subject = `Votre bonus de continuité : +${m} minutes`;
+      heading = "Merci de votre fidélité.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}vous êtes resté dans l'Atelier sans interruption. Voilà <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour votre continuité.</p>`;
+      bodyText = `${hi}merci de votre fidélité. +${m} minutes offertes pour votre continuité.`;
+      break;
+    case "anniversary":
+      annotation = "Anniversaire";
+      subject = `Joyeux anniversaire d'inscription — +${m} minutes`;
+      heading = "Un an de plus dans l'atelier.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}merci d'être là. Pour célébrer, <strong style="color:${COLORS.ink};">${m} minutes offertes</strong>.</p>`;
+      bodyText = `${hi}merci d'être là. Pour votre anniversaire d'inscription : +${m} minutes offertes.`;
+      break;
+    case "referral_inviter":
+      annotation = "Parrainage";
+      subject = `Votre filleul a rejoint l'Atelier — +${m} minutes`;
+      heading = "Merci pour le parrainage.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}la personne que vous avez invitée est passée à un plan payant. <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour vous — merci de faire grandir l'atelier.</p>`;
+      bodyText = `${hi}votre filleul est passé à un plan payant. +${m} minutes offertes pour vous.`;
+      break;
+    case "referral_invitee":
+      annotation = "Bienvenue";
+      subject = `Bienvenue dans l'Atelier — +${m} minutes offertes`;
+      heading = "Bienvenue grâce à votre parrain.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}vous arrivez sur invitation : <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour bien démarrer.</p>`;
+      bodyText = `${hi}bienvenue. +${m} minutes offertes grâce à votre parrain.`;
+      break;
+    case "gift_random":
+      annotation = "Cadeau";
+      subject = `Un petit cadeau — +${m} minutes`;
+      heading = "Sans occasion particulière.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}voilà <strong style="color:${COLORS.ink};">${m} minutes</strong> en cadeau. Juste pour le plaisir. — Maxence</p>`;
+      bodyText = `${hi}voilà ${m} minutes en cadeau, sans occasion particulière. — Maxence`;
+      break;
+    case "compensation":
+      annotation = "Un geste";
+      subject = `Un geste de notre part — +${m} minutes`;
+      heading = "Toutes nos excuses.";
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}quelque chose n'a pas fonctionné comme prévu. <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour la gêne occasionnée.</p>`;
+      bodyText = `${hi}toutes nos excuses pour la gêne. +${m} minutes offertes.`;
+      break;
+  }
+
+  const html = emailWrapper(
+    `
+    <p style="margin:0 0 20px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
+      § ${annotation}
+    </p>
+    <h1 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:30px;font-weight:500;letter-spacing:-0.02em;color:${COLORS.ink};line-height:1.15;">
+      ${heading}
+    </h1>
+    ${body}
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0 0 0;">
+      <tr>
+        <td style="background-color:${COLORS.rouge};border-radius:3px;">
+          <a href="${APP_URL}/app/atelier" style="display:inline-block;padding:13px 26px;font-size:15px;font-weight:700;color:${COLORS.ivory};text-decoration:none;">
+            Voir mon Atelier
+          </a>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:28px 0 0 0;font-size:13px;line-height:1.6;color:${COLORS.inkSoft};">
+      Vos minutes offertes n'expirent jamais.
+    </p>
+  `,
+    "Vous recevez cet email parce que vous avez un compte Maxline Studio (notifications de l'Atelier).",
+  );
+
+  const text = `${heading}
+
+${bodyText}
+
+Voir mon Atelier : ${APP_URL}/app/atelier
+Vos minutes offertes n'expirent jamais.
+
+— Maxline Studio · ${APP_URL.replace("https://", "")}`;
+
+  return { subject, html, text };
 }
 
 // ─────────────────────────────────────────────────────────────────

@@ -1,5 +1,10 @@
 import { Resend } from "resend";
-import { accountWelcomeEmail } from "@/lib/email-templates";
+import {
+  accountWelcomeEmail,
+  atelierBonusEmail,
+  type AtelierEmailType,
+} from "@/lib/email-templates";
+import type { Rank } from "@/lib/atelier";
 
 /**
  * Emails transactionnels de l'application (via API Resend).
@@ -30,6 +35,36 @@ export async function sendAccountWelcomeEmail(params: {
     to: params.to,
     replyTo: process.env.ADMIN_NOTIFY_EMAIL,
     subject: "Votre atelier Maxline Studio est ouvert",
+    html,
+    text,
+  });
+}
+
+/** Email de bonus / progression Atelier (rang, streak, anniversaire, parrainage, cadeau…). */
+export async function sendAtelierBonusEmail(params: {
+  to: string;
+  type: AtelierEmailType;
+  minutes?: number;
+  toRank?: Rank;
+  name?: string | null;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from) return;
+
+  const resend = new Resend(apiKey);
+  const { subject, html, text } = atelierBonusEmail({
+    type: params.type,
+    minutes: params.minutes,
+    toRank: params.toRank,
+    name: params.name ?? undefined,
+  });
+
+  await resend.emails.send({
+    from,
+    to: params.to,
+    replyTo: process.env.ADMIN_NOTIFY_EMAIL,
+    subject,
     html,
     text,
   });
