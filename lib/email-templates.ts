@@ -34,7 +34,10 @@ const COLORS = {
 //  Wrapper commun (layout, header, footer)
 // ─────────────────────────────────────────────────────────────────
 
-function emailWrapper(content: string): string {
+function emailWrapper(
+  content: string,
+  footerNote = "Vous recevez cet email parce que vous êtes inscrit à la liste d'attente de Maxline Studio.",
+): string {
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="fr">
 <head>
@@ -79,7 +82,7 @@ function emailWrapper(content: string): string {
           <tr>
             <td style="padding:24px 32px;background-color:${COLORS.ivoryLight};border-top:1px solid ${COLORS.border};font-size:12px;color:${COLORS.inkSoft};line-height:1.6;">
               <p style="margin:0 0 8px 0;">
-                Vous recevez cet email parce que vous êtes inscrit à la liste d'attente de Maxline Studio.
+                ${footerNote}
               </p>
               <p style="margin:0;">
                 Maxline Studio &middot; <a href="${APP_URL}" style="color:${COLORS.rouge};text-decoration:none;font-weight:600;">${APP_URL.replace("https://", "")}</a> &middot; Hébergé en France &amp; UE
@@ -189,6 +192,91 @@ Une question, une suggestion, un retour ? Répondez à cet email — je lis tout
 
 ---
 Vous recevez cet email parce que vous êtes inscrit à la liste d'attente de Maxline Studio.
+Maxline Studio · ${APP_URL.replace("https://", "")} · Hébergé en France & UE`;
+
+  return { html, text };
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Email — Bienvenue de COMPTE (après confirmation d'inscription)
+//  Distinct du welcome waitlist : le compte est créé, l'atelier est ouvert.
+// ─────────────────────────────────────────────────────────────────
+
+export function accountWelcomeEmail({
+  referralCode,
+  name,
+}: { referralCode?: string; name?: string } = {}) {
+  const hello = name ? `Bonjour ${name},` : "Bonjour,";
+
+  const referralBlockHtml = referralCode
+    ? `
+    <div style="margin:28px 0;padding:20px;background-color:${COLORS.white};border-radius:3px;border:1px solid ${COLORS.border};">
+      <p style="margin:0 0 8px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
+        Votre lien de parrainage
+      </p>
+      <p style="margin:0 0 12px 0;font-size:14px;line-height:1.65;color:${COLORS.inkSoft};">
+        Invitez un créateur. Quand il passe à un plan payant, vous recevez tous les deux <strong style="color:${COLORS.ink};">30 minutes offertes</strong>.
+      </p>
+      <a href="${APP_URL}/r/${referralCode}" style="font-family:'Menlo','Consolas',monospace;font-size:14px;font-weight:700;color:${COLORS.rouge};text-decoration:none;">
+        ${APP_URL.replace("https://", "")}/r/${referralCode}
+      </a>
+    </div>`
+    : "";
+
+  const referralBlockText = referralCode
+    ? `\nVotre lien de parrainage (invitez un créateur, +30 min chacun à sa 1re souscription) :\n${APP_URL}/r/${referralCode}\n`
+    : "";
+
+  const html = emailWrapper(
+    `
+    <p style="margin:0 0 20px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
+      § Votre atelier est ouvert
+    </p>
+
+    <h1 style="margin:0 0 20px 0;font-family:Georgia,serif;font-size:32px;font-weight:500;letter-spacing:-0.02em;color:${COLORS.ink};line-height:1.1;">
+      Bienvenue dans l'atelier.
+    </h1>
+
+    <p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">
+      ${hello} votre compte est prêt. Votre <strong style="color:${COLORS.ink};">première vidéo est offerte</strong> (jusqu'à 5 minutes), sans carte demandée.
+    </p>
+
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;">
+      <tr>
+        <td style="background-color:${COLORS.rouge};border-radius:3px;">
+          <a href="${APP_URL}/app/upload" style="display:inline-block;padding:14px 28px;font-size:15px;font-weight:700;color:${COLORS.ivory};text-decoration:none;letter-spacing:0.01em;">
+            Traduire ma première vidéo
+          </a>
+        </td>
+      </tr>
+    </table>
+
+    ${referralBlockHtml}
+
+    <p style="margin:24px 0 0 0;font-size:15px;line-height:1.65;color:${COLORS.inkSoft};">
+      Plus vous traduisez, plus votre atelier s'agrandit : chaque minute vous fait progresser dans les rangs, avec des minutes offertes à la clé. Tout est expliqué en transparence sur <a href="${APP_URL}/atelier" style="color:${COLORS.rouge};text-decoration:none;font-weight:600;">la page de l'Atelier</a>.
+    </p>
+
+    <p style="margin:28px 0 0 0;font-family:Georgia,serif;font-style:italic;font-size:15px;color:${COLORS.ink};">
+      — Maxence,<br />
+      <span style="font-family:-apple-system,sans-serif;font-style:normal;font-size:13px;color:${COLORS.inkSoft};">fondateur de Maxline Studio</span>
+    </p>
+  `,
+    "Vous recevez cet email parce que vous venez de créer un compte sur Maxline Studio.",
+  );
+
+  const text = `Bienvenue dans l'atelier.
+
+${hello} votre compte est prêt. Votre première vidéo est offerte (jusqu'à 5 minutes), sans carte demandée.
+
+Traduire ma première vidéo : ${APP_URL}/app/upload
+${referralBlockText}
+Plus vous traduisez, plus votre atelier s'agrandit : chaque minute vous fait progresser dans les rangs. Détails : ${APP_URL}/atelier
+
+— Maxence, fondateur de Maxline Studio
+
+---
+Vous recevez cet email parce que vous venez de créer un compte sur Maxline Studio.
 Maxline Studio · ${APP_URL.replace("https://", "")} · Hébergé en France & UE`;
 
   return { html, text };

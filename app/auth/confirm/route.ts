@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { claimPendingReferral } from "@/lib/referral";
+import { sendAccountWelcomeEmail } from "@/lib/transactional-email";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 /**
@@ -32,6 +33,31 @@ export async function GET(request: NextRequest) {
   if (type !== "recovery") {
     await claimPendingReferral();
   }
+
+  // Email de bienvenue de compte (uniquement à la 1re confirmation d'inscription).
+  // Non bloquant : un échec d'envoi ne doit pas casser la connexion.
+  if (type === "signup") {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("referral_code, display_name")
+          .eq("id", user.id)
+          .single();
+        await sendAccountWelcomeEmail({
+          to: user.email,
+          referralCode: profile?.referral_code,
+          name: profile?.display_name,
+        });
+      }
+    } catch (e) {
+      console.error("[auth/confirm] welcome email error (non-blocking):", e);
+    }
+  }
+
   const next =
     type === "recovery" ? "/reset-password?step=2" : "/app/dashboard";
   return NextResponse.redirect(`${origin}${next}`);
