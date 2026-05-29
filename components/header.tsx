@@ -83,8 +83,14 @@ export function Header() {
             })}
           </nav>
 
-          {/* ─── CTA desktop ─── */}
+          {/* ─── CTAs desktop ─── */}
           <div className="hidden md:flex items-center gap-3">
+            <Link
+              href="/login"
+              className="text-sm font-medium text-ink-700 hover:text-rouge-500 transition-colors"
+            >
+              Connexion
+            </Link>
             <a
               href="/#subscribe"
               className="btn-pen text-sm py-2 px-4"
