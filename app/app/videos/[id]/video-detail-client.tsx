@@ -198,25 +198,32 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
             </div>
           </div>
 
-          {/* Exports (Sprint 5 pour le vrai téléchargement ; ici placeholders) */}
+          {/* Exports */}
           <div className="bg-ivory-100 border border-ivory-200 rounded-sm p-6">
             <h3 className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-4">
               Exports
             </h3>
             <div className="flex flex-wrap gap-3">
-              {[".srt", ".vtt", ".txt", "MP4 sous-titré"].map((fmt) => (
-                <span
+              {(["srt", "vtt", "txt"] as const).map((fmt) => (
+                <a
                   key={fmt}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
-                  title="Téléchargement disponible au Sprint 5"
+                  href={`/app/videos/${initialVideo.id}/export?format=${fmt}`}
+                  download
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
                 >
-                  <Download className="h-4 w-4" aria-hidden />
-                  {fmt}
-                </span>
+                  <Download className="h-4 w-4" aria-hidden />.{fmt}
+                </a>
               ))}
+              <span
+                className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
+                title="Disponible avec le rendu vidéo (à venir)"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                MP4 sous-titré
+              </span>
             </div>
             <p className="text-xs text-ink-500 mt-3 font-mono">
-              › téléchargements actifs au Sprint 5 · éditeur de sous-titres disponible
+              › .srt / .vtt / .txt prêts · MP4 incrusté à l&apos;arrivée du rendu vidéo
             </p>
           </div>
         </>

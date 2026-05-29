@@ -35,6 +35,7 @@ export type Database = {
           rank: string;
           referral_code: string | null;
           referred_by: string | null;
+          streak_anchor_date: string | null;
           stripe_customer_id: string | null;
           stripe_subscription_id: string | null;
           subscription_streak_months: number;
@@ -59,6 +60,7 @@ export type Database = {
           rank?: string;
           referral_code?: string | null;
           referred_by?: string | null;
+          streak_anchor_date?: string | null;
           stripe_customer_id?: string | null;
           stripe_subscription_id?: string | null;
           subscription_streak_months?: number;
@@ -224,6 +226,10 @@ export type Database = {
       claim_referral: {
         Args: { p_code: string };
         Returns: Json;
+      };
+      process_referral_conversion: {
+        Args: { p_invitee_id: string };
+        Returns: undefined;
       };
     };
     Enums: Record<string, never>;
