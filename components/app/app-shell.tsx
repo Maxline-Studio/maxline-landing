@@ -97,7 +97,12 @@ export function AppShell({
         </header>
 
         <main id="main-content" className="flex-1 overflow-x-hidden">
-          {children}
+          {/* Conteneur unique : largeur/padding cohérents sur toutes les pages app.
+              Centré et borné pour rester lisible sur très grand écran, fluide
+              sur mobile/tablette. Les pages ne fixent plus leur propre largeur. */}
+          <div className="mx-auto w-full max-w-[1600px] px-4 sm:px-6 lg:px-10 py-8 md:py-12">
+            {children}
+          </div>
         </main>
       </div>
     </div>

@@ -55,7 +55,7 @@ export default async function EditPage({
   const segmentsFr = (v.transcription_fr as Segment[]) || [];
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 max-w-7xl">
+    <div>
       <Link
         href={`/app/videos/${id}`}
         className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-6 group"

@@ -17,7 +17,7 @@ export function ComingSoon({
   description: string;
 }) {
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-3xl">
+    <div className="max-w-3xl">
       <div className="flex items-center gap-3 mb-6">
         <span className="annotation">{annotation}</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">

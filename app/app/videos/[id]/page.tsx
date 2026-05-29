@@ -33,7 +33,7 @@ export default async function VideoDetailPage({
   if (!video) notFound();
 
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-4xl">
+    <div className="max-w-4xl">
       <Link
         href="/app/videos"
         className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-8 group"

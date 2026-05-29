@@ -5,7 +5,7 @@
  */
 export default function AppLoading() {
   return (
-    <div className="px-6 md:px-10 py-8 md:py-12 max-w-[1500px] animate-pulse">
+    <div className="animate-pulse">
       {/* Barre d'accent (rappel de la signature rouge) */}
       <div className="h-1 w-16 bg-rouge-200 rounded-full mb-8" />
 

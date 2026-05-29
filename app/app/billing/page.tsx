@@ -53,9 +53,9 @@ export default async function BillingPage({
       {status === "success" && (
         <div
           role="status"
-          className="mb-8 flex items-start gap-3 p-4 bg-rouge-50 border border-rouge-200 rounded-sm"
+          className="mb-8 flex items-start gap-3 p-4 bg-success-500/10 border border-success-500/40 rounded-sm"
         >
-          <CheckCircle2 className="h-5 w-5 text-rouge-600 flex-shrink-0 mt-0.5" aria-hidden />
+          <CheckCircle2 className="h-5 w-5 text-success-600 flex-shrink-0 mt-0.5" aria-hidden />
           <p className="text-sm text-ink-700">
             Paiement confirmé. Votre compte est mis à jour en quelques secondes —
             actualisez si besoin.
