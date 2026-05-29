@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Trash2,
@@ -8,6 +9,7 @@ import {
   AlertCircle,
   Download,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import type { Video } from "@/lib/supabase/types";
 import {
@@ -160,13 +162,17 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
       {status === "done" && (
         <>
           <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center justify-between gap-3 mb-5">
               <h2 className="font-display font-medium text-xl text-ink-900">
                 Sous-titres anglais
               </h2>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                {transcriptionEn.length} segments
-              </span>
+              <Link
+                href={`/app/videos/${initialVideo.id}/edit`}
+                className="btn-pen text-sm shrink-0"
+              >
+                <Pencil className="h-4 w-4" aria-hidden />
+                Éditer
+              </Link>
             </div>
 
             {/* Aperçu transcription EN avec original FR en dessous */}
@@ -210,7 +216,7 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
               ))}
             </div>
             <p className="text-xs text-ink-500 mt-3 font-mono">
-              › téléchargements actifs au Sprint 5 · éditeur de sous-titres au Sprint 4
+              › téléchargements actifs au Sprint 5 · éditeur de sous-titres disponible
             </p>
           </div>
         </>

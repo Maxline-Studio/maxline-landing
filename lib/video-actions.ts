@@ -8,6 +8,7 @@ import {
   computeStage,
   MOCK_TOTAL_SECONDS,
   type VideoStatus,
+  type Segment,
 } from "@/lib/mock-worker";
 
 export type CreateUploadResult =
@@ -311,6 +312,120 @@ export async function tickVideoProcessing(
   }
 
   return { status, progress };
+}
+
+/**
+ * Sauvegarde les sous-titres anglais édités par l'utilisateur.
+ * Marque user_edited=true. Appelée par l'auto-save et le bouton manuel.
+ */
+export async function saveTranscriptionEn(
+  videoId: string,
+  segments: Segment[],
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  // Validation basique des segments
+  if (!Array.isArray(segments)) {
+    return { ok: false, error: "Format de sous-titres invalide." };
+  }
+  for (const seg of segments) {
+    if (
+      typeof seg.start !== "number" ||
+      typeof seg.end !== "number" ||
+      typeof seg.text !== "string"
+    ) {
+      return { ok: false, error: "Segment invalide." };
+    }
+  }
+
+  const { error } = await supabase
+    .from("videos")
+    .update({
+      transcription_en: segments,
+      user_edited: true,
+    })
+    .eq("id", videoId)
+    .eq("user_id", user.id);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Régénère la traduction d'une seule ligne (MOCK Sprint 4).
+ * Le vrai worker (Sprint 3) appellera OPUS-MT sur le segment FR correspondant.
+ * Ici on renvoie une formulation alternative déterministe à partir du texte FR.
+ */
+export async function regenerateLine(
+  videoId: string,
+  index: number,
+): Promise<{ ok: boolean; text?: string; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("transcription_fr, transcription_en")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+
+  const frSegs = (video.transcription_fr as Segment[]) || [];
+  const fr = frSegs[index]?.text || "";
+
+  // Mock : 3 variations de style possibles. Le vrai OPUS-MT remplacera ça.
+  const variations = [
+    fr, // fallback : renvoie le FR si pas de variation (ne devrait pas arriver)
+  ];
+  // Variation simple basée sur un dictionnaire de reformulations légères
+  const enSegs = (video.transcription_en as Segment[]) || [];
+  const currentEn = enSegs[index]?.text || "";
+  const alt = mockAlternativeTranslation(currentEn);
+
+  return { ok: true, text: alt || variations[0] };
+}
+
+/** Reformulation mock d'une traduction (sera remplacée par OPUS-MT). */
+function mockAlternativeTranslation(en: string): string {
+  const map: Record<string, string> = {
+    "Hi everyone, I hope you're doing great!":
+      "Hey everybody, hope you're all doing well!",
+    "Today, we're diving into a topic close to my heart.":
+      "Today we're tackling a subject that really matters to me.",
+    "Before we start, don't forget to subscribe.":
+      "Before we begin, make sure to hit subscribe.",
+    "So, the first thing to understand is this.":
+      "Now, here's the first thing you need to grasp.",
+    "Let me show you exactly how I do it.":
+      "Here's precisely how I go about it.",
+    "And here, you can see the result on screen.":
+      "And there, the result appears on screen.",
+    "Honestly, it's simpler than you'd think.":
+      "Frankly, it's easier than it looks.",
+    "A little tip that few people know about.":
+      "A small trick most people aren't aware of.",
+    "Pay close attention to this step, it's crucial.":
+      "Watch this step carefully — it's essential.",
+    "If you enjoyed this, leave a comment.":
+      "Liked it? Drop a comment below.",
+    "See you very soon for the next part.":
+      "Catch you soon for what's next.",
+    "Thanks for watching to the end, see you soon!":
+      "Thanks for sticking around — see you next time!",
+  };
+  return map[en] || en;
 }
 
 /**
