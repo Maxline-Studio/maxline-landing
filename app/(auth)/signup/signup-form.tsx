@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { AlertCircle, CheckCircle2, Mail, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, Mail, User, Gift } from "lucide-react";
 import {
   signUpAction,
   signInWithGoogleAction,
@@ -9,7 +9,7 @@ import {
 } from "@/lib/auth-actions";
 import { Input } from "@/components/ui/input";
 
-export function SignupForm() {
+export function SignupForm({ referralCode = "" }: { referralCode?: string }) {
   const [state, formAction, pending] = useActionState<
     AuthState | undefined,
     FormData
@@ -40,8 +40,28 @@ export function SignupForm() {
 
   return (
     <div className="space-y-5">
+      {referralCode && (
+        <div
+          role="status"
+          className="flex items-start gap-3 p-4 bg-rouge-50 border border-rouge-200 rounded-sm"
+        >
+          <Gift
+            className="h-5 w-5 text-rouge-600 flex-shrink-0 mt-0.5"
+            aria-hidden
+          />
+          <p className="text-sm text-ink-700 leading-relaxed">
+            <span className="font-semibold text-ink-900">
+              Vous arrivez sur invitation.
+            </span>{" "}
+            Quand vous passerez à un plan payant, vous recevrez tous les deux{" "}
+            <span className="font-semibold">30 minutes offertes</span>.
+          </p>
+        </div>
+      )}
+
       {/* Google OAuth */}
       <form action={signInWithGoogleAction}>
+        {referralCode && <input type="hidden" name="ref" value={referralCode} />}
         <button
           type="submit"
           className="w-full h-11 inline-flex items-center justify-center gap-3 bg-white border-2 border-ink-900 text-ink-900 rounded-sm hover:bg-ink-900 hover:text-ivory-50 transition-colors font-semibold"
@@ -60,6 +80,7 @@ export function SignupForm() {
       </div>
 
       <form action={formAction} className="space-y-4">
+        {referralCode && <input type="hidden" name="ref" value={referralCode} />}
         <div>
           <label
             htmlFor="display_name"

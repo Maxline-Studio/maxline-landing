@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { claimPendingReferral } from "@/lib/referral";
 
 /**
  * Callback OAuth (Google, etc.) — appelé par Supabase après authentification
@@ -24,6 +25,9 @@ export async function GET(request: NextRequest) {
       `${origin}/login?error=${encodeURIComponent(error.message)}`,
     );
   }
+
+  // Applique un éventuel parrainage capturé avant l'OAuth.
+  await claimPendingReferral();
 
   return NextResponse.redirect(`${origin}${next}`);
 }

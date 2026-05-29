@@ -122,6 +122,68 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];
       };
+      rewards_ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          type: string;
+          minutes_bonus: number;
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          type: string;
+          minutes_bonus: number;
+          reason?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["rewards_ledger"]["Insert"]>;
+        Relationships: [];
+      };
+      rank_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          from_rank: string;
+          to_rank: string;
+          triggered_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          from_rank: string;
+          to_rank: string;
+          triggered_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["rank_history"]["Insert"]>;
+        Relationships: [];
+      };
+      referrals: {
+        Row: {
+          id: string;
+          inviter_id: string;
+          invitee_id: string | null;
+          invitee_email: string | null;
+          status: string;
+          bonus_credited: boolean;
+          created_at: string;
+          validated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          inviter_id: string;
+          invitee_id?: string | null;
+          invitee_email?: string | null;
+          status?: string;
+          bonus_credited?: boolean;
+          created_at?: string;
+          validated_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["referrals"]["Insert"]>;
+        Relationships: [];
+      };
       waitlist: {
         Row: {
           email: string;
@@ -159,6 +221,10 @@ export type Database = {
         Args: { p_user_id: string };
         Returns: number;
       };
+      claim_referral: {
+        Args: { p_code: string };
+        Returns: Json;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -173,6 +239,10 @@ export type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 export type Video = Database["public"]["Tables"]["videos"]["Row"];
 export type VideoInsert = Database["public"]["Tables"]["videos"]["Insert"];
 export type VideoUpdate = Database["public"]["Tables"]["videos"]["Update"];
+
+export type RewardLedgerRow = Database["public"]["Tables"]["rewards_ledger"]["Row"];
+export type RankHistoryRow = Database["public"]["Tables"]["rank_history"]["Row"];
+export type ReferralRow = Database["public"]["Tables"]["referrals"]["Row"];
 
 export type Rank = "apprenti" | "correcteur" | "editeur_en_chef" | "maitre_doeuvre";
 export type Plan = "free" | "starter" | "plus" | "credits";

@@ -1,63 +1,44 @@
 import { GraduationCap, Pencil, BookOpen, Crown } from "lucide-react";
 import { Reveal } from "@/components/reveal";
 import { HandUnderline } from "@/components/hand-underline";
+import {
+  RANK_ORDER,
+  RANK_LABELS,
+  RANK_RANGE_LABEL,
+  RANK_PERKS,
+  type Rank,
+} from "@/lib/atelier";
 
 /**
  * Section "L'Atelier" — système de fidélité Maxline.
  * 4 rangs progressifs, vocabulaire d'imprimerie française.
+ * Les libellés, seuils et avantages viennent de lib/atelier.ts (source unique).
  * Détails complets dans 03-produit/06-atelier-gamification.md
  */
 
 type Marker = "ivory" | "rouge" | "rouge-line" | "rouge-crown";
 
-const ranks: {
-  name: string;
-  icon: typeof GraduationCap;
-  threshold: string;
-  marker: Marker;
-  perks: string[];
-}[] = [
-  {
-    name: "Apprenti",
-    icon: GraduationCap,
-    threshold: "0 — 299 min",
-    marker: "ivory",
-    perks: ["Toutes les fonctions du plan choisi", "Support en français sous 24 h"],
-  },
-  {
-    name: "Correcteur",
-    icon: Pencil,
-    threshold: "300 — 1 199 min",
-    marker: "rouge",
-    perks: [
-      "Glossaire personnalisé sauvegardé",
-      "Priorité dans la file de traitement",
-      "+5 min offertes tous les 3 mois consécutifs",
-    ],
-  },
-  {
-    name: "Éditeur en chef",
-    icon: BookOpen,
-    threshold: "1 200 — 4 999 min",
-    marker: "rouge-line",
-    perks: [
-      "Exports .fcpxml et .xml inclus, même sur Starter",
-      "Accès anticipé aux nouvelles fonctions",
-      "+15 min offertes tous les 3 mois · +30 min anniversaire",
-    ],
-  },
-  {
-    name: "Maître d'œuvre",
-    icon: Crown,
-    threshold: "5 000+ min",
-    marker: "rouge-crown",
-    perks: [
-      "Vote sur la prochaine fonction prioritaire",
-      "Un mois gratuit offert tous les ans",
-      "+50 min offertes tous les 3 mois",
-    ],
-  },
-];
+const RANK_ICON: Record<Rank, typeof GraduationCap> = {
+  apprenti: GraduationCap,
+  correcteur: Pencil,
+  editeur_en_chef: BookOpen,
+  maitre_doeuvre: Crown,
+};
+
+const RANK_MARKER: Record<Rank, Marker> = {
+  apprenti: "ivory",
+  correcteur: "rouge",
+  editeur_en_chef: "rouge-line",
+  maitre_doeuvre: "rouge-crown",
+};
+
+const ranks = RANK_ORDER.map((rank) => ({
+  name: RANK_LABELS[rank],
+  icon: RANK_ICON[rank],
+  threshold: RANK_RANGE_LABEL[rank],
+  marker: RANK_MARKER[rank],
+  perks: RANK_PERKS[rank],
+}));
 
 function RankMarker({ marker }: { marker: Marker }) {
   if (marker === "ivory") {

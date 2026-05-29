@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { claimPendingReferral } from "@/lib/referral";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
 /**
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Pour 'recovery' (reset password) → redirect vers page mot de passe
-  // Pour 'signup' / 'email' → redirect dashboard
+  // Pour 'signup' / 'email' → applique un éventuel parrainage puis dashboard
+  if (type !== "recovery") {
+    await claimPendingReferral();
+  }
   const next =
     type === "recovery" ? "/reset-password?step=2" : "/app/dashboard";
   return NextResponse.redirect(`${origin}${next}`);

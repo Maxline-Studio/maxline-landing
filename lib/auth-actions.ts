@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import {
+  REF_COOKIE,
+  REF_COOKIE_MAX_AGE,
+  sanitizeReferralCode,
+} from "@/lib/referral";
 
 /**
  * Server actions pour l'authentification Supabase.
@@ -56,12 +61,24 @@ export async function signUpAction(
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const password = formData.get("password") as string;
   const displayName = (formData.get("display_name") as string)?.trim();
+  const ref = sanitizeReferralCode((formData.get("ref") as string) || "");
 
   if (!email || !password) {
     return { error: "Email et mot de passe requis." };
   }
   if (password.length < 8) {
     return { error: "Le mot de passe doit faire au moins 8 caractères." };
+  }
+
+  // Mémorise le code de parrainage pour le réclamer après confirmation email.
+  if (ref) {
+    const cookieStore = await cookies();
+    cookieStore.set(REF_COOKIE, ref, {
+      maxAge: REF_COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    });
   }
 
   const supabase = await createClient();
@@ -133,6 +150,18 @@ export async function requestPasswordResetAction(
 // ─────────────────────────────────────────────────────────────────
 export async function signInWithGoogleAction(formData: FormData) {
   const redirectTo = (formData.get("redirect") as string) || "/app/dashboard";
+
+  // Mémorise un éventuel parrainage avant la redirection OAuth.
+  const ref = sanitizeReferralCode((formData.get("ref") as string) || "");
+  if (ref) {
+    const cookieStore = await cookies();
+    cookieStore.set(REF_COOKIE, ref, {
+      maxAge: REF_COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+    });
+  }
 
   const supabase = await createClient();
   const headersList = await headers();

@@ -99,7 +99,31 @@ function emailWrapper(content: string): string {
 //  Email 1 — Bienvenue à l'utilisateur inscrit
 // ─────────────────────────────────────────────────────────────────
 
-export function welcomeEmail() {
+export function welcomeEmail({
+  referralCode,
+}: { referralCode?: string } = {}) {
+  // Bloc parrainage — affiché seulement si un code perso est fourni
+  // (email transactionnel d'inscription, câblé au Sprint 7). Pour la
+  // waitlist (sans compte), referralCode est absent et le bloc est omis.
+  const referralBlockHtml = referralCode
+    ? `
+    <div style="margin:28px 0;padding:20px;background-color:${COLORS.white};border-radius:3px;border:1px solid ${COLORS.border};">
+      <p style="margin:0 0 8px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
+        Votre lien de parrainage
+      </p>
+      <p style="margin:0 0 12px 0;font-size:14px;line-height:1.65;color:${COLORS.inkSoft};">
+        Invitez un créateur. Quand il passe à un plan payant, vous recevez tous les deux <strong style="color:${COLORS.ink};">30 minutes offertes</strong>.
+      </p>
+      <a href="${APP_URL}/r/${referralCode}" style="font-family:'Menlo','Consolas',monospace;font-size:14px;font-weight:700;color:${COLORS.rouge};text-decoration:none;">
+        ${APP_URL.replace("https://", "")}/r/${referralCode}
+      </a>
+    </div>`
+    : "";
+
+  const referralBlockText = referralCode
+    ? `\nVotre lien de parrainage (invitez un créateur, +30 min chacun à sa première souscription) :\n${APP_URL}/r/${referralCode}\n`
+    : "";
+
   const html = emailWrapper(`
     <p style="margin:0 0 20px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
       § Confirmation d'inscription
@@ -127,6 +151,8 @@ export function welcomeEmail() {
       </tr>
     </table>
 
+    ${referralBlockHtml}
+
     <div style="margin:28px 0;padding:20px;background-color:${COLORS.ivoryLight};border-radius:3px;border-left:3px solid ${COLORS.rouge};">
       <p style="margin:0 0 8px 0;font-family:'Menlo','Consolas',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:${COLORS.rouge};">
         En attendant
@@ -152,7 +178,7 @@ export function welcomeEmail() {
 Merci pour votre inscription à la liste d'attente de Maxline Studio.
 
 Vous serez parmi les premiers prévenus quand la bêta privée s'ouvrira (d'ici quelques semaines). Et comme vous êtes dans les tout premiers inscrits, vous aurez un accès gratuit prolongé au lancement, et le tarif d'origine à vie.
-
+${referralBlockText}
 En attendant, suivez l'aventure :
 - Le journal de construction : ${APP_URL}/blog
 - Twitter / X : https://twitter.com/maxlinestudio

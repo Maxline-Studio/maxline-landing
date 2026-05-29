@@ -3,18 +3,12 @@ import Link from "next/link";
 import { ArrowRight, Upload, Video, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Video as VideoRow } from "@/lib/supabase/types";
+import { RANK_LABELS, rankProgress, type Rank } from "@/lib/atelier";
 
 export const metadata: Metadata = {
   title: "Tableau de bord",
   robots: { index: false, follow: false },
 };
-
-const RANK_NEXT_THRESHOLDS = {
-  apprenti: { next: "Correcteur", threshold: 300 },
-  correcteur: { next: "Éditeur en chef", threshold: 1200 },
-  editeur_en_chef: { next: "Maître d'œuvre", threshold: 5000 },
-  maitre_doeuvre: { next: null, threshold: null },
-} as const;
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -43,8 +37,7 @@ export default async function DashboardPage() {
     Math.max(profile.quota_minutes_total - profile.quota_minutes_used, 0) +
     profile.credits_minutes;
 
-  const rankInfo =
-    RANK_NEXT_THRESHOLDS[profile.rank as keyof typeof RANK_NEXT_THRESHOLDS];
+  const progress = rankProgress(profile.lifetime_minutes_used);
 
   return (
     <div className="px-6 md:px-10 py-8 md:py-12 max-w-6xl">
@@ -95,24 +88,24 @@ export default async function DashboardPage() {
             Votre rang
           </div>
           <div className="font-display italic font-light text-3xl text-ivory-50 leading-none mb-2">
-            {formatRank(profile.rank)}
+            {RANK_LABELS[profile.rank as Rank]}
           </div>
           <div className="text-sm text-ink-300 mb-4">
             {profile.lifetime_minutes_used.toFixed(0)} min cumulées à vie
           </div>
-          {rankInfo.next && (
+          {progress.next && (
             <>
               <div className="h-1.5 bg-ink-800 rounded-full overflow-hidden mb-2">
                 <div
                   className="h-full bg-rouge-500 transition-all"
-                  style={{
-                    width: `${Math.min((profile.lifetime_minutes_used / rankInfo.threshold!) * 100, 100)}%`,
-                  }}
+                  style={{ width: `${progress.percent}%` }}
                 />
               </div>
               <div className="font-mono text-[10px] uppercase tracking-widest text-ink-300">
-                {Math.max(rankInfo.threshold! - profile.lifetime_minutes_used, 0).toFixed(0)} min avant{" "}
-                <span className="text-rouge-400">{rankInfo.next}</span>
+                {progress.remaining.toFixed(0)} min avant{" "}
+                <span className="text-rouge-400">
+                  {RANK_LABELS[progress.next]}
+                </span>
               </div>
             </>
           )}
@@ -244,16 +237,5 @@ function StatusBadge({ status }: { status: string }) {
     >
       {config.label}
     </span>
-  );
-}
-
-function formatRank(rank: string): string {
-  return (
-    {
-      apprenti: "Apprenti",
-      correcteur: "Correcteur",
-      editeur_en_chef: "Éditeur en chef",
-      maitre_doeuvre: "Maître d'œuvre",
-    }[rank] || rank
   );
 }

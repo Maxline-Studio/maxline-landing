@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { AuthCard } from "@/components/app/auth-card";
+import { REF_COOKIE, sanitizeReferralCode } from "@/lib/referral";
 import { SignupForm } from "./signup-form";
 
 export const metadata: Metadata = {
@@ -10,7 +12,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ref?: string }>;
+}) {
+  const { ref } = await searchParams;
+  const cookieStore = await cookies();
+  const referralCode = sanitizeReferralCode(
+    ref || cookieStore.get(REF_COOKIE)?.value || "",
+  );
+
   return (
     <AuthCard
       annotation="§ Inscription"
@@ -25,7 +37,7 @@ export default function SignupPage() {
         </p>
       }
     >
-      <SignupForm />
+      <SignupForm referralCode={referralCode} />
     </AuthCard>
   );
 }
