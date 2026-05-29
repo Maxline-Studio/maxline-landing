@@ -272,9 +272,10 @@ export async function tickVideoProcessing(
   const { status, progress } = computeStage(elapsed);
 
   if (status === "done" && elapsed >= MOCK_TOTAL_SECONDS) {
-    // Transition finale : marque done + clés sous-titres + bump lifetime
-    const durationMinutes = (Number(video.duration_seconds) || 0) / 60;
-
+    // Transition finale : marque done + clés sous-titres.
+    // Le bump lifetime_minutes_used (progression Atelier + recalcul rang) est
+    // assuré par le trigger videos_done_lifetime (source UNIQUE, cf. migration
+    // 009/010) — ne PAS le refaire ici sous peine de double comptage.
     await supabase
       .from("videos")
       .update({
@@ -284,22 +285,6 @@ export async function tickVideoProcessing(
         storage_key_vtt: vttKey(user.id, videoId),
       })
       .eq("id", videoId);
-
-    // Bump lifetime_minutes_used (progression Atelier ; recalcul du rang en S6)
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("lifetime_minutes_used")
-      .eq("id", user.id)
-      .single();
-    if (profile) {
-      await supabase
-        .from("profiles")
-        .update({
-          lifetime_minutes_used:
-            profile.lifetime_minutes_used + durationMinutes,
-        })
-        .eq("id", user.id);
-    }
 
     revalidatePath("/app/videos");
     revalidatePath("/app/dashboard");
