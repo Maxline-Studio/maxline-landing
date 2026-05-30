@@ -397,7 +397,7 @@ export function VideoDetailClient({
               indépendamment (sticky inutilisable car <main> a overflow-x-hidden). */}
           <div className="lg:flex lg:gap-6 lg:items-stretch lg:h-[calc(100dvh-12rem)]">
             {/* Gauche : aperçu + style + exports + suppression */}
-            <div className="lg:flex-1 lg:min-w-0 lg:overflow-y-auto lg:pr-1">
+            <div className="lg:flex-1 lg:min-w-0 lg:overflow-y-auto lg:pr-2 ml-scroll">
               <SubtitlePlayer
                 ref={playerRef}
                 videoUrl={videoUrl}
@@ -454,7 +454,7 @@ export function VideoDetailClient({
             </div>
 
             {/* Droite : volet d'édition docké, défilant */}
-            <aside className="mt-6 lg:mt-0 lg:w-[400px] xl:w-[480px] lg:flex-shrink-0 lg:border-l lg:border-ivory-200 lg:pl-6 lg:overflow-y-auto">
+            <aside className="mt-6 lg:mt-0 lg:w-[460px] xl:w-[560px] lg:flex-shrink-0 lg:border-l lg:border-ivory-200 lg:pl-6 lg:overflow-y-auto ml-scroll">
               <div className="space-y-3">
                 {segments.map((seg, idx) => (
                   <SegmentRow
@@ -632,8 +632,8 @@ function SegmentRow({
         <textarea
           value={segment.text}
           onChange={(e) => onTextChange(e.target.value)}
-          rows={2}
-          className="w-full bg-white border border-ink-200 rounded-sm px-3 py-2 text-ink-900 resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30"
+          rows={3}
+          className="ml-scroll w-full min-h-[4.75rem] bg-white border border-ink-200 rounded-sm px-3 py-2.5 text-ink-900 leading-relaxed resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30"
           placeholder="Sous-titre anglais…"
         />
 
@@ -739,7 +739,7 @@ function TimecodeInput({
       onKeyDown={(e) => {
         if (e.key === "Enter") e.currentTarget.blur();
       }}
-      className="w-20 bg-white border border-ink-200 rounded-sm px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-900 text-center focus:outline-none focus:border-rouge-500"
+      className="w-24 bg-white border border-ink-200 rounded-sm px-2 py-1 font-mono text-xs tabular-nums text-ink-900 text-center focus:outline-none focus:border-rouge-500"
     />
   );
 }

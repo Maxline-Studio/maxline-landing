@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LayoutDashboard } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Header — état unique, toujours sur fond ivory.
@@ -12,12 +13,23 @@ import { Menu, X } from "lucide-react";
 export function Header() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  // null = inconnu (on affiche les CTA visiteur par défaut, pas de flash).
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
+      setLoggedIn(!!session?.user),
+    );
+    return () => sub.subscription.unsubscribe();
   }, []);
 
   return (
@@ -85,18 +97,24 @@ export function Header() {
 
           {/* ─── CTAs desktop ─── */}
           <div className="hidden md:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-ink-700 hover:text-rouge-500 transition-colors"
-            >
-              Connexion
-            </Link>
-            <a
-              href="/#subscribe"
-              className="btn-pen text-sm py-2 px-4"
-            >
-              Réserver mon accès
-            </a>
+            {loggedIn ? (
+              <Link href="/app/dashboard" className="btn-pen text-sm py-2 px-4">
+                <LayoutDashboard className="h-4 w-4" aria-hidden />
+                Mon espace
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-ink-700 hover:text-rouge-500 transition-colors"
+                >
+                  Connexion
+                </Link>
+                <a href="/#subscribe" className="btn-pen text-sm py-2 px-4">
+                  Réserver mon accès
+                </a>
+              </>
+            )}
           </div>
 
           {/* ─── Burger mobile ─── */}
@@ -150,20 +168,33 @@ export function Header() {
               );
             })}
             <div className="pt-4 px-2 space-y-3">
-              <Link
-                href="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center justify-center w-full px-3 py-3 text-base font-medium text-ink-800 border border-ink-300 rounded-sm hover:bg-ivory-100 transition-colors"
-              >
-                Connexion
-              </Link>
-              <a
-                href="/#subscribe"
-                onClick={() => setMobileOpen(false)}
-                className="btn-pen w-full"
-              >
-                Réserver mon accès
-              </a>
+              {loggedIn ? (
+                <Link
+                  href="/app/dashboard"
+                  onClick={() => setMobileOpen(false)}
+                  className="btn-pen w-full"
+                >
+                  <LayoutDashboard className="h-4 w-4" aria-hidden />
+                  Mon espace
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center justify-center w-full px-3 py-3 text-base font-medium text-ink-800 border border-ink-300 rounded-sm hover:bg-ivory-100 transition-colors"
+                  >
+                    Connexion
+                  </Link>
+                  <a
+                    href="/#subscribe"
+                    onClick={() => setMobileOpen(false)}
+                    className="btn-pen w-full"
+                  >
+                    Réserver mon accès
+                  </a>
+                </>
+              )}
             </div>
           </nav>
         )}

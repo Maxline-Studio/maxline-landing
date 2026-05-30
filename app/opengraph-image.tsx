@@ -114,7 +114,7 @@ export default function OpengraphImage() {
               fontFamily: "monospace",
             }}
           >
-            §00 · Pré-lancement
+            §00 · Sous-titrage vidéo
           </div>
         </div>
 

@@ -10,9 +10,9 @@ export default function SettingsPage() {
   return (
     <ComingSoon
       annotation="§ Paramètres"
-      sprint="Sprint 7 — à venir"
+      sprint="Bientôt disponible"
       title="Préférences et confidentialité."
-      description="Les paramètres (durée de rétention des vidéos 7/14/30j, notifications email, langue de l'interface, suppression de compte) seront disponibles au Sprint 7."
+      description="Les paramètres (durée de rétention des vidéos 7/14/30j, notifications email, langue de l'interface, suppression de compte) arrivent très bientôt."
     />
   );
 }

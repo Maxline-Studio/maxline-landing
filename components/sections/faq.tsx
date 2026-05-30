@@ -9,7 +9,7 @@ const faqs = [
   {
     question: "Quels formats vidéo sont supportés ?",
     answer:
-      "Au lancement : MP4, MOV, AVI, MKV et WebM. Avec une limite de 1 Go et 30 minutes par vidéo en MVP. Ces limites évolueront selon les retours.",
+      "MP4, MOV, AVI, MKV et WebM, jusqu'à 1 Go et 30 minutes par vidéo. Ces limites évolueront selon les retours.",
   },
   {
     question: "Combien de temps faut-il pour une vidéo de 10 minutes ?",

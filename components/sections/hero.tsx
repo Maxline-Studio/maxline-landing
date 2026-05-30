@@ -65,17 +65,6 @@ export function Hero() {
         <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-center">
           {/* ─── Texte ─── */}
           <div className="lg:col-span-7 max-w-2xl">
-            {/* Annotation marginale en haut */}
-            <div className="flex items-center gap-3 mb-10 animate-fade-in">
-              <span className="annotation-filled">
-                <span className="h-1.5 w-1.5 rounded-full bg-ivory-50 animate-pulse-soft" />
-                Pré-lancement
-              </span>
-              <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
-                MVP en 8 semaines
-              </span>
-            </div>
-
             {/* Headline — Fraunces, mix de droit et italique */}
             <h1 className="font-display font-medium text-[2.6rem] sm:text-5xl md:text-6xl lg:text-[4.4rem] leading-[1.02] tracking-[-0.025em] text-ink-900">
               <span className="block">Vos vidéos</span>

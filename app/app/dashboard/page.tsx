@@ -163,7 +163,7 @@ export default async function DashboardPage() {
       <footer className="border-t border-ivory-200 pt-6">
         <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 flex items-center gap-2">
           <Sparkles className="h-3 w-3 text-rouge-500" aria-hidden />
-          MVP en cours de construction · merci d&apos;être ici
+          Merci de faire partie de l&apos;aventure Maxline
         </p>
       </footer>
     </div>

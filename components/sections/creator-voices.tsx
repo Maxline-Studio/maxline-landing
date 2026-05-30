@@ -71,7 +71,7 @@ export function CreatorVoices() {
           <div className="flex items-center gap-3 mb-6">
             <span className="annotation">§08 · Voix de créateurs</span>
             <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
-              personas · pré-lancement
+              exemples illustratifs
             </span>
           </div>
           <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">

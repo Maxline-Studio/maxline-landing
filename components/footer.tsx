@@ -27,7 +27,7 @@ export function Footer() {
               Soigné comme par un éditeur.
             </p>
             <span className="annotation mt-5 inline-flex border-rouge-400 text-rouge-400">
-              v.0 · pré-lancement
+              Fait main en France
             </span>
           </div>
 
