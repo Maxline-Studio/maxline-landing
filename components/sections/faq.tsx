@@ -37,9 +37,9 @@ const faqs = [
       "Bêta privée prévue dans les prochaines semaines, lancement public officiel dans 2-3 mois. Inscrivez-vous pour être prévenu en priorité — les premiers inscrits auront un accès gratuit prolongé.",
   },
   {
-    question: "Quelles langues seront supportées ?",
+    question: "Quelles langues sont supportées ?",
     answer:
-      "Au lancement : français vers anglais uniquement (cible créateurs FR voulant percer à l'international). L'espagnol et l'allemand arriveront en v1 selon les retours utilisateurs.",
+      "Le français et l'anglais, dans les deux sens (français → anglais et anglais → français), ou une simple transcription dans la langue parlée — idéale pour l'accessibilité. L'espagnol et l'allemand arriveront selon vos retours.",
   },
   {
     question: "Y aura-t-il un doublage avec voix clonée ?",

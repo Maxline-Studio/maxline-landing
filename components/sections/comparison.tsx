@@ -25,7 +25,7 @@ const txt = (value: string): Cell => ({ kind: "text", value });
 
 const ROWS: Row[] = [
   {
-    label: "Spécialisé créateurs francophones (FR → EN)",
+    label: "Spécialisé créateurs francophones (FR ↔ EN)",
     maxline: yes,
     others: [no, no, no, no],
   },
@@ -56,7 +56,7 @@ const ROWS: Row[] = [
   },
   {
     label: "Langues couvertes",
-    maxline: txt("FR → EN, à la perfection"),
+    maxline: txt("FR ↔ EN, à la perfection"),
     others: [txt("50+"), txt("125+"), txt("100+"), txt("125+")],
   },
   {
@@ -135,8 +135,8 @@ export function Comparison() {
             </h2>
             <p className="mt-6 text-lg text-ink-700 leading-relaxed">
               Les autres outils sont excellents pour faire un peu de tout, dans
-              toutes les langues. Maxline fait <em>une</em> chose — traduire le
-              français en anglais, vraiment bien — pour les créateurs
+              toutes les langues. Maxline fait <em>une</em> chose — le
+              français et l&apos;anglais, vraiment bien — pour les créateurs
               francophones.
             </p>
           </div>

@@ -45,13 +45,15 @@ export const metadata: Metadata = {
     template: "%s | Maxline Studio",
   },
   description:
-    "Maxline Studio traduit automatiquement vos vidéos YouTube et TikTok du français vers l'anglais. Sous-titres propres, exportables vers DaVinci ou Premiere. À 12 € par mois, sans piège.",
+    "Maxline Studio sous-titre automatiquement vos vidéos YouTube et TikTok du français vers l'anglais — et aussi anglais → français, ou transcription dans la langue parlée. Sous-titres propres, exportables vers DaVinci ou Premiere. À 12 € par mois, sans piège.",
   keywords: [
     "traduction vidéo",
     "sous-titres anglais",
+    "sous-titres français",
     "youtube traduction",
     "tiktok traduction",
     "transcription automatique",
+    "accessibilité sous-titres",
     "sous-titres srt",
     "vidéo international",
   ],

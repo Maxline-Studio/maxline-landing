@@ -16,7 +16,7 @@ const steps = [
     icon: Wand2,
     title: "L'IA fait son travail",
     description:
-      "Transcription française, traduction anglaise, alignement automatique. Environ 10 minutes pour 10 minutes de vidéo.",
+      "Transcription dans la langue parlée, traduction si besoin, alignement automatique. Environ 10 minutes pour 10 minutes de vidéo.",
     timecode: "00:10 → 10:00",
   },
   {
