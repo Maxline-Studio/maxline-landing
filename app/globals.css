@@ -595,3 +595,18 @@ video::cue {
   color: #f8f4e9;
   line-height: 1.3;
 }
+
+/* ─── Plein écran maison du lecteur ─── */
+/* Le conteneur remplit l'écran ; la vidéo garde son format réel, centrée, pour
+   que les sous-titres natifs restent dans le cadre de la vidéo (pas de débordement
+   sur les bandes noires d'un format vertical). */
+.ml-player:fullscreen {
+  width: 100vw;
+  height: 100vh;
+}
+.ml-player:fullscreen .ml-player-inner {
+  width: auto !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
