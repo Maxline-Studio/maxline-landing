@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sourceKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 import type { VideoStatus, Segment } from "@/lib/mock-worker";
+import type { SubtitleStyle } from "@/lib/subtitle-style";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -284,6 +285,31 @@ export async function saveTranscriptionEn(
     return { ok: false, error: error.message };
   }
 
+  return { ok: true };
+}
+
+/**
+ * Sauvegarde le style de sous-titres personnalisé (police, taille, fond/contour,
+ * couleur) pour une vidéo. S'applique à l'aperçu et alimentera l'incrustation
+ * MP4 (différée).
+ */
+export async function saveSubtitleStyle(
+  videoId: string,
+  style: SubtitleStyle,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { error } = await supabase
+    .from("videos")
+    .update({ subtitle_style: style })
+    .eq("id", videoId)
+    .eq("user_id", user.id);
+
+  if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
 

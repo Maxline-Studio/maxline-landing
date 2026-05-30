@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces, Caveat } from "next/font/google";
+import { Inter, Fraunces, Caveat, Montserrat, Anton } from "next/font/google";
 import "./globals.css";
 import { ScrollProgress } from "@/components/scroll-progress";
 
@@ -20,6 +20,20 @@ const fraunces = Fraunces({
 const caveat = Caveat({
   subsets: ["latin"],
   variable: "--font-caveat",
+  display: "swap",
+});
+
+// Polices proposées pour la personnalisation des sous-titres.
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  display: "swap",
+});
+
+const anton = Anton({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-anton",
   display: "swap",
 });
 
@@ -81,7 +95,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${inter.variable} ${fraunces.variable} ${caveat.variable}`}
+      className={`${inter.variable} ${fraunces.variable} ${caveat.variable} ${montserrat.variable} ${anton.variable}`}
     >
       <body>
         <a href="#main-content" className="skip-link">

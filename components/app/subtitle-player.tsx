@@ -17,6 +17,11 @@ import {
   Minimize,
   VideoOff,
 } from "lucide-react";
+import {
+  overlayStyleCss,
+  DEFAULT_SUBTITLE_STYLE,
+  type SubtitleStyle,
+} from "@/lib/subtitle-style";
 
 export type SubtitlePlayerHandle = {
   /** Place la lecture à `seconds` et démarre. */
@@ -45,11 +50,12 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl: string | null;
     activeText?: string;
+    subtitleStyle?: SubtitleStyle;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
   }
 >(function SubtitlePlayer(
-  { videoUrl, activeText, onTimeUpdate, onPlayingChange },
+  { videoUrl, activeText, subtitleStyle, onTimeUpdate, onPlayingChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -212,13 +218,8 @@ export const SubtitlePlayer = forwardRef<
               }`}
             >
               <span
-                className="ml-subtitle bg-ink-900/85 text-ivory-50 rounded-sm text-center font-medium whitespace-pre-line"
-                style={{
-                  fontSize: "clamp(0.75rem, 3.2cqw, 1.05rem)",
-                  padding: "0.25em 0.6em",
-                  maxWidth: "92%",
-                  lineHeight: 1.3,
-                }}
+                className="ml-subtitle text-center whitespace-pre-line"
+                style={overlayStyleCss(subtitleStyle ?? DEFAULT_SUBTITLE_STYLE)}
               >
                 {activeText}
               </span>

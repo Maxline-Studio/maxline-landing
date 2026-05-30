@@ -28,6 +28,7 @@ import {
   deleteVideo,
   retryVideo,
   saveTranscriptionEn,
+  saveSubtitleStyle,
   regenerateLine,
 } from "@/lib/video-actions";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
@@ -37,6 +38,14 @@ import {
 } from "@/components/app/subtitle-player";
 import { formatDuration } from "@/lib/storage";
 import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
+import {
+  normalizeSubtitleStyle,
+  subtitleColorHex,
+  FONT_OPTIONS,
+  COLOR_OPTIONS,
+  SIZE_OPTIONS,
+  type SubtitleStyle,
+} from "@/lib/subtitle-style";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -110,6 +119,31 @@ export function VideoDetailClient({
   segmentsRef.current = segments;
 
   const segmentsFr = (initialVideo.transcription_fr as Segment[]) || [];
+
+  // Style des sous-titres (perso, persisté par vidéo, sauvegarde différée).
+  const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(
+    normalizeSubtitleStyle(initialVideo.subtitle_style),
+  );
+  const styleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const updateStyle = useCallback(
+    (patch: Partial<SubtitleStyle>) => {
+      setSubtitleStyle((prev) => {
+        const next = { ...prev, ...patch };
+        if (styleTimer.current) clearTimeout(styleTimer.current);
+        styleTimer.current = setTimeout(() => {
+          saveSubtitleStyle(initialVideo.id, next);
+        }, 700);
+        return next;
+      });
+    },
+    [initialVideo.id],
+  );
+  useEffect(
+    () => () => {
+      if (styleTimer.current) clearTimeout(styleTimer.current);
+    },
+    [],
+  );
 
   // Quand la transcription arrive (ex. transition live "en cours → terminé"),
   // on recharge les segments — sauf si l'utilisateur a des modifs non sauvées.
@@ -364,12 +398,16 @@ export function VideoDetailClient({
                   ref={playerRef}
                   videoUrl={videoUrl}
                   activeText={activeText}
+                  subtitleStyle={subtitleStyle}
                   onTimeUpdate={setCurrentTime}
                   onPlayingChange={setIsPlaying}
                 />
                 <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
                   {segments.length} sous-titres · modifiez le texte, cliquez «&nbsp;Lire&nbsp;» pour vous y rendre
                 </p>
+
+                {/* Panneau : style des sous-titres */}
+                <SubtitleStylePanel style={subtitleStyle} onChange={updateStyle} />
               </div>
 
               {/* Liste éditable, dans son propre cadre défilant */}
@@ -725,5 +763,121 @@ function SaveIndicator({ state }: { state: SaveState }) {
       {c.icon}
       {c.label}
     </span>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Panneau de style des sous-titres
+// ─────────────────────────────────────────────────────────────────
+const chipCls = (active: boolean) =>
+  `px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+    active
+      ? "border-rouge-500 bg-rouge-50 text-ink-900"
+      : "border-ivory-300 text-ink-600 hover:border-ink-400"
+  }`;
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="block font-mono text-[9px] uppercase tracking-widest text-ink-400 mb-1.5">
+      {children}
+    </span>
+  );
+}
+
+function SubtitleStylePanel({
+  style,
+  onChange,
+}: {
+  style: SubtitleStyle;
+  onChange: (patch: Partial<SubtitleStyle>) => void;
+}) {
+  return (
+    <div className="mt-4 rounded-sm border border-ivory-200 bg-ivory-50 p-4 space-y-4">
+      <div className="flex items-baseline gap-2 flex-wrap">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-ink-600">
+          Style des sous-titres
+        </span>
+        <span className="font-mono text-[9px] text-ink-400">
+          aperçu · sera gravé avec le rendu MP4
+        </span>
+      </div>
+
+      {/* Police */}
+      <div>
+        <FieldLabel>Police</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          {FONT_OPTIONS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => onChange({ font: f.id })}
+              style={{ fontFamily: `var(--font-${f.id})` }}
+              className={chipCls(style.font === f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-8 flex-wrap">
+        {/* Mode */}
+        <div>
+          <FieldLabel>Style</FieldLabel>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => onChange({ mode: "background" })}
+              className={chipCls(style.mode === "background")}
+            >
+              Fond
+            </button>
+            <button
+              onClick={() => onChange({ mode: "outline" })}
+              className={chipCls(style.mode === "outline")}
+            >
+              Contour
+            </button>
+          </div>
+        </div>
+
+        {/* Taille */}
+        <div>
+          <FieldLabel>Taille</FieldLabel>
+          <div className="flex gap-1.5">
+            {SIZE_OPTIONS.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => onChange({ size: s.id })}
+                className={chipCls(style.size === s.id)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Couleur */}
+      <div>
+        <FieldLabel>
+          Couleur du {style.mode === "background" ? "fond" : "contour"}
+        </FieldLabel>
+        <div className="flex flex-wrap gap-2">
+          {COLOR_OPTIONS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onChange({ color: c.id })}
+              title={c.label}
+              aria-label={c.label}
+              className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                style.color === c.id
+                  ? "border-ink-900 scale-110"
+                  : "border-ivory-300 hover:scale-105"
+              }`}
+              style={{ backgroundColor: subtitleColorHex(c.id) }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

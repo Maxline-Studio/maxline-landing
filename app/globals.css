@@ -607,7 +607,8 @@ input, textarea, select {
   max-width: 100vw !important;
   max-height: 100vh !important;
 }
-/* En plein écran, sous-titres plus grands (la vidéo occupe tout l'écran). */
+/* En plein écran, sous-titres plus grands (la vidéo occupe tout l'écran).
+   Réutilise le multiplicateur de taille S/M/L (--sub-scale) défini sur l'overlay. */
 .ml-player:fullscreen .ml-subtitle {
-  font-size: clamp(1.1rem, 3.6cqw, 1.6rem) !important;
+  font-size: calc(clamp(1.05rem, 3.6cqw, 1.55rem) * var(--sub-scale, 1)) !important;
 }

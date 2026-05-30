@@ -90,6 +90,7 @@ export type Database = {
           storage_key_source: string | null;
           storage_key_srt: string | null;
           storage_key_vtt: string | null;
+          subtitle_style: Json | null;
           transcription_en: Json | null;
           transcription_fr: Json | null;
           uploaded_at: string;
@@ -115,6 +116,7 @@ export type Database = {
           storage_key_source?: string | null;
           storage_key_srt?: string | null;
           storage_key_vtt?: string | null;
+          subtitle_style?: Json | null;
           transcription_en?: Json | null;
           transcription_fr?: Json | null;
           uploaded_at?: string;
