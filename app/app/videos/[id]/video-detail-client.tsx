@@ -8,7 +8,6 @@ import {
   useMemo,
   useRef,
 } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Trash2,
@@ -16,14 +15,20 @@ import {
   AlertCircle,
   Download,
   Loader2,
-  Pencil,
   Play,
+  Plus,
+  ArrowDownUp,
+  RotateCcw,
+  Save,
+  Check,
 } from "lucide-react";
 import type { Video } from "@/lib/supabase/types";
 import {
   getVideoStatus,
   deleteVideo,
   retryVideo,
+  saveTranscriptionEn,
+  regenerateLine,
 } from "@/lib/video-actions";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
 import {
@@ -32,6 +37,8 @@ import {
 } from "@/components/app/subtitle-player";
 import { formatDuration } from "@/lib/storage";
 import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
+
+type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
 const PROCESSING_STATES = [
   "queued",
@@ -43,6 +50,11 @@ const PROCESSING_STATES = [
   "burning_in",
 ];
 
+/**
+ * Espace de travail vidéo unifié : statut/pipeline, puis — une fois la vidéo
+ * prête — l'aperçu (lecteur + sous-titres) ET l'édition directement sur la même
+ * page (fusion détail + éditeur, un clic en moins). Sauvegarde auto.
+ */
 export function VideoDetailClient({
   initialVideo,
   videoUrl,
@@ -63,7 +75,7 @@ export function VideoDetailClient({
 
   const isProcessing = PROCESSING_STATES.includes(status);
 
-  // Polling du statut RÉEL (mis à jour par le worker sur la VM).
+  // ─── Polling du statut RÉEL (mis à jour par le worker) ───
   const poll = useCallback(async () => {
     const result = await getVideoStatus(initialVideo.id);
     if (!result) return;
@@ -72,27 +84,163 @@ export function VideoDetailClient({
       STAGE_PROGRESS[result.status as keyof typeof STAGE_PROGRESS] ?? 0,
     );
     if (result.errorMessage) setErrorMessage(result.errorMessage);
-    if (result.status === "done") {
-      // Recharge pour afficher la transcription finale + clés sous-titres
-      router.refresh();
-    }
+    if (result.status === "done") router.refresh();
   }, [initialVideo.id, router]);
 
   useEffect(() => {
     if (!isProcessing) return;
-    // Premier tick immédiat puis toutes les 2s
     poll();
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, [isProcessing, poll]);
 
+  // ─── Édition des sous-titres ───
+  const playerRef = useRef<SubtitlePlayerHandle>(null);
+  const activeRowRef = useRef<HTMLElement>(null);
+  const dirtyRef = useRef(false);
+  const [segments, setSegments] = useState<Segment[]>(
+    (initialVideo.transcription_en as Segment[]) || [],
+  );
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
+
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
+
+  const segmentsFr = (initialVideo.transcription_fr as Segment[]) || [];
+
+  // Quand la transcription arrive (ex. transition live "en cours → terminé"),
+  // on recharge les segments — sauf si l'utilisateur a des modifs non sauvées.
+  useEffect(() => {
+    if (!dirtyRef.current) {
+      setSegments((initialVideo.transcription_en as Segment[]) || []);
+    }
+  }, [initialVideo.transcription_en]);
+
+  const activeIndex = useMemo(
+    () =>
+      segments.findIndex((s) => currentTime >= s.start && currentTime < s.end),
+    [segments, currentTime],
+  );
+
+  useEffect(() => {
+    if (isPlaying && activeRowRef.current) {
+      activeRowRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [activeIndex, isPlaying]);
+
+  const markDirty = useCallback(() => {
+    dirtyRef.current = true;
+    setSaveState("dirty");
+  }, []);
+
+  const save = useCallback(async () => {
+    if (!dirtyRef.current) return;
+    setSaveState("saving");
+    const result = await saveTranscriptionEn(initialVideo.id, segmentsRef.current);
+    if (result.ok) {
+      dirtyRef.current = false;
+      setSaveState("saved");
+      setTimeout(() => {
+        if (!dirtyRef.current) setSaveState("idle");
+      }, 2500);
+    } else {
+      setSaveState("error");
+    }
+  }, [initialVideo.id]);
+
+  // Auto-save toutes les 10 s, et sauvegarde avant de quitter.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (dirtyRef.current) save();
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [save]);
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, []);
+
+  const updateText = (idx: number, text: string) => {
+    setSegments((prev) => prev.map((s, i) => (i === idx ? { ...s, text } : s)));
+    markDirty();
+  };
+  const updateTiming = (idx: number, field: "start" | "end", value: number) => {
+    setSegments((prev) =>
+      prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
+    );
+    markDirty();
+  };
+  const addLineAfter = (idx: number) => {
+    setSegments((prev) => {
+      const cur = prev[idx];
+      const next = prev[idx + 1];
+      const newStart = cur ? cur.end : 0;
+      const newEnd = next ? next.start : newStart + 2;
+      const newSeg: Segment = {
+        start: newStart,
+        end: Math.max(newEnd, newStart + 0.5),
+        text: "",
+      };
+      return [...prev.slice(0, idx + 1), newSeg, ...prev.slice(idx + 1)];
+    });
+    markDirty();
+  };
+  const deleteLine = (idx: number) => {
+    setSegments((prev) => prev.filter((_, i) => i !== idx));
+    markDirty();
+  };
+  const mergeWithNext = (idx: number) => {
+    setSegments((prev) => {
+      const a = prev[idx];
+      const b = prev[idx + 1];
+      if (!a || !b) return prev;
+      const merged: Segment = {
+        start: a.start,
+        end: b.end,
+        text: `${a.text} ${b.text}`.trim(),
+      };
+      return [...prev.slice(0, idx), merged, ...prev.slice(idx + 2)];
+    });
+    markDirty();
+  };
+  const regenerate = async (idx: number) => {
+    setRegeneratingIdx(idx);
+    const result = await regenerateLine(initialVideo.id, idx);
+    if (result.ok && result.text) updateText(idx, result.text);
+    setRegeneratingIdx(null);
+  };
+
+  // Export : on sauvegarde d'abord (si modifs), puis on télécharge la version à jour.
+  const downloadExport = useCallback(
+    async (fmt: "srt" | "vtt" | "txt") => {
+      if (dirtyRef.current) await save();
+      const a = document.createElement("a");
+      a.href = `/app/videos/${initialVideo.id}/export?format=${fmt}`;
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    },
+    [initialVideo.id, save],
+  );
+
+  // ─── Actions vidéo ───
   const handleDelete = () => {
     startTransition(async () => {
       await deleteVideo(initialVideo.id);
       router.push("/app/videos");
     });
   };
-
   const handleRetry = () => {
     startTransition(async () => {
       await retryVideo(initialVideo.id);
@@ -103,31 +251,7 @@ export function VideoDetailClient({
     });
   };
 
-  const transcriptionEn = (initialVideo.transcription_en as Segment[]) || [];
-  const transcriptionFr = (initialVideo.transcription_fr as Segment[]) || [];
-
-  // ─── Aperçu vidéo : lecteur + déroulé synchronisé ───
-  const playerRef = useRef<SubtitlePlayerHandle>(null);
-  const activeRowRef = useRef<HTMLButtonElement>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const activeIndex = useMemo(
-    () =>
-      transcriptionEn.findIndex(
-        (s) => currentTime >= s.start && currentTime < s.end,
-      ),
-    [transcriptionEn, currentTime],
-  );
-
-  // Auto-défilement : centre la ligne active quand la vidéo joue (sans gêner
-  // le défilement manuel de l'utilisateur quand elle est en pause).
-  useEffect(() => {
-    if (isPlaying && activeRowRef.current) {
-      activeRowRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-    // (le conteneur de liste a son propre overflow → ne scrolle que lui)
-  }, [activeIndex, isPlaying]);
+  const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
 
   return (
     <div>
@@ -189,8 +313,7 @@ export function VideoDetailClient({
                 Le traitement a échoué
               </h2>
               <p className="text-sm text-ink-700">
-                {errorMessage ||
-                  "Une erreur est survenue pendant le traitement."}
+                {errorMessage || "Une erreur est survenue pendant le traitement."}
               </p>
             </div>
           </div>
@@ -205,79 +328,84 @@ export function VideoDetailClient({
         </div>
       )}
 
-      {/* Terminé : aperçu transcription + exports */}
+      {/* Terminé : aperçu + édition (fusionnés) */}
       {status === "done" && (
         <>
           <div className="mb-6">
-            <div className="flex items-center justify-between gap-3 mb-4">
+            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
               <h2 className="font-display font-medium text-xl text-ink-900">
                 Sous-titres anglais
               </h2>
-              <Link
-                href={`/app/videos/${initialVideo.id}/edit`}
-                className="btn-pen text-sm shrink-0"
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-                Éditer
-              </Link>
+              <div className="flex items-center gap-3">
+                <SaveIndicator state={saveState} />
+                <button
+                  onClick={save}
+                  disabled={
+                    saveState === "saving" ||
+                    saveState === "idle" ||
+                    saveState === "saved"
+                  }
+                  className="btn-pen text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saveState === "saving" ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Save className="h-4 w-4" aria-hidden />
+                  )}
+                  Enregistrer
+                </button>
+              </div>
             </div>
 
             <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6 items-start">
-              {/* Lecteur : reste visible (le déroulé défile dans son propre cadre) */}
+              {/* Lecteur (reste visible) */}
               <div>
                 <SubtitlePlayer
                   ref={playerRef}
                   videoUrl={videoUrl}
-                  activeText={
-                    activeIndex >= 0 ? transcriptionEn[activeIndex]?.text : ""
-                  }
+                  activeText={activeText}
                   onTimeUpdate={setCurrentTime}
                   onPlayingChange={setIsPlaying}
                 />
                 <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                  {transcriptionEn.length} sous-titres · cliquez une ligne pour
-                  vous y rendre
+                  {segments.length} sous-titres · modifiez le texte, cliquez «&nbsp;Lire&nbsp;» pour vous y rendre
                 </p>
               </div>
 
-              {/* Déroulé synchronisé (lecture seule), dans son propre cadre défilant */}
-              <div className="max-h-[70vh] overflow-y-auto rounded-sm border border-ivory-200 bg-ivory-50 divide-y divide-ivory-200">
-                {transcriptionEn.map((seg, i) => {
-                  const isActive = i === activeIndex;
-                  return (
+              {/* Liste éditable, dans son propre cadre défilant */}
+              <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+                {segments.map((seg, idx) => (
+                  <SegmentRow
+                    key={idx}
+                    index={idx}
+                    segment={seg}
+                    frText={segmentsFr[idx]?.text}
+                    rowRef={idx === activeIndex ? activeRowRef : undefined}
+                    isActive={idx === activeIndex}
+                    isRegenerating={regeneratingIdx === idx}
+                    canMerge={idx < segments.length - 1}
+                    onSeek={() => playerRef.current?.seekTo(seg.start)}
+                    onTextChange={(t) => updateText(idx, t)}
+                    onTimingChange={(f, v) => updateTiming(idx, f, v)}
+                    onAdd={() => addLineAfter(idx)}
+                    onDelete={() => deleteLine(idx)}
+                    onMerge={() => mergeWithNext(idx)}
+                    onRegenerate={() => regenerate(idx)}
+                  />
+                ))}
+
+                {segments.length === 0 && (
+                  <div className="text-center py-12 text-ink-500">
+                    <p className="mb-4">Aucun segment.</p>
                     <button
-                      key={i}
-                      ref={isActive ? activeRowRef : undefined}
-                      onClick={() => playerRef.current?.seekTo(seg.start)}
-                      style={{
-                        contentVisibility: "auto",
-                        containIntrinsicSize: "auto 76px",
-                      }}
-                      className={`group w-full text-left flex gap-3 px-4 py-3 transition-colors ${
-                        isActive ? "bg-rouge-50" : "hover:bg-ivory-100"
-                      }`}
+                      onClick={() => addLineAfter(-1)}
+                      className="btn-outline text-sm"
                     >
-                      <span
-                        className={`font-mono text-[10px] tabular-nums pt-0.5 w-14 flex-shrink-0 inline-flex items-center gap-1 ${
-                          isActive ? "text-rouge-600" : "text-ink-400"
-                        }`}
-                      >
-                        {isActive && <Play className="h-3 w-3" aria-hidden />}
-                        {formatDuration(seg.start)}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-ink-900 font-medium whitespace-pre-line">
-                          {seg.text}
-                        </span>
-                        {transcriptionFr[i] && (
-                          <span className="block text-sm text-ink-400 italic mt-0.5 whitespace-pre-line">
-                            {transcriptionFr[i].text}
-                          </span>
-                        )}
-                      </span>
+                      <Plus className="h-4 w-4" aria-hidden />
+                      Ajouter une ligne
                     </button>
-                  );
-                })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -289,14 +417,13 @@ export function VideoDetailClient({
             </h3>
             <div className="flex flex-wrap gap-3">
               {(["srt", "vtt", "txt"] as const).map((fmt) => (
-                <a
+                <button
                   key={fmt}
-                  href={`/app/videos/${initialVideo.id}/export?format=${fmt}`}
-                  download
+                  onClick={() => downloadExport(fmt)}
                   className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
                 >
                   <Download className="h-4 w-4" aria-hidden />.{fmt}
-                </a>
+                </button>
               ))}
               <span
                 className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
@@ -307,7 +434,8 @@ export function VideoDetailClient({
               </span>
             </div>
             <p className="text-xs text-ink-500 mt-3 font-mono">
-              › .srt / .vtt / .txt prêts · MP4 incrusté à l&apos;arrivée du rendu vidéo
+              › les exports reprennent vos dernières modifications (enregistrées
+              automatiquement)
             </p>
           </div>
         </>
@@ -348,5 +476,254 @@ export function VideoDetailClient({
         )}
       </div>
     </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Ligne de segment éditable
+// ─────────────────────────────────────────────────────────────────
+function SegmentRow({
+  index,
+  segment,
+  frText,
+  rowRef,
+  isActive,
+  isRegenerating,
+  canMerge,
+  onSeek,
+  onTextChange,
+  onTimingChange,
+  onAdd,
+  onDelete,
+  onMerge,
+  onRegenerate,
+}: {
+  index: number;
+  segment: Segment;
+  frText?: string;
+  rowRef?: React.Ref<HTMLElement>;
+  isActive: boolean;
+  isRegenerating: boolean;
+  canMerge: boolean;
+  onSeek: () => void;
+  onTextChange: (t: string) => void;
+  onTimingChange: (field: "start" | "end", value: number) => void;
+  onAdd: () => void;
+  onDelete: () => void;
+  onMerge: () => void;
+  onRegenerate: () => void;
+}) {
+  return (
+    <article
+      ref={rowRef}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 210px" }}
+      className={`rounded-sm border-2 transition-colors ${
+        isActive
+          ? "border-rouge-500 bg-rouge-50"
+          : "border-ink-200 bg-ivory-50 hover:border-ink-400"
+      }`}
+    >
+      <div className="p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="font-mono text-[10px] text-ink-400 tabular-nums w-6">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+          <TimecodeInput
+            value={segment.start}
+            onChange={(v) => onTimingChange("start", v)}
+            aria-label={`Début segment ${index + 1}`}
+          />
+          <span className="text-ink-300">→</span>
+          <TimecodeInput
+            value={segment.end}
+            onChange={(v) => onTimingChange("end", v)}
+            aria-label={`Fin segment ${index + 1}`}
+          />
+          <button
+            onClick={onSeek}
+            className="ml-auto inline-flex items-center gap-1 text-[10px] font-mono uppercase tracking-widest text-encre-500 hover:text-rouge-500 transition-colors"
+            title="Aller à ce moment dans la vidéo"
+          >
+            <Play className="h-3 w-3" aria-hidden />
+            Lire
+          </button>
+        </div>
+
+        <textarea
+          value={segment.text}
+          onChange={(e) => onTextChange(e.target.value)}
+          rows={2}
+          className="w-full bg-white border border-ink-200 rounded-sm px-3 py-2 text-ink-900 resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30"
+          placeholder="Sous-titre anglais…"
+        />
+
+        {frText && <p className="mt-2 text-sm text-ink-400 italic">{frText}</p>}
+
+        <div className="flex items-center gap-1 mt-3">
+          <RowAction
+            onClick={onRegenerate}
+            disabled={isRegenerating}
+            title="Régénérer la traduction de cette ligne"
+          >
+            {isRegenerating ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+            )}
+            Régénérer
+          </RowAction>
+          <RowAction onClick={onAdd} title="Ajouter une ligne après">
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Ajouter
+          </RowAction>
+          {canMerge && (
+            <RowAction onClick={onMerge} title="Fusionner avec la ligne suivante">
+              <ArrowDownUp className="h-3.5 w-3.5" aria-hidden />
+              Fusionner
+            </RowAction>
+          )}
+          <RowAction onClick={onDelete} title="Supprimer cette ligne" danger>
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            Supprimer
+          </RowAction>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function RowAction({
+  children,
+  onClick,
+  disabled,
+  title,
+  danger,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  title: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={`inline-flex items-center gap-1 px-2 py-1 rounded-sm text-[10px] font-mono uppercase tracking-widest transition-colors disabled:opacity-50 ${
+        danger
+          ? "text-ink-500 hover:text-rouge-600 hover:bg-rouge-50"
+          : "text-ink-500 hover:text-ink-900 hover:bg-ivory-200"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function TimecodeInput({
+  value,
+  onChange,
+  "aria-label": ariaLabel,
+}: {
+  value: number;
+  onChange: (seconds: number) => void;
+  "aria-label": string;
+}) {
+  const [text, setText] = useState(formatTimecode(value));
+  const [editing, setEditing] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setText(formatTimecode(value));
+  }, [value, editing]);
+
+  const commit = () => {
+    setEditing(false);
+    const parsed = parseTimecode(text);
+    if (parsed !== null) {
+      onChange(parsed);
+      setText(formatTimecode(parsed));
+    } else {
+      setText(formatTimecode(value));
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={text}
+      aria-label={ariaLabel}
+      onFocus={() => setEditing(true)}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+      }}
+      className="w-20 bg-white border border-ink-200 rounded-sm px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-ink-900 text-center focus:outline-none focus:border-rouge-500"
+    />
+  );
+}
+
+function formatTimecode(seconds: number): string {
+  const cs = Math.round((seconds % 1) * 100);
+  const s = Math.floor(seconds) % 60;
+  const m = Math.floor(seconds / 60);
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
+}
+
+function parseTimecode(str: string): number | null {
+  const trimmed = str.trim();
+  const full = trimmed.match(/^(\d+):(\d{1,2})(?:\.(\d{1,2}))?$/);
+  if (full) {
+    const m = parseInt(full[1]!, 10);
+    const s = parseInt(full[2]!, 10);
+    const cs = full[3] ? parseInt(full[3].padEnd(2, "0"), 10) : 0;
+    if (s >= 60) return null;
+    return m * 60 + s + cs / 100;
+  }
+  const simple = trimmed.match(/^(\d+)(?:\.(\d{1,2}))?$/);
+  if (simple) {
+    const s = parseInt(simple[1]!, 10);
+    const cs = simple[2] ? parseInt(simple[2].padEnd(2, "0"), 10) : 0;
+    return s + cs / 100;
+  }
+  return null;
+}
+
+function SaveIndicator({ state }: { state: SaveState }) {
+  if (state === "idle") return null;
+  const config: Record<
+    Exclude<SaveState, "idle">,
+    { label: string; className: string; icon: React.ReactNode }
+  > = {
+    dirty: {
+      label: "Modifications non enregistrées",
+      className: "text-ink-500",
+      icon: <span className="h-1.5 w-1.5 rounded-full bg-rouge-500" />,
+    },
+    saving: {
+      label: "Enregistrement…",
+      className: "text-ink-500",
+      icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
+    },
+    saved: {
+      label: "Enregistré",
+      className: "text-success-600",
+      icon: <Check className="h-3.5 w-3.5" />,
+    },
+    error: {
+      label: "Erreur d'enregistrement",
+      className: "text-rouge-600",
+      icon: <span className="h-1.5 w-1.5 rounded-full bg-rouge-600" />,
+    },
+  };
+  const c = config[state];
+  return (
+    <span
+      className={`hidden sm:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest ${c.className}`}
+    >
+      {c.icon}
+      {c.label}
+    </span>
   );
 }
