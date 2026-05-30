@@ -149,7 +149,14 @@ export function Header() {
                 </a>
               );
             })}
-            <div className="pt-4 px-2">
+            <div className="pt-4 px-2 space-y-3">
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center justify-center w-full px-3 py-3 text-base font-medium text-ink-800 border border-ink-300 rounded-sm hover:bg-ivory-100 transition-colors"
+              >
+                Connexion
+              </Link>
               <a
                 href="/#subscribe"
                 onClick={() => setMobileOpen(false)}
