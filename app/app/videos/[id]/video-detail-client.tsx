@@ -222,7 +222,7 @@ export function VideoDetailClient({
               </Link>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6 items-start">
+            <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6 items-start">
               {/* Lecteur : reste visible (le déroulé défile dans son propre cadre) */}
               <div>
                 <SubtitlePlayer
