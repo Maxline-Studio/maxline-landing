@@ -55,9 +55,29 @@ export default async function DashboardPage() {
         </h1>
       </div>
 
-      {/* Grille 3 cartes : quota / atelier / nouvelle vidéo */}
+      {/* Grille 3 cartes — ordre lecture gauche→droite : action / minutes / rang */}
       <div className="grid md:grid-cols-3 gap-6 mb-12">
-        {/* Quota */}
+        {/* Nouvelle vidéo (CTA) — à gauche */}
+        <article className="bg-rouge-500 text-ivory-50 border-2 border-rouge-500 rounded-sm p-6 flex flex-col">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-ivory-50/80 mb-3">
+            Action
+          </div>
+          <div className="font-display font-medium text-2xl leading-tight mb-2">
+            Sous-titrer une vidéo
+          </div>
+          <div className="text-sm text-ivory-50/90 mb-6 flex-1">
+            Glissez votre vidéo. Sous-titres prêts en ~10 minutes.
+          </div>
+          <Link
+            href="/app/upload"
+            className="inline-flex items-center justify-center gap-2 bg-ivory-50 text-ink-900 px-4 py-2.5 rounded-sm font-bold hover:bg-ivory-100 transition-colors"
+          >
+            <Upload className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+            Démarrer
+          </Link>
+        </article>
+
+        {/* Quota — au milieu */}
         <article className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6">
           <div className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
             Minutes disponibles
@@ -82,7 +102,7 @@ export default async function DashboardPage() {
           </Link>
         </article>
 
-        {/* Atelier */}
+        {/* Atelier — à droite */}
         <article className="bg-ink-900 text-ivory-50 border-2 border-ink-900 rounded-sm p-6">
           <div className="font-mono text-[10px] uppercase tracking-widest text-rouge-400 mb-3">
             Votre rang
@@ -109,26 +129,6 @@ export default async function DashboardPage() {
               </div>
             </>
           )}
-        </article>
-
-        {/* Nouvelle vidéo (CTA) */}
-        <article className="bg-rouge-500 text-ivory-50 border-2 border-rouge-500 rounded-sm p-6 flex flex-col">
-          <div className="font-mono text-[10px] uppercase tracking-widest text-ivory-50/80 mb-3">
-            Action
-          </div>
-          <div className="font-display font-medium text-2xl leading-tight mb-2">
-            Traduire une vidéo
-          </div>
-          <div className="text-sm text-ivory-50/90 mb-6 flex-1">
-            Glissez votre fichier MP4. Sous-titres anglais en ~10 minutes.
-          </div>
-          <Link
-            href="/app/upload"
-            className="inline-flex items-center justify-center gap-2 bg-ivory-50 text-ink-900 px-4 py-2.5 rounded-sm font-bold hover:bg-ivory-100 transition-colors"
-          >
-            <Upload className="h-4 w-4" strokeWidth={2.5} aria-hidden />
-            Démarrer
-          </Link>
         </article>
       </div>
 
@@ -180,7 +180,7 @@ function EmptyState() {
         Votre atelier est vide.
       </h3>
       <p className="text-sm text-ink-600 mb-6 max-w-md mx-auto">
-        Traduisez votre première vidéo française en anglais — c&apos;est{" "}
+        Sous-titrez votre première vidéo — c&apos;est{" "}
         <span className="font-semibold">offert au lancement</span>, sans carte
         demandée.
       </p>
