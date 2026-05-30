@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { STORAGE_BUCKET } from "@/lib/storage";
 import type { Video } from "@/lib/supabase/types";
 import { VideoDetailClient } from "./video-detail-client";
 
@@ -32,8 +33,19 @@ export default async function VideoDetailPage({
 
   if (!video) notFound();
 
+  const v = video as Video;
+
+  // Signed URL (1h) pour l'aperçu vidéo, uniquement si traitée + fichier présent.
+  let videoUrl: string | null = null;
+  if (v.status === "done" && v.storage_key_source) {
+    const { data: signed } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(v.storage_key_source, 3600);
+    videoUrl = signed?.signedUrl ?? null;
+  }
+
   return (
-    <div className="max-w-4xl">
+    <div className="max-w-6xl">
       <Link
         href="/app/videos"
         className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-8 group"
@@ -42,7 +54,7 @@ export default async function VideoDetailPage({
         Mes vidéos
       </Link>
 
-      <VideoDetailClient initialVideo={video as Video} />
+      <VideoDetailClient initialVideo={v} videoUrl={videoUrl} />
     </div>
   );
 }

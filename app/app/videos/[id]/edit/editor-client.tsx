@@ -16,10 +16,13 @@ import {
   Check,
   Loader2,
   Play,
-  VideoOff,
 } from "lucide-react";
 import type { Segment } from "@/lib/mock-worker";
 import { saveTranscriptionEn, regenerateLine } from "@/lib/video-actions";
+import {
+  SubtitlePlayer,
+  type SubtitlePlayerHandle,
+} from "@/components/app/subtitle-player";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
@@ -36,11 +39,12 @@ export function EditorClient({
   initialSegmentsEn: Segment[];
   segmentsFr: Segment[];
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const playerRef = useRef<SubtitlePlayerHandle>(null);
+  const activeRowRef = useRef<HTMLElement>(null);
   const [segments, setSegments] = useState<Segment[]>(initialSegmentsEn);
   const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
-  const [videoError, setVideoError] = useState(false);
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
 
   const dirtyRef = useRef(false);
@@ -53,6 +57,13 @@ export function EditorClient({
       (s) => currentTime >= s.start && currentTime < s.end,
     );
   }, [segments, currentTime]);
+
+  // Auto-défilement de la ligne active pendant la lecture (sans gêner l'édition).
+  useEffect(() => {
+    if (isPlaying && activeRowRef.current) {
+      activeRowRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [activeIndex, isPlaying]);
 
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
@@ -157,10 +168,7 @@ export function EditorClient({
 
   // ─── Lecture vidéo ───
   const seekTo = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = seconds;
-      videoRef.current.play().catch(() => {});
-    }
+    playerRef.current?.seekTo(seconds);
   };
 
   const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
@@ -194,57 +202,31 @@ export function EditorClient({
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Colonne gauche : lecteur (sticky) */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <div className="bg-ink-900 rounded-sm overflow-hidden border-2 border-ink-900">
-            {videoUrl && !videoError ? (
-              <div className="relative">
-                <video
-                  ref={videoRef}
-                  src={videoUrl}
-                  controls
-                  className="w-full aspect-video bg-ink-900"
-                  onTimeUpdate={(e) =>
-                    setCurrentTime(e.currentTarget.currentTime)
-                  }
-                  onError={() => setVideoError(true)}
-                />
-                {/* Overlay sous-titre courant */}
-                {activeText && (
-                  <div className="absolute bottom-14 inset-x-0 flex justify-center px-4 pointer-events-none">
-                    <span className="bg-ink-900/85 text-ivory-50 px-3 py-1.5 rounded-sm text-sm md:text-base font-medium text-center max-w-[90%]">
-                      {activeText}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="aspect-video flex flex-col items-center justify-center text-ink-400 gap-3">
-                <VideoOff className="h-8 w-8" strokeWidth={1.5} aria-hidden />
-                <p className="text-sm font-mono uppercase tracking-widest">
-                  Aperçu vidéo indisponible
-                </p>
-                <p className="text-xs text-ink-500 max-w-xs text-center px-4">
-                  L&apos;édition des sous-titres reste pleinement fonctionnelle.
-                </p>
-              </div>
-            )}
-          </div>
-
+      <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 items-start">
+        {/* Colonne gauche : lecteur adaptatif (reste visible : la liste défile
+            dans son propre cadre à droite) */}
+        <div>
+          <SubtitlePlayer
+            ref={playerRef}
+            videoUrl={videoUrl}
+            activeText={activeText}
+            onTimeUpdate={setCurrentTime}
+            onPlayingChange={setIsPlaying}
+          />
           <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
             {segments.length} segments · cliquez une ligne pour vous y rendre
           </p>
         </div>
 
-        {/* Colonne droite : liste éditable */}
-        <div className="space-y-3">
+        {/* Colonne droite : liste éditable, dans son propre cadre défilant */}
+        <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
           {segments.map((seg, idx) => (
             <SegmentRow
               key={idx}
               index={idx}
               segment={seg}
               frText={segmentsFr[idx]?.text}
+              rowRef={idx === activeIndex ? activeRowRef : undefined}
               isActive={idx === activeIndex}
               isRegenerating={regeneratingIdx === idx}
               canMerge={idx < segments.length - 1}
@@ -283,6 +265,7 @@ function SegmentRow({
   index,
   segment,
   frText,
+  rowRef,
   isActive,
   isRegenerating,
   canMerge,
@@ -297,6 +280,7 @@ function SegmentRow({
   index: number;
   segment: Segment;
   frText?: string;
+  rowRef?: React.Ref<HTMLElement>;
   isActive: boolean;
   isRegenerating: boolean;
   canMerge: boolean;
@@ -310,6 +294,8 @@ function SegmentRow({
 }) {
   return (
     <article
+      ref={rowRef}
+      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 210px" }}
       className={`rounded-sm border-2 transition-colors ${
         isActive
           ? "border-rouge-500 bg-rouge-50"

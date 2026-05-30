@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback, useTransition } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+  useMemo,
+  useRef,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,6 +17,7 @@ import {
   Download,
   Loader2,
   Pencil,
+  Play,
 } from "lucide-react";
 import type { Video } from "@/lib/supabase/types";
 import {
@@ -18,6 +26,10 @@ import {
   retryVideo,
 } from "@/lib/video-actions";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
+import {
+  SubtitlePlayer,
+  type SubtitlePlayerHandle,
+} from "@/components/app/subtitle-player";
 import { formatDuration } from "@/lib/storage";
 import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
 
@@ -31,7 +43,13 @@ const PROCESSING_STATES = [
   "burning_in",
 ];
 
-export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
+export function VideoDetailClient({
+  initialVideo,
+  videoUrl,
+}: {
+  initialVideo: Video;
+  videoUrl: string | null;
+}) {
   const router = useRouter();
   const [status, setStatus] = useState(initialVideo.status);
   const [progress, setProgress] = useState(
@@ -87,6 +105,29 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
 
   const transcriptionEn = (initialVideo.transcription_en as Segment[]) || [];
   const transcriptionFr = (initialVideo.transcription_fr as Segment[]) || [];
+
+  // ─── Aperçu vidéo : lecteur + déroulé synchronisé ───
+  const playerRef = useRef<SubtitlePlayerHandle>(null);
+  const activeRowRef = useRef<HTMLButtonElement>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const activeIndex = useMemo(
+    () =>
+      transcriptionEn.findIndex(
+        (s) => currentTime >= s.start && currentTime < s.end,
+      ),
+    [transcriptionEn, currentTime],
+  );
+
+  // Auto-défilement : centre la ligne active quand la vidéo joue (sans gêner
+  // le défilement manuel de l'utilisateur quand elle est en pause).
+  useEffect(() => {
+    if (isPlaying && activeRowRef.current) {
+      activeRowRef.current.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+    // (le conteneur de liste a son propre overflow → ne scrolle que lui)
+  }, [activeIndex, isPlaying]);
 
   return (
     <div>
@@ -167,8 +208,8 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
       {/* Terminé : aperçu transcription + exports */}
       {status === "done" && (
         <>
-          <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8 mb-6">
-            <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="mb-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
               <h2 className="font-display font-medium text-xl text-ink-900">
                 Sous-titres anglais
               </h2>
@@ -181,26 +222,63 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
               </Link>
             </div>
 
-            {/* Aperçu transcription EN avec original FR en dessous */}
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-              {transcriptionEn.map((seg, i) => (
-                <div
-                  key={i}
-                  className="flex gap-4 pb-4 border-b border-ivory-200 last:border-0"
-                >
-                  <span className="font-mono text-[10px] text-ink-400 tabular-nums pt-1 w-16 flex-shrink-0">
-                    {formatDuration(seg.start)}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-ink-900 font-medium">{seg.text}</p>
-                    {transcriptionFr[i] && (
-                      <p className="text-sm text-ink-400 italic mt-0.5">
-                        {transcriptionFr[i].text}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="grid lg:grid-cols-2 gap-6 items-start">
+              {/* Lecteur : reste visible (le déroulé défile dans son propre cadre) */}
+              <div>
+                <SubtitlePlayer
+                  ref={playerRef}
+                  videoUrl={videoUrl}
+                  activeText={
+                    activeIndex >= 0 ? transcriptionEn[activeIndex]?.text : ""
+                  }
+                  onTimeUpdate={setCurrentTime}
+                  onPlayingChange={setIsPlaying}
+                />
+                <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
+                  {transcriptionEn.length} sous-titres · cliquez une ligne pour
+                  vous y rendre
+                </p>
+              </div>
+
+              {/* Déroulé synchronisé (lecture seule), dans son propre cadre défilant */}
+              <div className="max-h-[70vh] overflow-y-auto rounded-sm border border-ivory-200 bg-ivory-50 divide-y divide-ivory-200">
+                {transcriptionEn.map((seg, i) => {
+                  const isActive = i === activeIndex;
+                  return (
+                    <button
+                      key={i}
+                      ref={isActive ? activeRowRef : undefined}
+                      onClick={() => playerRef.current?.seekTo(seg.start)}
+                      style={{
+                        contentVisibility: "auto",
+                        containIntrinsicSize: "auto 76px",
+                      }}
+                      className={`group w-full text-left flex gap-3 px-4 py-3 transition-colors ${
+                        isActive ? "bg-rouge-50" : "hover:bg-ivory-100"
+                      }`}
+                    >
+                      <span
+                        className={`font-mono text-[10px] tabular-nums pt-0.5 w-14 flex-shrink-0 inline-flex items-center gap-1 ${
+                          isActive ? "text-rouge-600" : "text-ink-400"
+                        }`}
+                      >
+                        {isActive && <Play className="h-3 w-3" aria-hidden />}
+                        {formatDuration(seg.start)}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-ink-900 font-medium whitespace-pre-line">
+                          {seg.text}
+                        </span>
+                        {transcriptionFr[i] && (
+                          <span className="block text-sm text-ink-400 italic mt-0.5 whitespace-pre-line">
+                            {transcriptionFr[i].text}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
