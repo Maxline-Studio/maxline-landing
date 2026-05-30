@@ -21,7 +21,7 @@ export function Founder() {
       <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 relative">
         <Reveal>
           <div className="flex items-center gap-3 mb-12">
-            <span className="annotation">§07 · Le mot du fondateur</span>
+            <span className="annotation">§ Le mot du fondateur</span>
           </div>
         </Reveal>
 

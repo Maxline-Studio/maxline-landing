@@ -111,7 +111,7 @@ export function Faq() {
       <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
         <div className="mb-14">
           <div className="flex items-center gap-3 mb-6">
-            <span className="annotation">§10 · FAQ</span>
+            <span className="annotation">§09 · FAQ</span>
           </div>
           <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">
             Questions

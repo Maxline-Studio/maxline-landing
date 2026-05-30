@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { HandUnderline } from "@/components/hand-underline";
+import { Founder } from "@/components/sections/founder";
 
 export const metadata: Metadata = {
   title: "Journal",
@@ -76,6 +77,9 @@ export default function BlogIndex() {
             </p>
           </div>
         </section>
+
+        {/* Le mot du fondateur */}
+        <Founder />
 
         {/* Liste articles */}
         <section className="relative pb-24 md:pb-32">
