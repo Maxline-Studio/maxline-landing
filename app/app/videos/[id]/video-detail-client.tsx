@@ -31,7 +31,6 @@ import {
   type SubtitlePlayerHandle,
 } from "@/components/app/subtitle-player";
 import { formatDuration } from "@/lib/storage";
-import { toVtt } from "@/lib/subtitles";
 import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
 
 const PROCESSING_STATES = [
@@ -119,11 +118,6 @@ export function VideoDetailClient({
         (s) => currentTime >= s.start && currentTime < s.end,
       ),
     [transcriptionEn, currentTime],
-  );
-
-  const vtt = useMemo(
-    () => (transcriptionEn.length > 0 ? toVtt(transcriptionEn) : null),
-    [transcriptionEn],
   );
 
   // Auto-défilement : centre la ligne active quand la vidéo joue (sans gêner
@@ -234,7 +228,9 @@ export function VideoDetailClient({
                 <SubtitlePlayer
                   ref={playerRef}
                   videoUrl={videoUrl}
-                  vtt={vtt}
+                  activeText={
+                    activeIndex >= 0 ? transcriptionEn[activeIndex]?.text : ""
+                  }
                   onTimeUpdate={setCurrentTime}
                   onPlayingChange={setIsPlaying}
                 />

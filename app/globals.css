@@ -588,14 +588,6 @@ input, textarea, select {
   pointer-events: none;
 }
 
-/* ─── Sous-titres natifs (piste WebVTT) aux couleurs de l'Atelier ─── */
-/* Fond encre + texte ivoire. S'affiche au-dessus des contrôles ET en plein écran. */
-video::cue {
-  background-color: rgba(26, 24, 20, 0.86);
-  color: #f8f4e9;
-  line-height: 1.3;
-}
-
 /* ─── Plein écran maison du lecteur ─── */
 /* Le conteneur remplit l'écran ; la vidéo garde son format réel, centrée, pour
    que les sous-titres natifs restent dans le cadre de la vidéo (pas de débordement

@@ -8,45 +8,63 @@ import {
   useRef,
   useState,
 } from "react";
-import { VideoOff, Maximize, Minimize } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  Minimize,
+  VideoOff,
+} from "lucide-react";
 
 export type SubtitlePlayerHandle = {
   /** Place la lecture à `seconds` et démarre. */
   seekTo: (seconds: number) => void;
 };
 
+/** secondes → "m:ss". */
+function fmt(s: number): string {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, "0")}`;
+}
+
 /**
- * Lecteur vidéo **adaptatif au format réel** (16:9, 9:16 vertical, 1:1…) avec
- * sous-titres **natifs** (piste WebVTT). Les sous-titres natifs se placent
- * automatiquement au-dessus de la barre de contrôles ET s'affichent en plein
- * écran. Style : voir `video::cue` dans globals.css (couleurs Atelier).
+ * Lecteur vidéo **maison** aux couleurs de l'Atelier (aucun contrôle natif, zéro
+ * librairie). Cadre **adaptatif au format réel** (16:9, 9:16 vertical, 1:1…).
+ * Sous-titres en overlay maison positionné au-dessus de la barre de contrôles.
  *
- * Plein écran : on met en plein écran le **conteneur** (pas l'élément <video>)
- * via un bouton maison (`controlsList="nofullscreen"` retire le bouton natif).
- * En plein écran, la vidéo garde son format réel, centrée → l'élément <video>
- * a la taille du contenu, donc les sous-titres natifs restent dans le cadre de
- * la vidéo (au lieu de déborder sur les bandes noires d'un format forcé 16:9).
- *
- * La piste VTT est générée côté client (prop `vtt`) à partir des segments.
+ * Plein écran : on met en plein écran le **conteneur** (pas l'élément <video>),
+ * et la vidéo garde son format réel centré → l'overlay des sous-titres et les
+ * contrôles restent dans le cadre de la vidéo, même pour une vidéo verticale.
  */
 export const SubtitlePlayer = forwardRef<
   SubtitlePlayerHandle,
   {
     videoUrl: string | null;
-    vtt: string | null;
+    activeText?: string;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
   }
 >(function SubtitlePlayer(
-  { videoUrl, vtt, onTimeUpdate, onPlayingChange },
+  { videoUrl, activeText, onTimeUpdate, onPlayingChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [ratio, setRatio] = useState(16 / 9);
   const [error, setError] = useState(false);
-  const [trackUrl, setTrackUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [muted, setMuted] = useState(false);
+  const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [controlsVisible, setControlsVisible] = useState(true);
 
   useImperativeHandle(
     ref,
@@ -62,50 +80,77 @@ export const SubtitlePlayer = forwardRef<
     [],
   );
 
-  // URL blob VTT pour la piste native (régénérée si le texte change).
   useEffect(() => {
-    if (!vtt) {
-      setTrackUrl(null);
-      return;
-    }
-    const url = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
-    setTrackUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [vtt]);
-
-  const showTrack = () => {
-    const v = videoRef.current;
-    if (v && v.textTracks.length > 0) {
-      v.textTracks[0]!.mode = "showing";
-    }
-  };
-
-  useEffect(() => {
-    if (!trackUrl) return;
-    const t = setTimeout(showTrack, 50);
-    return () => clearTimeout(t);
-  }, [trackUrl]);
-
-  // Suivi de l'état plein écran (du conteneur).
-  useEffect(() => {
-    const onFsChange = () =>
+    const onFs = () =>
       setIsFullscreen(document.fullscreenElement === containerRef.current);
-    document.addEventListener("fullscreenchange", onFsChange);
-    return () => document.removeEventListener("fullscreenchange", onFsChange);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    },
+    [],
+  );
+
+  const togglePlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play().catch(() => {});
+    else v.pause();
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
   }, []);
 
   const toggleFullscreen = useCallback(() => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen?.();
-    } else {
-      containerRef.current?.requestFullscreen?.();
-    }
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else containerRef.current?.requestFullscreen?.();
   }, []);
+
+  /** Révèle les contrôles puis les masque après inactivité (uniquement en lecture). */
+  const revealControls = useCallback(() => {
+    setControlsVisible(true);
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => {
+      if (videoRef.current && !videoRef.current.paused) setControlsVisible(false);
+    }, 2600);
+  }, []);
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (e.key === " " || e.key === "k") {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === "ArrowRight") {
+      v.currentTime = Math.min(v.duration || 0, v.currentTime + 5);
+    } else if (e.key === "ArrowLeft") {
+      v.currentTime = Math.max(0, v.currentTime - 5);
+    } else if (e.key === "f") {
+      toggleFullscreen();
+    } else if (e.key === "m") {
+      toggleMute();
+    }
+    revealControls();
+  };
+
+  const showVolumeMuted = muted || volume === 0;
 
   return (
     <div
       ref={containerRef}
-      className="ml-player flex items-center justify-center bg-ink-900 rounded-sm border-2 border-ink-900 overflow-hidden"
+      className={`ml-player relative flex items-center justify-center bg-ink-900 rounded-sm border-2 border-ink-900 overflow-hidden ${
+        !controlsVisible && isPlaying ? "cursor-none" : ""
+      }`}
+      onMouseMove={revealControls}
+      onTouchStart={revealControls}
+      onKeyDown={onKeyDown}
+      tabIndex={0}
     >
       {videoUrl && !error ? (
         <div
@@ -113,52 +158,168 @@ export const SubtitlePlayer = forwardRef<
           style={{
             aspectRatio: String(ratio),
             maxWidth: ratio < 1 ? `calc(70vh * ${ratio})` : undefined,
+            containerType: "inline-size",
           }}
         >
           <video
             ref={videoRef}
             src={videoUrl}
-            controls
-            controlsList="nofullscreen"
             playsInline
             preload="metadata"
-            className="w-full h-full object-contain bg-ink-900"
+            className="w-full h-full object-contain bg-ink-900 cursor-pointer"
+            onClick={togglePlay}
             onLoadedMetadata={(e) => {
               const el = e.currentTarget;
               if (el.videoWidth > 0 && el.videoHeight > 0) {
                 setRatio(el.videoWidth / el.videoHeight);
               }
-              showTrack();
+              setDuration(el.duration || 0);
             }}
-            onTimeUpdate={(e) => onTimeUpdate?.(e.currentTarget.currentTime)}
-            onPlay={() => onPlayingChange?.(true)}
-            onPause={() => onPlayingChange?.(false)}
+            onDurationChange={(e) => setDuration(e.currentTarget.duration || 0)}
+            onTimeUpdate={(e) => {
+              const t = e.currentTarget.currentTime;
+              setCurrent(t);
+              onTimeUpdate?.(t);
+            }}
+            onPlay={() => {
+              setIsPlaying(true);
+              onPlayingChange?.(true);
+              revealControls();
+            }}
+            onPause={() => {
+              setIsPlaying(false);
+              onPlayingChange?.(false);
+              setControlsVisible(true);
+            }}
+            onEnded={() => {
+              setIsPlaying(false);
+              onPlayingChange?.(false);
+              setControlsVisible(true);
+            }}
+            onVolumeChange={(e) => {
+              setMuted(e.currentTarget.muted);
+              setVolume(e.currentTarget.volume);
+            }}
             onError={() => setError(true)}
-          >
-            {trackUrl && (
-              <track
-                default
-                kind="subtitles"
-                srcLang="en"
-                label="English"
-                src={trackUrl}
-                onLoad={showTrack}
-              />
-            )}
-          </video>
+          />
 
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
-            className="absolute top-2 right-2 inline-flex items-center justify-center h-8 w-8 rounded-sm bg-ink-900/70 text-ivory-50 hover:bg-ink-900 transition-colors"
+          {/* Sous-titre (overlay maison, au-dessus des contrôles) */}
+          {activeText && (
+            <div
+              aria-live="polite"
+              className={`absolute inset-x-0 flex justify-center px-3 pointer-events-none transition-[bottom] duration-200 ${
+                controlsVisible ? "bottom-16" : "bottom-6"
+              }`}
+            >
+              <span
+                className="bg-ink-900/85 text-ivory-50 rounded-sm text-center font-medium whitespace-pre-line"
+                style={{
+                  fontSize: "clamp(0.8rem, 5cqw, 1.5rem)",
+                  padding: "0.25em 0.6em",
+                  maxWidth: "92%",
+                  lineHeight: 1.3,
+                }}
+              >
+                {activeText}
+              </span>
+            </div>
+          )}
+
+          {/* Gros bouton lecture central (en pause) */}
+          {!isPlaying && (
+            <button
+              type="button"
+              onClick={togglePlay}
+              aria-label="Lecture"
+              className="absolute inset-0 m-auto h-16 w-16 inline-flex items-center justify-center rounded-full bg-rouge-500/90 text-ivory-50 hover:bg-rouge-500 transition-colors shadow-lg"
+            >
+              <Play className="h-7 w-7 translate-x-0.5" aria-hidden />
+            </button>
+          )}
+
+          {/* Barre de contrôles maison */}
+          <div
+            className={`absolute inset-x-0 bottom-0 px-3 pb-2 pt-8 bg-gradient-to-t from-ink-900/95 via-ink-900/60 to-transparent transition-opacity duration-200 ${
+              controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
           >
-            {isFullscreen ? (
-              <Minimize className="h-4 w-4" aria-hidden />
-            ) : (
-              <Maximize className="h-4 w-4" aria-hidden />
-            )}
-          </button>
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step="0.01"
+              value={current}
+              onChange={(e) => {
+                const v = videoRef.current;
+                if (v) v.currentTime = Number(e.target.value);
+              }}
+              aria-label="Progression"
+              className="w-full h-1 cursor-pointer"
+              style={{ accentColor: "#C8392F" }}
+            />
+            <div className="flex items-center gap-3 mt-1.5">
+              <button
+                type="button"
+                onClick={togglePlay}
+                aria-label={isPlaying ? "Pause" : "Lecture"}
+                className="text-ivory-50 hover:text-rouge-400 transition-colors"
+              >
+                {isPlaying ? (
+                  <Pause className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Play className="h-5 w-5" aria-hidden />
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleMute}
+                aria-label={showVolumeMuted ? "Activer le son" : "Couper le son"}
+                className="text-ivory-50 hover:text-rouge-400 transition-colors"
+              >
+                {showVolumeMuted ? (
+                  <VolumeX className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Volume2 className="h-5 w-5" aria-hidden />
+                )}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step="0.05"
+                value={showVolumeMuted ? 0 : volume}
+                onChange={(e) => {
+                  const v = videoRef.current;
+                  if (v) {
+                    const nv = Number(e.target.value);
+                    v.volume = nv;
+                    v.muted = nv === 0;
+                  }
+                }}
+                aria-label="Volume"
+                className="w-16 h-1 cursor-pointer hidden sm:block"
+                style={{ accentColor: "#C8392F" }}
+              />
+
+              <span className="font-mono text-[11px] text-ivory-50 tabular-nums ml-0.5">
+                {fmt(current)} / {fmt(duration)}
+              </span>
+
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+                className="ml-auto text-ivory-50 hover:text-rouge-400 transition-colors"
+              >
+                {isFullscreen ? (
+                  <Minimize className="h-5 w-5" aria-hidden />
+                ) : (
+                  <Maximize className="h-5 w-5" aria-hidden />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="aspect-video w-full flex flex-col items-center justify-center text-ink-400 gap-3">

@@ -6,7 +6,6 @@ import {
   useEffect,
   useCallback,
   useMemo,
-  useDeferredValue,
 } from "react";
 import {
   Plus,
@@ -20,7 +19,6 @@ import {
 } from "lucide-react";
 import type { Segment } from "@/lib/mock-worker";
 import { saveTranscriptionEn, regenerateLine } from "@/lib/video-actions";
-import { toVtt } from "@/lib/subtitles";
 import {
   SubtitlePlayer,
   type SubtitlePlayerHandle,
@@ -67,12 +65,7 @@ export function EditorClient({
     }
   }, [activeIndex, isPlaying]);
 
-  // Piste VTT pour l'aperçu : différée pour ne pas régénérer à chaque frappe.
-  const deferredSegments = useDeferredValue(segments);
-  const vtt = useMemo(
-    () => (deferredSegments.length > 0 ? toVtt(deferredSegments) : null),
-    [deferredSegments],
-  );
+  const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
 
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
@@ -216,7 +209,7 @@ export function EditorClient({
           <SubtitlePlayer
             ref={playerRef}
             videoUrl={videoUrl}
-            vtt={vtt}
+            activeText={activeText}
             onTimeUpdate={setCurrentTime}
             onPlayingChange={setIsPlaying}
           />
