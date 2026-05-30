@@ -13,13 +13,13 @@ import {
 } from "lucide-react";
 import type { Video } from "@/lib/supabase/types";
 import {
-  tickVideoProcessing,
+  getVideoStatus,
   deleteVideo,
   retryVideo,
 } from "@/lib/video-actions";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
 import { formatDuration } from "@/lib/storage";
-import { MOCK_TOTAL_SECONDS, type Segment } from "@/lib/mock-worker";
+import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
 
 const PROCESSING_STATES = [
   "queued",
@@ -35,31 +35,36 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialVideo.status);
   const [progress, setProgress] = useState(
-    initialVideo.status === "done" ? 100 : 0,
+    STAGE_PROGRESS[initialVideo.status as keyof typeof STAGE_PROGRESS] ?? 0,
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(
+    initialVideo.error_message ?? null,
   );
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const isProcessing = PROCESSING_STATES.includes(status);
 
-  // Polling de la state machine mock pendant le traitement
+  // Polling du statut RÉEL (mis à jour par le worker sur la VM).
   const poll = useCallback(async () => {
-    const result = await tickVideoProcessing(initialVideo.id);
-    if (result) {
-      setStatus(result.status);
-      setProgress(result.progress);
-      if (result.status === "done") {
-        // Recharge pour afficher la transcription finale + clés sous-titres
-        router.refresh();
-      }
+    const result = await getVideoStatus(initialVideo.id);
+    if (!result) return;
+    setStatus(result.status);
+    setProgress(
+      STAGE_PROGRESS[result.status as keyof typeof STAGE_PROGRESS] ?? 0,
+    );
+    if (result.errorMessage) setErrorMessage(result.errorMessage);
+    if (result.status === "done") {
+      // Recharge pour afficher la transcription finale + clés sous-titres
+      router.refresh();
     }
   }, [initialVideo.id, router]);
 
   useEffect(() => {
     if (!isProcessing) return;
-    // Premier tick immédiat puis toutes les 1.5s
+    // Premier tick immédiat puis toutes les 2s
     poll();
-    const interval = setInterval(poll, 1500);
+    const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, [isProcessing, poll]);
 
@@ -73,8 +78,9 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
   const handleRetry = () => {
     startTransition(async () => {
       await retryVideo(initialVideo.id);
-      setStatus("extracting_audio");
-      setProgress(0);
+      setErrorMessage(null);
+      setStatus("queued");
+      setProgress(STAGE_PROGRESS.queued);
       router.refresh();
     });
   };
@@ -124,7 +130,7 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
             />
           </div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-ink-300">
-            {progress}% · estimation ~{MOCK_TOTAL_SECONDS}s (démo)
+            {progress}% · traitement en cours
           </p>
         </div>
       )}
@@ -142,7 +148,7 @@ export function VideoDetailClient({ initialVideo }: { initialVideo: Video }) {
                 Le traitement a échoué
               </h2>
               <p className="text-sm text-ink-700">
-                {initialVideo.error_message ||
+                {errorMessage ||
                   "Une erreur est survenue pendant le traitement."}
               </p>
             </div>

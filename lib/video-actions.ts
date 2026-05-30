@@ -2,14 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { sourceKey, videoFolder, srtKey, vttKey, STORAGE_BUCKET } from "@/lib/storage";
-import {
-  generateMockTranscription,
-  computeStage,
-  MOCK_TOTAL_SECONDS,
-  type VideoStatus,
-  type Segment,
-} from "@/lib/mock-worker";
+import { sourceKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
+import type { VideoStatus, Segment } from "@/lib/mock-worker";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -121,26 +115,23 @@ export async function createVideoUpload(params: {
 
   const key = sourceKey(user.id, video.id, ext);
 
-  // Sauvegarde la clé source
-  await supabase
-    .from("videos")
-    .update({ storage_key_source: key })
-    .eq("id", video.id);
-
+  // NB (Sprint 3) : on ne persiste PAS storage_key_source ici. Cette colonne est
+  // le "signal de prise en charge" du worker : il ne traite que les vidéos dont
+  // storage_key_source est renseigné — ce que fait markVideoUploaded UNE FOIS
+  // l'upload terminé et les minutes consommées. Cela évite qu'une vidéo dont
+  // l'upload a été abandonné (ou les minutes non décomptées) soit traitée.
   return { ok: true, videoId: video.id, storageKey: key };
 }
 
 /**
  * Appelé par le client une fois l'upload terminé.
- * Démarre le traitement (MOCK Sprint 2) :
- *  - consomme les minutes (quota puis crédits)
- *  - génère une transcription factice (stockée pour l'éditeur)
- *  - passe le statut en 'extracting_audio' avec processing_started_at
+ *  - consomme les minutes (quota d'abord, puis crédits)
+ *  - renseigne storage_key_source : c'est LE signal qui met la vidéo à
+ *    disposition du worker (qui poll les 'queued' avec storage_key_source).
  *
- * La progression ensuite est calculée à la volée par tickVideoProcessing
- * (state machine paresseuse basée sur le temps écoulé).
- *
- * Au Sprint 3, ce corps sera remplacé par un appel au worker Oracle Cloud.
+ * Le statut reste 'queued' : le worker (VM) le fera réellement avancer
+ * (extracting_audio → … → done) et écrira la transcription. Aucune transcription
+ * factice ici. Le worker ne touche jamais aux minutes (déjà décomptées ici).
  */
 export async function markVideoUploaded(videoId: string): Promise<void> {
   const supabase = await createClient();
@@ -151,7 +142,7 @@ export async function markVideoUploaded(videoId: string): Promise<void> {
 
   const { data: video } = await supabase
     .from("videos")
-    .select("id, status, duration_seconds")
+    .select("id, status, duration_seconds, format")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
@@ -205,37 +196,32 @@ export async function markVideoUploaded(videoId: string): Promise<void> {
     })
     .eq("id", user.id);
 
-  // Génère la transcription factice (sera affinée par le vrai worker plus tard)
-  const transcription = generateMockTranscription(durationSeconds);
-
+  // Renseigne storage_key_source → met la vidéo à disposition du worker.
+  // Le statut reste 'queued' ; le worker prend le relais.
+  const key = sourceKey(user.id, videoId, video.format || "mp4");
   await supabase
     .from("videos")
-    .update({
-      status: "extracting_audio",
-      processing_started_at: new Date().toISOString(),
-      transcription_fr: transcription.fr,
-      transcription_en: transcription.en,
-    })
-    .eq("id", videoId);
+    .update({ storage_key_source: key })
+    .eq("id", videoId)
+    .eq("status", "queued");
 
   revalidatePath("/app/videos");
   revalidatePath("/app/dashboard");
 }
 
-export type VideoTickResult = {
+export type VideoStatusResult = {
   status: VideoStatus;
-  progress: number;
+  errorMessage: string | null;
 };
 
 /**
- * State machine paresseuse du worker MOCK. Appelée en polling par la page
- * détail. Calcule l'étape selon le temps écoulé depuis processing_started_at
- * et, à la fin, marque la vidéo 'done' (+ clés de sous-titres + bump
- * lifetime_minutes_used pour la progression Atelier).
+ * Lit le statut RÉEL de la vidéo (mis à jour par le worker sur la VM). Appelée
+ * en polling par la page détail. Lecture seule : c'est le worker qui fait
+ * avancer le pipeline et écrit la transcription.
  */
-export async function tickVideoProcessing(
+export async function getVideoStatus(
   videoId: string,
-): Promise<VideoTickResult | null> {
+): Promise<VideoStatusResult | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -244,59 +230,17 @@ export async function tickVideoProcessing(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("id, status, processing_started_at, duration_seconds")
+    .select("status, error_message")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
   if (!video) return null;
 
-  // États terminaux : on renvoie tel quel
-  if (
-    video.status === "done" ||
-    video.status === "failed" ||
-    video.status === "cancelled"
-  ) {
-    return {
-      status: video.status as VideoStatus,
-      progress: video.status === "done" ? 100 : 0,
-    };
-  }
-
-  if (video.status === "queued" || !video.processing_started_at) {
-    return { status: "queued", progress: 0 };
-  }
-
-  const elapsed =
-    (Date.now() - new Date(video.processing_started_at).getTime()) / 1000;
-  const { status, progress } = computeStage(elapsed);
-
-  if (status === "done" && elapsed >= MOCK_TOTAL_SECONDS) {
-    // Transition finale : marque done + clés sous-titres.
-    // Le bump lifetime_minutes_used (progression Atelier + recalcul rang) est
-    // assuré par le trigger videos_done_lifetime (source UNIQUE, cf. migration
-    // 009/010) — ne PAS le refaire ici sous peine de double comptage.
-    await supabase
-      .from("videos")
-      .update({
-        status: "done",
-        processing_completed_at: new Date().toISOString(),
-        storage_key_srt: srtKey(user.id, videoId),
-        storage_key_vtt: vttKey(user.id, videoId),
-      })
-      .eq("id", videoId);
-
-    revalidatePath("/app/videos");
-    revalidatePath("/app/dashboard");
-    return { status: "done", progress: 100 };
-  }
-
-  // Met à jour le statut courant si changé (pour cohérence liste/dashboard)
-  if (status !== video.status) {
-    await supabase.from("videos").update({ status }).eq("id", videoId);
-  }
-
-  return { status, progress };
+  return {
+    status: video.status as VideoStatus,
+    errorMessage: video.error_message ?? null,
+  };
 }
 
 /**
@@ -344,9 +288,10 @@ export async function saveTranscriptionEn(
 }
 
 /**
- * Régénère la traduction d'une seule ligne (MOCK Sprint 4).
- * Le vrai worker (Sprint 3) appellera OPUS-MT sur le segment FR correspondant.
- * Ici on renvoie une formulation alternative déterministe à partir du texte FR.
+ * Régénère la traduction d'une seule ligne.
+ * TODO (différé Sprint 3) : brancher sur Claude (comme le worker) pour une vraie
+ * reformulation contextuelle. Nécessite ANTHROPIC_API_KEY côté Vercel. En
+ * attendant, reformulation déterministe légère (placeholder).
  */
 export async function regenerateLine(
   videoId: string,
@@ -415,7 +360,10 @@ function mockAlternativeTranslation(en: string): string {
 
 /**
  * Relance une vidéo en échec SANS refacturer les minutes (spec F03 : retry
- * gratuit). Régénère la transcription et redémarre la state machine mock.
+ * gratuit). Remet la vidéo en file ('queued') : le worker la reprendra (le
+ * fichier source et storage_key_source sont déjà en place). Réinitialise les
+ * timestamps et l'erreur. lifetime_counted reste false (la vidéo n'a jamais
+ * atteint 'done'), donc le comptage des minutes restera correct à la réussite.
  */
 export async function retryVideo(videoId: string): Promise<void> {
   const supabase = await createClient();
@@ -426,26 +374,21 @@ export async function retryVideo(videoId: string): Promise<void> {
 
   const { data: video } = await supabase
     .from("videos")
-    .select("id, status, duration_seconds, retry_count")
+    .select("id, status, retry_count")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
   if (!video || video.status !== "failed") return;
 
-  const transcription = generateMockTranscription(
-    Number(video.duration_seconds) || 0,
-  );
-
   await supabase
     .from("videos")
     .update({
-      status: "extracting_audio",
+      status: "queued",
       error_message: null,
-      processing_started_at: new Date().toISOString(),
+      processing_started_at: null,
+      processing_completed_at: null,
       retry_count: (video.retry_count ?? 0) + 1,
-      transcription_fr: transcription.fr,
-      transcription_en: transcription.en,
     })
     .eq("id", videoId);
 
