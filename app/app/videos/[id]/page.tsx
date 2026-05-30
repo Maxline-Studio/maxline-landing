@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { STORAGE_BUCKET } from "@/lib/storage";
+import { presignGet } from "@/lib/r2";
 import type { Video } from "@/lib/supabase/types";
 import { VideoDetailClient } from "./video-detail-client";
 
@@ -35,13 +35,15 @@ export default async function VideoDetailPage({
 
   const v = video as Video;
 
-  // Signed URL (1h) pour l'aperçu vidéo, uniquement si traitée + fichier présent.
+  // URL présignée R2 (1h) pour l'aperçu vidéo, uniquement si traitée + fichier
+  // présent. La page ne charge que la vidéo de l'utilisateur → propriété garantie.
   let videoUrl: string | null = null;
   if (v.status === "done" && v.storage_key_source) {
-    const { data: signed } = await supabase.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(v.storage_key_source, 3600);
-    videoUrl = signed?.signedUrl ?? null;
+    try {
+      videoUrl = await presignGet(v.storage_key_source, 3600);
+    } catch {
+      videoUrl = null;
+    }
   }
 
   return (

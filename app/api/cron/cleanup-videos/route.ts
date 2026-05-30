@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { STORAGE_BUCKET, videoFolder } from "@/lib/storage";
+import { STORAGE_BUCKET, videoFolder, burnedKey } from "@/lib/storage";
+import { deleteObjects } from "@/lib/r2";
 
 /**
  * Cron de suppression RGPD : efface les vidéos (fichiers + ligne) dont la
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   // Vidéos arrivées à expiration (par lots pour rester dans le temps imparti).
   const { data: videos, error } = await admin
     .from("videos")
-    .select("id, user_id")
+    .select("id, user_id, storage_key_source")
     .lt("delete_at", new Date().toISOString())
     .not("delete_at", "is", null)
     .limit(200);
@@ -43,7 +44,13 @@ export async function GET(req: NextRequest) {
 
   for (const video of videos) {
     try {
-      // 1. Supprime les fichiers du dossier de la vidéo.
+      // 1a. Vidéo source + MP4 incrusté → Cloudflare R2.
+      await deleteObjects([
+        video.storage_key_source ?? null,
+        burnedKey(video.user_id, video.id),
+      ]);
+
+      // 1b. Sous-titres (.srt/.vtt) → Supabase Storage.
       const folder = videoFolder(video.user_id, video.id);
       const { data: files } = await admin.storage
         .from(STORAGE_BUCKET)

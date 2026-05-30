@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { sourceKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
+import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
+import { presignPut, deleteObjects } from "@/lib/r2";
 import type { VideoStatus, Segment } from "@/lib/mock-worker";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 
@@ -122,6 +123,49 @@ export async function createVideoUpload(params: {
   // l'upload terminé et les minutes consommées. Cela évite qu'une vidéo dont
   // l'upload a été abandonné (ou les minutes non décomptées) soit traitée.
   return { ok: true, videoId: video.id, storageKey: key };
+}
+
+export type UploadUrlResult =
+  | { ok: true; url: string }
+  | { ok: false; error: string };
+
+/**
+ * Génère une URL PUT présignée (Cloudflare R2) pour que le navigateur uploade la
+ * vidéo source directement, sans transiter par Vercel (limite de corps ~4,5 Mo) et
+ * sans le plafond Supabase Free (50 Mo). La clé est imposée par le serveur depuis
+ * la session → un utilisateur ne peut écrire que dans son propre dossier.
+ */
+export async function createSourceUploadUrl(
+  videoId: string,
+): Promise<UploadUrlResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée. Reconnectez-vous." };
+
+  // La vidéo doit appartenir à l'utilisateur et être en attente d'upload.
+  const { data: video } = await supabase
+    .from("videos")
+    .select("id, format, status")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video || video.status !== "queued") {
+    return { ok: false, error: "Vidéo introuvable ou déjà traitée." };
+  }
+
+  try {
+    const key = sourceKey(user.id, videoId, video.format || "mp4");
+    const url = await presignPut(key);
+    return { ok: true, url };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Préparation de l'upload impossible.",
+    };
+  }
 }
 
 /**
@@ -421,7 +465,7 @@ export async function retryVideo(videoId: string): Promise<void> {
   revalidatePath(`/app/videos/${videoId}`);
 }
 
-/** Supprime une vidéo (ligne + fichiers storage). */
+/** Supprime une vidéo (ligne + fichiers storage Supabase + objets R2). */
 export async function deleteVideo(videoId: string): Promise<void> {
   const supabase = await createClient();
   const {
@@ -429,12 +473,25 @@ export async function deleteVideo(videoId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Supprime les fichiers du dossier
+  // Récupère la clé source réelle (R2) avant suppression de la ligne.
+  const { data: video } = await supabase
+    .from("videos")
+    .select("storage_key_source")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  // 1. Vidéo source + MP4 incrusté → R2.
+  await deleteObjects([
+    video?.storage_key_source ?? null,
+    burnedKey(user.id, videoId),
+  ]);
+
+  // 2. Sous-titres (.srt/.vtt) → Supabase Storage.
   const folder = videoFolder(user.id, videoId);
   const { data: files } = await supabase.storage
     .from(STORAGE_BUCKET)
     .list(folder);
-
   if (files && files.length > 0) {
     await supabase.storage
       .from(STORAGE_BUCKET)

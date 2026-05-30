@@ -3,16 +3,18 @@
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { UploadCloud, FileVideo, AlertCircle, CheckCircle2, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import {
   validateVideoFile,
   readVideoDuration,
   fileExtension,
   formatDuration,
-  STORAGE_BUCKET,
   MAX_DURATION_SECONDS,
 } from "@/lib/storage";
-import { createVideoUpload, markVideoUploaded } from "@/lib/video-actions";
+import {
+  createVideoUpload,
+  createSourceUploadUrl,
+  markVideoUploaded,
+} from "@/lib/video-actions";
 
 type Phase = "idle" | "validating" | "uploading" | "finalizing" | "done" | "error";
 
@@ -90,12 +92,21 @@ export function UploadClient({
         return;
       }
 
-      // 5. Upload direct navigateur → Supabase Storage (avec progression XHR)
+      // 5. Récupère une URL PUT présignée (Cloudflare R2) puis upload direct
+      //    navigateur → R2 (avec progression XHR). Évite le plafond Supabase Free
+      //    (50 Mo) et la limite de corps Vercel.
       setPhase("uploading");
       setProgress(0);
 
+      const urlResult = await createSourceUploadUrl(result.videoId);
+      if (!urlResult.ok) {
+        setError(`Préparation de l'upload échouée : ${urlResult.error}`);
+        setPhase("error");
+        return;
+      }
+
       try {
-        await uploadWithProgress(file, result.storageKey, (pct) =>
+        await uploadWithProgress(file, urlResult.url, (pct) =>
           setProgress(pct),
         );
       } catch (e) {
@@ -282,32 +293,17 @@ export function UploadClient({
 }
 
 /**
- * Upload direct navigateur → Supabase Storage via XHR (pour la progression).
- * Utilise le token de session de l'utilisateur ; RLS garantit qu'il ne peut
- * écrire que dans son dossier.
+ * Upload direct navigateur → Cloudflare R2 via XHR (pour la progression), sur une
+ * URL PUT présignée (la signature est dans l'URL, aucun en-tête d'auth à fournir).
  */
 async function uploadWithProgress(
   file: File,
-  storageKey: string,
+  presignedUrl: string,
   onProgress: (pct: number) => void,
 ): Promise<void> {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
-    throw new Error("Session expirée");
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const endpoint = `${supabaseUrl}/storage/v1/object/${STORAGE_BUCKET}/${storageKey}`;
-
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", endpoint, true);
-    xhr.setRequestHeader("Authorization", `Bearer ${session.access_token}`);
-    xhr.setRequestHeader("x-upsert", "true");
+    xhr.open("PUT", presignedUrl, true);
     if (file.type) {
       xhr.setRequestHeader("Content-Type", file.type);
     }

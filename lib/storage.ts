@@ -1,17 +1,20 @@
 /**
- * Abstraction de stockage objet, provider-agnostic.
+ * Conventions de clés de stockage objet (provider-agnostic) + validations upload.
  *
- * Implémentation actuelle : Supabase Storage (bucket 'videos').
- * Migration future : Cloudflare R2 (zéro egress) — il suffira de réécrire
- * les fonctions de ce fichier en gardant la même signature. Le reste de
- * l'app n'a aucune dépendance directe au provider.
+ * Répartition des providers (depuis la migration R2) :
+ *   - Vidéo source `source.{ext}` et `burned.mp4` → **Cloudflare R2** (cf. lib/r2.ts)
+ *     car le plan Supabase Free plafonne les uploads à 50 Mo ; R2 = 10 Go + egress
+ *     gratuit (le worker GCP télécharge sans frais).
+ *   - Sous-titres `subtitles.srt`/`.vtt` (quelques Ko) → **Supabase Storage** (bucket
+ *     'videos'). L'audio extrait reste local sur la VM (non stocké).
+ * Les fonctions de clé ci-dessous sont communes aux deux providers.
  *
  * Convention de chemins (clés de stockage) :
- *   {user_id}/{video_id}/source.{ext}    — vidéo uploadée
- *   {user_id}/{video_id}/audio.mp3       — audio extrait (worker)
- *   {user_id}/{video_id}/subtitles.srt   — sous-titres
- *   {user_id}/{video_id}/subtitles.vtt
- *   {user_id}/{video_id}/burned.mp4      — vidéo finale incrustée
+ *   {user_id}/{video_id}/source.{ext}    — vidéo uploadée (R2)
+ *   {user_id}/{video_id}/audio.mp3       — audio extrait (worker, local)
+ *   {user_id}/{video_id}/subtitles.srt   — sous-titres (Supabase)
+ *   {user_id}/{video_id}/subtitles.vtt   — sous-titres (Supabase)
+ *   {user_id}/{video_id}/burned.mp4      — vidéo finale incrustée (R2, différé)
  */
 
 export const STORAGE_BUCKET = "videos";
