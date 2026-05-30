@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -14,28 +15,32 @@ export type SubtitlePlayerHandle = {
 };
 
 /**
- * Lecteur vidéo + overlay de sous-titre, **adaptatif au format réel** de la
- * vidéo (16:9, 9:16 vertical, 1:1…). Le cadre épouse le ratio détecté (plus de
- * 16:9 forcé qui écrase une vidéo verticale), borné en hauteur pour rester
- * confortable. La taille de la police de l'overlay s'adapte à la LARGEUR du
- * lecteur (unités de conteneur `cqw`) pour ne jamais déborder sur un format
- * étroit. Composant partagé entre la page détail (aperçu) et l'éditeur.
+ * Lecteur vidéo **adaptatif au format réel** (16:9, 9:16 vertical, 1:1…) avec
+ * sous-titres **natifs** (piste WebVTT). Les sous-titres natifs se placent
+ * automatiquement au-dessus de la barre de contrôles ET s'affichent en plein
+ * écran (contrairement à un overlay HTML). Style des sous-titres : voir la règle
+ * `video::cue` dans globals.css (couleurs Atelier). Composant partagé entre la
+ * page détail (aperçu) et l'éditeur.
+ *
+ * La piste VTT est générée côté client (prop `vtt`) à partir des segments, donc
+ * elle reste synchronisée avec les retouches dans l'éditeur.
  */
 export const SubtitlePlayer = forwardRef<
   SubtitlePlayerHandle,
   {
     videoUrl: string | null;
-    activeText?: string;
+    vtt: string | null;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
   }
 >(function SubtitlePlayer(
-  { videoUrl, activeText, onTimeUpdate, onPlayingChange },
+  { videoUrl, vtt, onTimeUpdate, onPlayingChange },
   ref,
 ) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [ratio, setRatio] = useState(16 / 9);
   const [error, setError] = useState(false);
+  const [trackUrl, setTrackUrl] = useState<string | null>(null);
 
   useImperativeHandle(
     ref,
@@ -51,6 +56,33 @@ export const SubtitlePlayer = forwardRef<
     [],
   );
 
+  // URL blob VTT pour la piste de sous-titres native (régénérée si le texte change).
+  useEffect(() => {
+    if (!vtt) {
+      setTrackUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([vtt], { type: "text/vtt" }));
+    setTrackUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [vtt]);
+
+  /** Force l'affichage de la piste (les pistes ajoutées dynamiquement sont
+   * parfois en mode "disabled" par défaut). */
+  const showTrack = () => {
+    const v = videoRef.current;
+    if (v && v.textTracks.length > 0) {
+      v.textTracks[0]!.mode = "showing";
+    }
+  };
+
+  // Réaffirme l'affichage quand la piste change.
+  useEffect(() => {
+    if (!trackUrl) return;
+    const t = setTimeout(showTrack, 50);
+    return () => clearTimeout(t);
+  }, [trackUrl]);
+
   return (
     <div className="flex justify-center bg-ink-900 rounded-sm border-2 border-ink-900 overflow-hidden">
       {videoUrl && !error ? (
@@ -60,7 +92,6 @@ export const SubtitlePlayer = forwardRef<
             aspectRatio: String(ratio),
             // Empêche une vidéo verticale de s'étaler sur toute la largeur.
             maxWidth: ratio < 1 ? `calc(70vh * ${ratio})` : undefined,
-            containerType: "inline-size",
           }}
         >
           <video
@@ -75,27 +106,24 @@ export const SubtitlePlayer = forwardRef<
               if (el.videoWidth > 0 && el.videoHeight > 0) {
                 setRatio(el.videoWidth / el.videoHeight);
               }
+              showTrack();
             }}
             onTimeUpdate={(e) => onTimeUpdate?.(e.currentTarget.currentTime)}
             onPlay={() => onPlayingChange?.(true)}
             onPause={() => onPlayingChange?.(false)}
             onError={() => setError(true)}
-          />
-          {activeText && (
-            <div className="absolute bottom-[7%] inset-x-0 flex justify-center px-3 pointer-events-none">
-              <span
-                className="bg-ink-900/85 text-ivory-50 rounded-sm text-center font-medium whitespace-pre-line"
-                style={{
-                  fontSize: "clamp(0.72rem, 4.4cqw, 1.4rem)",
-                  padding: "0.3em 0.6em",
-                  maxWidth: "92%",
-                  lineHeight: 1.25,
-                }}
-              >
-                {activeText}
-              </span>
-            </div>
-          )}
+          >
+            {trackUrl && (
+              <track
+                default
+                kind="subtitles"
+                srcLang="en"
+                label="English"
+                src={trackUrl}
+                onLoad={showTrack}
+              />
+            )}
+          </video>
         </div>
       ) : (
         <div className="aspect-video w-full flex flex-col items-center justify-center text-ink-400 gap-3">
