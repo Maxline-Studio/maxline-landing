@@ -91,8 +91,10 @@ export type Database = {
           storage_key_srt: string | null;
           storage_key_vtt: string | null;
           subtitle_style: Json | null;
-          transcription_en: Json | null;
-          transcription_fr: Json | null;
+          transcription_source: Json | null;
+          transcription_target: Json | null;
+          source_lang: string;
+          target_lang: string;
           uploaded_at: string;
           user_edited: boolean;
           user_id: string;
@@ -117,8 +119,10 @@ export type Database = {
           storage_key_srt?: string | null;
           storage_key_vtt?: string | null;
           subtitle_style?: Json | null;
-          transcription_en?: Json | null;
-          transcription_fr?: Json | null;
+          transcription_source?: Json | null;
+          transcription_target?: Json | null;
+          source_lang?: string;
+          target_lang?: string;
           uploaded_at?: string;
           user_edited?: boolean;
           user_id: string;

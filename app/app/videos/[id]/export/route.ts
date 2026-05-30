@@ -35,7 +35,7 @@ export async function GET(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("status, original_filename, transcription_en")
+    .select("status, original_filename, transcription_target")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -50,7 +50,7 @@ export async function GET(
     );
   }
 
-  const segments = (video.transcription_en as SubtitleSegment[] | null) ?? [];
+  const segments = (video.transcription_target as SubtitleSegment[] | null) ?? [];
   if (segments.length === 0) {
     return NextResponse.json(
       { error: "Aucun sous-titre disponible." },

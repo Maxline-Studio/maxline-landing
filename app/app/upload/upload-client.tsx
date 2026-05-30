@@ -15,6 +15,7 @@ import {
   createSourceUploadUrl,
   markVideoUploaded,
 } from "@/lib/video-actions";
+import { LANG_OPTIONS, langLabel, type Lang } from "@/lib/langs";
 
 type Phase = "idle" | "validating" | "uploading" | "finalizing" | "done" | "error";
 
@@ -26,6 +27,8 @@ export function UploadClient({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [sourceLang, setSourceLang] = useState<Lang>("fr");
+  const [targetLang, setTargetLang] = useState<Lang>("en");
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +87,8 @@ export function UploadClient({
         durationSeconds: duration,
         sizeBytes: file.size,
         format: ext,
+        sourceLang,
+        targetLang,
       });
 
       if (!result.ok) {
@@ -129,7 +134,7 @@ export function UploadClient({
         router.push(`/app/videos/${result.videoId}`);
       }, 900);
     },
-    [minutesAvailable, router],
+    [minutesAvailable, router, sourceLang, targetLang],
   );
 
   const onDrop = (e: React.DragEvent) => {
@@ -154,6 +159,63 @@ export function UploadClient({
     <div>
       {phase === "idle" || phase === "error" ? (
         <>
+          {/* Sélecteur de langues — langue parlée → langue des sous-titres */}
+          <div className="mb-5 flex flex-wrap items-end gap-x-4 gap-y-3">
+            <div>
+              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1.5">
+                Langue parlée
+              </span>
+              <div className="flex gap-1.5">
+                {LANG_OPTIONS.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setSourceLang(o.id)}
+                    className={`px-3 py-1.5 rounded-sm border text-sm font-medium transition-colors ${
+                      sourceLang === o.id
+                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <span className="pb-2 text-ink-300" aria-hidden>
+              →
+            </span>
+
+            <div>
+              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1.5">
+                Sous-titres en
+              </span>
+              <div className="flex gap-1.5">
+                {LANG_OPTIONS.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    onClick={() => setTargetLang(o.id)}
+                    className={`px-3 py-1.5 rounded-sm border text-sm font-medium transition-colors ${
+                      targetLang === o.id
+                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <p className="w-full text-xs text-ink-500">
+              {sourceLang === targetLang
+                ? `Transcription en ${langLabel(targetLang)} — sous-titres dans la langue parlée (idéal accessibilité).`
+                : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
+            </p>
+          </div>
+
           <div
             role="button"
             tabIndex={0}

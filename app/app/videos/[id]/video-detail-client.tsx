@@ -27,10 +27,11 @@ import {
   getVideoStatus,
   deleteVideo,
   retryVideo,
-  saveTranscriptionEn,
+  saveTranscriptionTarget,
   saveSubtitleStyle,
   regenerateLine,
 } from "@/lib/video-actions";
+import { langLabel, langShort, isTranslation } from "@/lib/langs";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
 import {
   SubtitlePlayer,
@@ -108,7 +109,7 @@ export function VideoDetailClient({
   const activeRowRef = useRef<HTMLElement>(null);
   const dirtyRef = useRef(false);
   const [segments, setSegments] = useState<Segment[]>(
-    (initialVideo.transcription_en as Segment[]) || [],
+    (initialVideo.transcription_target as Segment[]) || [],
   );
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -118,7 +119,13 @@ export function VideoDetailClient({
   const segmentsRef = useRef(segments);
   segmentsRef.current = segments;
 
-  const segmentsFr = (initialVideo.transcription_fr as Segment[]) || [];
+  const sourceLang = initialVideo.source_lang || "fr";
+  const targetLang = initialVideo.target_lang || "en";
+  const translationMode = isTranslation(sourceLang, targetLang);
+  // Référence source (italique) uniquement en mode traduction (sinon = doublon).
+  const segmentsSource = translationMode
+    ? (initialVideo.transcription_source as Segment[]) || []
+    : [];
 
   // Style des sous-titres (perso, persisté par vidéo, sauvegarde différée).
   const [subtitleStyle, setSubtitleStyle] = useState<SubtitleStyle>(
@@ -149,9 +156,9 @@ export function VideoDetailClient({
   // on recharge les segments — sauf si l'utilisateur a des modifs non sauvées.
   useEffect(() => {
     if (!dirtyRef.current) {
-      setSegments((initialVideo.transcription_en as Segment[]) || []);
+      setSegments((initialVideo.transcription_target as Segment[]) || []);
     }
-  }, [initialVideo.transcription_en]);
+  }, [initialVideo.transcription_target]);
 
   const activeIndex = useMemo(
     () =>
@@ -173,7 +180,7 @@ export function VideoDetailClient({
   const save = useCallback(async () => {
     if (!dirtyRef.current) return;
     setSaveState("saving");
-    const result = await saveTranscriptionEn(initialVideo.id, segmentsRef.current);
+    const result = await saveTranscriptionTarget(initialVideo.id, segmentsRef.current);
     if (result.ok) {
       dirtyRef.current = false;
       setSaveState("saved");
@@ -292,9 +299,17 @@ export function VideoDetailClient({
       {/* En-tête */}
       <div className="flex items-start justify-between gap-4 mb-8">
         <div className="min-w-0">
-          <div className="flex items-center gap-3 mb-3">
+          <div className="flex items-center gap-3 mb-3 flex-wrap">
             <span className="annotation">§ Vidéo</span>
             <VideoStatusBadge status={status} />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500 border border-ivory-300 rounded-sm px-2 py-1">
+              {isTranslation(
+                initialVideo.source_lang || "fr",
+                initialVideo.target_lang || "en",
+              )
+                ? `${langShort(initialVideo.source_lang || "fr")} → ${langShort(initialVideo.target_lang || "en")}`
+                : `${langShort(initialVideo.target_lang || "en")} · transcription`}
+            </span>
           </div>
           <h1 className="font-display font-medium text-2xl md:text-3xl leading-tight tracking-[-0.015em] text-ink-900 break-words">
             {initialVideo.original_filename}
@@ -369,7 +384,9 @@ export function VideoDetailClient({
           {/* Barre d'outils */}
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
             <h2 className="font-display font-medium text-xl text-ink-900">
-              Sous-titres anglais
+              {translationMode
+                ? `Sous-titres ${langLabel(targetLang)}`
+                : `Transcription ${langLabel(targetLang)}`}
             </h2>
             <div className="flex items-center gap-3">
               <SaveIndicator state={saveState} />
@@ -461,7 +478,7 @@ export function VideoDetailClient({
                     key={idx}
                     index={idx}
                     segment={seg}
-                    frText={segmentsFr[idx]?.text}
+                    frText={segmentsSource[idx]?.text}
                     rowRef={idx === activeIndex ? activeRowRef : undefined}
                     isActive={idx === activeIndex}
                     isRegenerating={regeneratingIdx === idx}
@@ -634,7 +651,7 @@ function SegmentRow({
           onChange={(e) => onTextChange(e.target.value)}
           rows={3}
           className="ml-scroll w-full min-h-[4.75rem] bg-white border border-ink-200 rounded-sm px-3 py-2.5 text-ink-900 leading-relaxed resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30"
-          placeholder="Sous-titre anglais…"
+          placeholder="Sous-titre…"
         />
 
         {frText && <p className="mt-2 text-sm text-ink-400 italic">{frText}</p>}

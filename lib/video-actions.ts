@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 import { presignPut, deleteObjects } from "@/lib/r2";
+import { isLang, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/mock-worker";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 
@@ -22,6 +23,8 @@ export async function createVideoUpload(params: {
   durationSeconds: number;
   sizeBytes: number;
   format: string;
+  sourceLang?: Lang;
+  targetLang?: Lang;
 }): Promise<CreateUploadResult> {
   const supabase = await createClient();
   const {
@@ -93,6 +96,10 @@ export async function createVideoUpload(params: {
   ).toISOString();
 
   const ext = params.format;
+  // Langues (défaut FR→EN). On valide pour ne jamais insérer une langue hors liste.
+  const sourceLang: Lang = isLang(params.sourceLang) ? params.sourceLang : "fr";
+  const targetLang: Lang = isLang(params.targetLang) ? params.targetLang : "en";
+
   // Insert la ligne video
   const { data: video, error: insertError } = await supabase
     .from("videos")
@@ -102,6 +109,8 @@ export async function createVideoUpload(params: {
       duration_seconds: params.durationSeconds,
       size_bytes: params.sizeBytes,
       format: ext,
+      source_lang: sourceLang,
+      target_lang: targetLang,
       status: "queued",
       delete_at: deleteAt,
     })
@@ -289,10 +298,10 @@ export async function getVideoStatus(
 }
 
 /**
- * Sauvegarde les sous-titres anglais édités par l'utilisateur.
+ * Sauvegarde les sous-titres (langue cible) édités par l'utilisateur.
  * Marque user_edited=true. Appelée par l'auto-save et le bouton manuel.
  */
-export async function saveTranscriptionEn(
+export async function saveTranscriptionTarget(
   videoId: string,
   segments: Segment[],
 ): Promise<{ ok: boolean; error?: string }> {
@@ -319,7 +328,7 @@ export async function saveTranscriptionEn(
   const { error } = await supabase
     .from("videos")
     .update({
-      transcription_en: segments,
+      transcription_target: segments,
       user_edited: true,
     })
     .eq("id", videoId)
@@ -375,26 +384,22 @@ export async function regenerateLine(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("transcription_fr, transcription_en")
+    .select("transcription_source, transcription_target")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
   if (!video) return { ok: false, error: "Vidéo introuvable." };
 
-  const frSegs = (video.transcription_fr as Segment[]) || [];
-  const fr = frSegs[index]?.text || "";
+  const sourceSegs = (video.transcription_source as Segment[]) || [];
+  const source = sourceSegs[index]?.text || "";
 
-  // Mock : 3 variations de style possibles. Le vrai OPUS-MT remplacera ça.
-  const variations = [
-    fr, // fallback : renvoie le FR si pas de variation (ne devrait pas arriver)
-  ];
-  // Variation simple basée sur un dictionnaire de reformulations légères
-  const enSegs = (video.transcription_en as Segment[]) || [];
-  const currentEn = enSegs[index]?.text || "";
-  const alt = mockAlternativeTranslation(currentEn);
+  // Mock : reformulation légère. Le vrai LLM (Claude) remplacera ça.
+  const targetSegs = (video.transcription_target as Segment[]) || [];
+  const currentTarget = targetSegs[index]?.text || "";
+  const alt = mockAlternativeTranslation(currentTarget);
 
-  return { ok: true, text: alt || variations[0] };
+  return { ok: true, text: alt || currentTarget || source };
 }
 
 /** Reformulation mock d'une traduction (sera remplacée par OPUS-MT). */
