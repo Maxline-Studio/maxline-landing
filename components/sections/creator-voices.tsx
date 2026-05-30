@@ -69,7 +69,7 @@ export function CreatorVoices() {
       <div className="relative container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
         <div className="max-w-3xl mb-14 md:mb-16">
           <div className="flex items-center gap-3 mb-6">
-            <span className="annotation">§04 · Voix de créateurs</span>
+            <span className="annotation">§05 · Voix de créateurs</span>
             <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
               personas · pré-lancement
             </span>

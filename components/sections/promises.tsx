@@ -42,7 +42,7 @@ export function Promises() {
         <Reveal>
           <div className="max-w-3xl mb-14">
             <div className="flex items-center gap-3 mb-6">
-              <span className="annotation">§05 · Engagements</span>
+              <span className="annotation">§06 · Engagements</span>
               <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
                 inscrits dans les CGV
               </span>

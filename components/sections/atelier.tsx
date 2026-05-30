@@ -78,7 +78,7 @@ export function Atelier() {
         <Reveal>
           <div className="max-w-3xl mb-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="annotation">§06 · L&apos;Atelier</span>
+              <span className="annotation">§08 · L&apos;Atelier</span>
               <span className="font-mono text-[11px] text-ink-500 uppercase tracking-widest">
                 système de fidélité
               </span>

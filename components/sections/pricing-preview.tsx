@@ -68,7 +68,7 @@ export function PricingPreview() {
         <Reveal>
           <div className="max-w-3xl mb-16">
             <div className="flex items-center gap-3 mb-6">
-              <span className="annotation">§06 · Tarif</span>
+              <span className="annotation">§09 · Tarif</span>
             </div>
             <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ink-900 leading-[1.05] tracking-[-0.02em]">
               Lisibles en{" "}

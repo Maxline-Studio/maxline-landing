@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import { Inter, Fraunces, Caveat } from "next/font/google";
 import "./globals.css";
 import { ScrollProgress } from "@/components/scroll-progress";
 
@@ -13,6 +13,13 @@ const fraunces = Fraunces({
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-fraunces",
+  display: "swap",
+});
+
+// Police manuscrite — réservée à la signature du fondateur.
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-caveat",
   display: "swap",
 });
 
@@ -72,7 +79,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${inter.variable} ${fraunces.variable}`}>
+    <html
+      lang="fr"
+      className={`${inter.variable} ${fraunces.variable} ${caveat.variable}`}
+    >
       <body>
         <a href="#main-content" className="skip-link">
           Aller au contenu principal
