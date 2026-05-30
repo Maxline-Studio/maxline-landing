@@ -47,7 +47,7 @@ export default async function VideoDetailPage({
   }
 
   return (
-    <div className="max-w-7xl">
+    <div className="w-full">
       <Link
         href="/app/videos"
         className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-8 group"

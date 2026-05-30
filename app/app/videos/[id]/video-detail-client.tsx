@@ -315,7 +315,7 @@ export function VideoDetailClient({
 
       {/* État du pipeline */}
       {isProcessing && (
-        <div className="bg-ink-900 text-ivory-50 rounded-sm p-6 md:p-8 mb-8">
+        <div className="bg-ink-900 text-ivory-50 rounded-sm p-6 md:p-8 mb-8 max-w-3xl">
           <div className="flex items-center gap-3 mb-4">
             <Loader2 className="h-5 w-5 text-rouge-400 animate-spin" aria-hidden />
             <span className="font-display font-medium text-lg">
@@ -336,7 +336,7 @@ export function VideoDetailClient({
 
       {/* Échec */}
       {status === "failed" && (
-        <div className="bg-rouge-50 border border-rouge-200 rounded-sm p-6 mb-8">
+        <div className="bg-rouge-50 border border-rouge-200 rounded-sm p-6 mb-8 max-w-3xl">
           <div className="flex items-start gap-3 mb-4">
             <AlertCircle
               className="h-5 w-5 text-rouge-600 flex-shrink-0 mt-0.5"
@@ -362,56 +362,100 @@ export function VideoDetailClient({
         </div>
       )}
 
-      {/* Terminé : aperçu + édition (fusionnés) */}
+      {/* Terminé : espace de travail pleine largeur — aperçu/style/exports à
+          gauche, volet d'édition docké à droite (scroll indépendant sur PC). */}
       {status === "done" && (
         <>
-          <div className="mb-6">
-            <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-              <h2 className="font-display font-medium text-xl text-ink-900">
-                Sous-titres anglais
-              </h2>
-              <div className="flex items-center gap-3">
-                <SaveIndicator state={saveState} />
-                <button
-                  onClick={save}
-                  disabled={
-                    saveState === "saving" ||
-                    saveState === "idle" ||
-                    saveState === "saved"
-                  }
-                  className="btn-pen text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {saveState === "saving" ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Save className="h-4 w-4" aria-hidden />
-                  )}
-                  Enregistrer
-                </button>
+          {/* Barre d'outils */}
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="font-display font-medium text-xl text-ink-900">
+              Sous-titres anglais
+            </h2>
+            <div className="flex items-center gap-3">
+              <SaveIndicator state={saveState} />
+              <button
+                onClick={save}
+                disabled={
+                  saveState === "saving" ||
+                  saveState === "idle" ||
+                  saveState === "saved"
+                }
+                className="btn-pen text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {saveState === "saving" ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                ) : (
+                  <Save className="h-4 w-4" aria-hidden />
+                )}
+                Enregistrer
+              </button>
+            </div>
+          </div>
+
+          {/* Deux panneaux. En dessous de lg : empilés (flux naturel, scroll page).
+              À partir de lg : côte à côte, hauteur ~écran, chaque panneau défile
+              indépendamment (sticky inutilisable car <main> a overflow-x-hidden). */}
+          <div className="lg:flex lg:gap-6 lg:items-stretch lg:h-[calc(100dvh-12rem)]">
+            {/* Gauche : aperçu + style + exports + suppression */}
+            <div className="lg:flex-1 lg:min-w-0 lg:overflow-y-auto lg:pr-1">
+              <SubtitlePlayer
+                ref={playerRef}
+                videoUrl={videoUrl}
+                activeText={activeText}
+                subtitleStyle={subtitleStyle}
+                onTimeUpdate={setCurrentTime}
+                onPlayingChange={setIsPlaying}
+              />
+              <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
+                {segments.length} sous-titres · modifiez le texte, cliquez «&nbsp;Lire&nbsp;» pour vous y rendre
+              </p>
+
+              {/* Panneau : style des sous-titres */}
+              <SubtitleStylePanel style={subtitleStyle} onChange={updateStyle} />
+
+              {/* Exports */}
+              <div className="mt-4 bg-ivory-100 border border-ivory-200 rounded-sm p-6">
+                <h3 className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-4">
+                  Exports
+                </h3>
+                <div className="flex flex-wrap gap-3">
+                  {(["srt", "vtt", "txt"] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      onClick={() => downloadExport(fmt)}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
+                    >
+                      <Download className="h-4 w-4" aria-hidden />.{fmt}
+                    </button>
+                  ))}
+                  <span
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
+                    title="Disponible avec le rendu vidéo (à venir)"
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    MP4 sous-titré
+                  </span>
+                </div>
+                <p className="text-xs text-ink-500 mt-3 font-mono">
+                  › les exports reprennent vos dernières modifications (enregistrées
+                  automatiquement)
+                </p>
+              </div>
+
+              {/* Suppression */}
+              <div className="mt-6 pt-6 border-t border-ivory-200">
+                <DeleteControl
+                  confirmDelete={confirmDelete}
+                  setConfirmDelete={setConfirmDelete}
+                  onDelete={handleDelete}
+                  isPending={isPending}
+                />
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6 items-start">
-              {/* Lecteur (reste visible) */}
-              <div>
-                <SubtitlePlayer
-                  ref={playerRef}
-                  videoUrl={videoUrl}
-                  activeText={activeText}
-                  subtitleStyle={subtitleStyle}
-                  onTimeUpdate={setCurrentTime}
-                  onPlayingChange={setIsPlaying}
-                />
-                <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                  {segments.length} sous-titres · modifiez le texte, cliquez «&nbsp;Lire&nbsp;» pour vous y rendre
-                </p>
-
-                {/* Panneau : style des sous-titres */}
-                <SubtitleStylePanel style={subtitleStyle} onChange={updateStyle} />
-              </div>
-
-              {/* Liste éditable, dans son propre cadre défilant */}
-              <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
+            {/* Droite : volet d'édition docké, défilant */}
+            <aside className="mt-6 lg:mt-0 lg:w-[400px] xl:w-[480px] lg:flex-shrink-0 lg:border-l lg:border-ivory-200 lg:pl-6 lg:overflow-y-auto">
+              <div className="space-y-3">
                 {segments.map((seg, idx) => (
                   <SegmentRow
                     key={idx}
@@ -445,74 +489,72 @@ export function VideoDetailClient({
                   </div>
                 )}
               </div>
-            </div>
-          </div>
-
-          {/* Exports */}
-          <div className="bg-ivory-100 border border-ivory-200 rounded-sm p-6">
-            <h3 className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-4">
-              Exports
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {(["srt", "vtt", "txt"] as const).map((fmt) => (
-                <button
-                  key={fmt}
-                  onClick={() => downloadExport(fmt)}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
-                >
-                  <Download className="h-4 w-4" aria-hidden />.{fmt}
-                </button>
-              ))}
-              <span
-                className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
-                title="Disponible avec le rendu vidéo (à venir)"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                MP4 sous-titré
-              </span>
-            </div>
-            <p className="text-xs text-ink-500 mt-3 font-mono">
-              › les exports reprennent vos dernières modifications (enregistrées
-              automatiquement)
-            </p>
+            </aside>
           </div>
         </>
       )}
 
-      {/* Actions */}
-      <div className="mt-10 pt-6 border-t border-ivory-200">
-        {!confirmDelete ? (
-          <button
-            onClick={() => setConfirmDelete(true)}
-            className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-rouge-600 transition-colors"
-          >
-            <Trash2 className="h-4 w-4" aria-hidden />
-            Supprimer cette vidéo
-          </button>
+      {/* Actions (états non terminés : la suppression est dans le panneau gauche en mode terminé) */}
+      {status !== "done" && (
+        <div className="mt-10 pt-6 border-t border-ivory-200 max-w-3xl">
+          <DeleteControl
+            confirmDelete={confirmDelete}
+            setConfirmDelete={setConfirmDelete}
+            onDelete={handleDelete}
+            isPending={isPending}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Contrôle de suppression (réutilisé dans tous les états)
+// ─────────────────────────────────────────────────────────────────
+function DeleteControl({
+  confirmDelete,
+  setConfirmDelete,
+  onDelete,
+  isPending,
+}: {
+  confirmDelete: boolean;
+  setConfirmDelete: (v: boolean) => void;
+  onDelete: () => void;
+  isPending: boolean;
+}) {
+  if (!confirmDelete) {
+    return (
+      <button
+        onClick={() => setConfirmDelete(true)}
+        className="inline-flex items-center gap-2 text-sm text-ink-500 hover:text-rouge-600 transition-colors"
+      >
+        <Trash2 className="h-4 w-4" aria-hidden />
+        Supprimer cette vidéo
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-ink-700">Confirmer la suppression ?</span>
+      <button
+        onClick={onDelete}
+        disabled={isPending}
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rouge-500 text-ivory-50 rounded-sm text-sm font-semibold hover:bg-rouge-600 disabled:opacity-60"
+      >
+        {isPending ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
         ) : (
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-ink-700">Confirmer la suppression ?</span>
-            <button
-              onClick={handleDelete}
-              disabled={isPending}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rouge-500 text-ivory-50 rounded-sm text-sm font-semibold hover:bg-rouge-600 disabled:opacity-60"
-            >
-              {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Trash2 className="h-4 w-4" aria-hidden />
-              )}
-              Oui, supprimer
-            </button>
-            <button
-              onClick={() => setConfirmDelete(false)}
-              className="text-sm text-ink-500 hover:text-ink-900"
-            >
-              Annuler
-            </button>
-          </div>
+          <Trash2 className="h-4 w-4" aria-hidden />
         )}
-      </div>
+        Oui, supprimer
+      </button>
+      <button
+        onClick={() => setConfirmDelete(false)}
+        className="text-sm text-ink-500 hover:text-ink-900"
+      >
+        Annuler
+      </button>
     </div>
   );
 }
