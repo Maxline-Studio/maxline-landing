@@ -1,18 +1,40 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/app/coming-soon";
+import { createClient } from "@/lib/supabase/server";
+import { SettingsClient } from "./settings-client";
 
 export const metadata: Metadata = {
   title: "Paramètres",
   robots: { index: false, follow: false },
 };
 
-export default function SettingsPage() {
+export default async function SettingsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("delete_after_days, email_notifications")
+    .eq("id", user.id)
+    .single();
+
   return (
-    <ComingSoon
-      annotation="§ Paramètres"
-      sprint="Bientôt disponible"
-      title="Préférences et confidentialité."
-      description="Les paramètres (durée de rétention des vidéos 7/14/30j, notifications email, langue de l'interface, suppression de compte) arrivent très bientôt."
-    />
+    <div>
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-4">
+          <span className="annotation">§ Paramètres</span>
+        </div>
+        <h1 className="font-display font-medium text-3xl md:text-4xl leading-[1.05] tracking-[-0.02em] text-ink-900">
+          Préférences et confidentialité.
+        </h1>
+      </div>
+
+      <SettingsClient
+        initialRetention={profile?.delete_after_days ?? 30}
+        initialEmailNotifications={profile?.email_notifications ?? true}
+      />
+    </div>
   );
 }
