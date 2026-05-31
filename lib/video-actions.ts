@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 import { presignPut, deleteObjects } from "@/lib/r2";
 import { isLang, type Lang } from "@/lib/langs";
@@ -242,7 +243,12 @@ export async function markVideoUploaded(videoId: string): Promise<void> {
     newCredits -= minutesNeeded - quotaAvail;
   }
 
-  await supabase
+  // Colonnes sensibles (quota/crédits) : écriture via le client admin
+  // (service_role). Le rôle `authenticated` n'a PAS le droit de modifier ces
+  // colonnes directement (privilèges au niveau colonne, migration 015) → un
+  // utilisateur ne peut pas se créditer des minutes via l'API.
+  const admin = createAdminClient();
+  await admin
     .from("profiles")
     .update({
       quota_minutes_used: newQuotaUsed,

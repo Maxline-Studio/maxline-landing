@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getStripe,
   planPriceId,
@@ -46,7 +47,9 @@ export async function createCheckoutSession(
       metadata: { user_id: user.id },
     });
     customerId = customer.id;
-    await supabase
+    // Colonne sensible : écriture via le client admin (le rôle authenticated
+    // n'a pas le droit de modifier stripe_customer_id — migration 015).
+    await createAdminClient()
       .from("profiles")
       .update({ stripe_customer_id: customerId })
       .eq("id", user.id);
