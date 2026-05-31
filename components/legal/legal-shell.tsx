@@ -30,13 +30,13 @@ export function LegalShell({
         <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 py-12 md:py-20">
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-rouge-500 transition-colors mb-8 group"
+            className="flex w-fit items-center gap-2 text-sm font-medium text-ink-600 hover:text-rouge-500 transition-colors mb-8 group"
           >
             <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
             Retour à l&apos;accueil
           </Link>
 
-          <span className="annotation mb-4 inline-flex">§ {label}</span>
+          <span className="annotation inline-flex">§ {label}</span>
 
           <h1 className="font-display font-medium text-4xl md:text-5xl leading-[1.05] tracking-[-0.02em] text-ink-900 mt-3">
             {title}

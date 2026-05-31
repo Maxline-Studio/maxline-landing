@@ -125,9 +125,18 @@ export function Footer() {
                   href="https://www.facebook.com/profile.php?id=61581498317108"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-rouge-400 transition-colors"
+                  aria-label="Maxline Studio sur Facebook"
+                  className="inline-flex items-center gap-2 text-ink-300 hover:text-rouge-400 transition-colors"
                 >
-                  Facebook
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="h-5 w-5"
+                    aria-hidden="true"
+                  >
+                    <path d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.026 4.388 11.022 10.125 11.927v-8.437H7.078v-3.49h3.047V9.43c0-3.017 1.79-4.683 4.532-4.683 1.313 0 2.686.236 2.686.236v2.953H15.83c-1.49 0-1.955.93-1.955 1.886v2.252h3.328l-.532 3.49h-2.796v8.437C19.612 23.095 24 18.099 24 12.073z" />
+                  </svg>
+                  <span>Facebook</span>
                 </a>
               </li>
             </ul>
