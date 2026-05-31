@@ -13,7 +13,14 @@ on conflict (id) do update
       file_size_limit = 2097152,
       allowed_mime_types = array['image/png','image/jpeg','image/jpg','image/webp','image/gif'];
 
--- Écriture limitée au dossier de l'utilisateur : avatars/{user_id}/...
+-- Lecture/écriture limitées au dossier de l'utilisateur : avatars/{user_id}/...
+-- (SELECT scopé au dossier perso → nécessaire pour l'upsert et la gestion de ses
+--  propres fichiers, sans permettre le listing global du bucket — advisor 0025.)
+drop policy if exists "Users read own avatar" on storage.objects;
+create policy "Users read own avatar"
+  on storage.objects for select to authenticated
+  using ( bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text );
+
 drop policy if exists "Users upload own avatar" on storage.objects;
 create policy "Users upload own avatar"
   on storage.objects for insert to authenticated

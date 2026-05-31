@@ -106,6 +106,15 @@ function ProfileCard({
     if (r.ok) {
       setAvatarUrl(url);
       flash();
+      // Nettoie les anciennes photos du dossier (best-effort).
+      const fileName = path.slice(userId.length + 1);
+      const { data: existing } = await supabase.storage.from("avatars").list(userId);
+      const stale = (existing ?? [])
+        .filter((f) => f.name !== fileName)
+        .map((f) => `${userId}/${f.name}`);
+      if (stale.length > 0) {
+        await supabase.storage.from("avatars").remove(stale);
+      }
     } else {
       setError(r.error);
     }
