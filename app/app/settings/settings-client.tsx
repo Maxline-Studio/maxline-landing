@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import {
   Clock,
   Mail,
@@ -9,9 +9,14 @@ import {
   Loader2,
   Check,
   AlertTriangle,
+  Camera,
+  RotateCcw,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { Avatar } from "@/components/app/avatar";
+import type { Rank } from "@/lib/supabase/types";
 import {
+  updateProfile,
   updateRetention,
   updateEmailNotifications,
   deleteAccount,
@@ -20,19 +25,205 @@ import {
 const RETENTION_OPTIONS = [7, 14, 30] as const;
 
 export function SettingsClient({
+  userId,
+  rank,
+  initialDisplayName,
+  initialAvatarUrl,
   initialRetention,
   initialEmailNotifications,
 }: {
+  userId: string;
+  rank: Rank;
+  initialDisplayName: string;
+  initialAvatarUrl: string | null;
   initialRetention: number;
   initialEmailNotifications: boolean;
 }) {
   return (
     <div className="max-w-3xl space-y-6">
+      <ProfileCard
+        userId={userId}
+        rank={rank}
+        initialAvatarUrl={initialAvatarUrl}
+        initialDisplayName={initialDisplayName}
+      />
       <RetentionCard initial={initialRetention} />
       <EmailCard initial={initialEmailNotifications} />
       <LanguageCard />
       <DangerCard />
     </div>
+  );
+}
+
+function ProfileCard({
+  userId,
+  rank,
+  initialAvatarUrl,
+  initialDisplayName,
+}: {
+  userId: string;
+  rank: Rank;
+  initialAvatarUrl: string | null;
+  initialDisplayName: string;
+}) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialAvatarUrl);
+  const [name, setName] = useState(initialDisplayName);
+  const [busy, setBusy] = useState<null | "upload" | "reset" | "name">(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const flash = () => {
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const onFile = async (file: File) => {
+    setError(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Veuillez choisir une image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Image trop lourde (2 Mo maximum).");
+      return;
+    }
+    setBusy("upload");
+    const supabase = createClient();
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const path = `${userId}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("avatars")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (upErr) {
+      setError(`Échec de l'envoi : ${upErr.message}`);
+      setBusy(null);
+      return;
+    }
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    const url = data.publicUrl;
+    const r = await updateProfile({ avatarUrl: url });
+    if (r.ok) {
+      setAvatarUrl(url);
+      flash();
+    } else {
+      setError(r.error);
+    }
+    setBusy(null);
+  };
+
+  const resetAvatar = async () => {
+    setBusy("reset");
+    setError(null);
+    const r = await updateProfile({ avatarUrl: null });
+    if (r.ok) {
+      setAvatarUrl(null);
+      flash();
+    } else {
+      setError(r.error);
+    }
+    setBusy(null);
+  };
+
+  const saveName = async () => {
+    setBusy("name");
+    setError(null);
+    const r = await updateProfile({ displayName: name });
+    if (r.ok) flash();
+    else setError(r.error);
+    setBusy(null);
+  };
+
+  return (
+    <Card
+      icon={<Camera className="h-5 w-5" strokeWidth={1.75} aria-hidden />}
+      title="Profil"
+      description="Votre photo et le nom affichés dans votre espace."
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+        <Avatar
+          src={avatarUrl}
+          rank={rank}
+          size="xl"
+          showRank={false}
+          className="border-2 border-ink-200"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onFile(f);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={busy !== null}
+            className="btn-pen text-sm py-2 px-4 disabled:opacity-60"
+          >
+            {busy === "upload" ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Camera className="h-4 w-4" aria-hidden />
+            )}
+            Changer la photo
+          </button>
+          {avatarUrl && (
+            <button
+              onClick={resetAvatar}
+              disabled={busy !== null}
+              className="inline-flex items-center gap-2 text-sm font-medium text-ink-600 hover:text-rouge-600 transition-colors disabled:opacity-60"
+            >
+              {busy === "reset" ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <RotateCcw className="h-4 w-4" aria-hidden />
+              )}
+              Logo par défaut
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <label className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1.5">
+          Nom affiché
+        </label>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={60}
+            placeholder="Votre nom"
+            className="w-full sm:w-72 bg-white border border-ink-200 rounded-sm px-3 py-2 text-ink-900 focus:outline-none focus:border-rouge-500"
+          />
+          <button
+            onClick={saveName}
+            disabled={busy !== null || name === initialDisplayName}
+            className="btn-pen text-sm py-2 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy === "name" ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Check className="h-4 w-4" aria-hidden />
+            )}
+            Enregistrer
+          </button>
+          <SavedFlash show={saved} />
+        </div>
+      </div>
+
+      {error && (
+        <p className="mt-3 text-sm text-rouge-700" role="alert">
+          {error}
+        </p>
+      )}
+    </Card>
   );
 }
 

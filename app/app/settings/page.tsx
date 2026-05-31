@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import type { Rank } from "@/lib/supabase/types";
 import { SettingsClient } from "./settings-client";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export default async function SettingsPage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("delete_after_days, email_notifications")
+    .select("delete_after_days, email_notifications, avatar_url, display_name, rank")
     .eq("id", user.id)
     .single();
 
@@ -32,6 +33,10 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsClient
+        userId={user.id}
+        rank={(profile?.rank ?? "apprenti") as Rank}
+        initialDisplayName={profile?.display_name ?? ""}
+        initialAvatarUrl={profile?.avatar_url ?? null}
         initialRetention={profile?.delete_after_days ?? 30}
         initialEmailNotifications={profile?.email_notifications ?? true}
       />

@@ -9,6 +9,45 @@ import { burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+/**
+ * Met à jour le profil affiché : nom et/ou photo (avatar_url). L'upload de la
+ * photo se fait côté client dans le bucket `avatars` ; cette action ne fait
+ * qu'enregistrer l'URL publique (ou null pour revenir au logo par défaut).
+ */
+export async function updateProfile(patch: {
+  displayName?: string;
+  avatarUrl?: string | null;
+}): Promise<ActionResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée. Reconnectez-vous." };
+
+  const update: { display_name?: string | null; avatar_url?: string | null } = {};
+  if (patch.displayName !== undefined) {
+    const name = patch.displayName.trim();
+    if (name.length > 60) {
+      return { ok: false, error: "Nom trop long (60 caractères maximum)." };
+    }
+    update.display_name = name || null;
+  }
+  if (patch.avatarUrl !== undefined) {
+    update.avatar_url = patch.avatarUrl;
+  }
+  if (Object.keys(update).length === 0) return { ok: true };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(update)
+    .eq("id", user.id);
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath("/app/settings");
+  revalidatePath("/app", "layout"); // rafraîchit l'avatar/nom dans la sidebar
+  return { ok: true };
+}
+
 const ALLOWED_RETENTION = [7, 14, 30] as const;
 export type RetentionDays = (typeof ALLOWED_RETENTION)[number];
 

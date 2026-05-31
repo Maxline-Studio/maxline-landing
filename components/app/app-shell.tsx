@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutAction } from "@/lib/auth-actions";
-import type { Profile } from "@/lib/supabase/types";
-import { RankBadge } from "@/components/app/rank-badge";
+import type { Profile, Rank } from "@/lib/supabase/types";
+import { Avatar } from "@/components/app/avatar";
 
 const NAV_ITEMS = [
   { href: "/app/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
@@ -158,7 +158,7 @@ function SidebarContent({
       {/* Profil + rang */}
       <div className="px-6 py-5 border-b border-ink-800">
         <div className="flex items-center gap-3 mb-3">
-          <RankBadge rank={profile.rank as "apprenti" | "correcteur" | "editeur_en_chef" | "maitre_doeuvre"} />
+          <Avatar src={profile.avatar_url} rank={profile.rank as Rank} />
           <div className="min-w-0">
             <div className="text-sm font-medium text-ivory-50 truncate">
               {profile.display_name || profile.email}
