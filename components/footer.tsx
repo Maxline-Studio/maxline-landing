@@ -95,6 +95,14 @@ export function Footer() {
                   Cookies
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/legal/cgu"
+                  className="hover:text-rouge-400 transition-colors"
+                >
+                  Conditions générales
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -112,8 +120,15 @@ export function Footer() {
                   contact@maxlinestudio.fr
                 </a>
               </li>
-              <li className="text-ink-500 italic font-display">
-                Réseaux à venir
+              <li>
+                <a
+                  href="https://www.facebook.com/profile.php?id=61581498317108"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-rouge-400 transition-colors"
+                >
+                  Facebook
+                </a>
               </li>
             </ul>
           </div>
@@ -122,8 +137,13 @@ export function Footer() {
         <div className="mt-14 pt-8 border-t border-ink-700 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs font-mono uppercase tracking-wider text-ink-500">
           <p>© 2026 Maxline Studio · Tous droits réservés</p>
           <p>
-            Édité à Paris ·{" "}
-            <span className="text-rouge-400">hébergé en Europe</span>
+            Édité en France ·{" "}
+            <Link
+              href="/legal/confidentialite"
+              className="text-rouge-400 hover:text-rouge-300 transition-colors"
+            >
+              Conforme RGPD
+            </Link>
           </p>
         </div>
       </div>
