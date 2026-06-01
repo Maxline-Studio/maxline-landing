@@ -1,36 +1,53 @@
 // Questions fréquentes — source unique, réutilisée par la section FAQ
 // (affichage) et par les données structurées FAQPage (JSON-LD).
+// Le texte doit rester identique à l'affichage : le schema FAQPage doit
+// refléter le contenu visible de la page.
 export type FaqItem = { question: string; answer: string };
 
 export const faqs: FaqItem[] = [
   {
-    question: "Est-ce que c'est vraiment automatique ?",
+    question: "Quels formats vidéo sont supportés ?",
     answer:
-      "Oui. Vous déposez votre vidéo, Maxline détecte les dialogues, les transcrit, les traduit en gardant le sens, et vous rend des sous-titres prêts à l'emploi. Vous repassez derrière seulement si vous voulez peaufiner.",
+      "MP4, MOV, AVI, MKV et WebM, jusqu'à 1 Go et 30 minutes par vidéo. Ces limites évolueront selon les retours.",
   },
   {
-    question: "Quelles langues sont gérées ?",
+    question: "Combien de temps faut-il pour une vidéo de 10 minutes ?",
     answer:
-      "Pour l'instant, français et anglais, dans les deux sens. Vous pouvez aussi sous-titrer une vidéo dans sa langue d'origine (transcription) pour l'accessibilité. D'autres langues arriveront selon vos retours.",
+      "Environ 10 minutes, parfois moins. Notre pipeline (extraction audio → transcription → traduction → génération sous-titres → vidéo finale) est optimisé pour rester sous la durée de la vidéo elle-même.",
   },
   {
-    question: "Est-ce que je garde la main sur le texte ?",
+    question: "Mes vidéos sont-elles vraiment supprimées ?",
     answer:
-      "Toujours. Chaque ligne est éditable dans l'atelier. Vous corrigez, vous ajustez le découpage, vous changez le style. La machine propose, vous validez.",
+      "Oui. Suppression automatique sous 30 jours par défaut (configurable à 7 ou 14 jours). Aucune donnée n'est conservée au-delà, et aucune n'est utilisée pour entraîner une IA. Hébergement en Europe.",
   },
   {
-    question: "Qu'est-ce qu'il se passe avec mes vidéos ?",
+    question: "Puis-je annuler mon abonnement à tout moment ?",
     answer:
-      "Elles sont traitées puis supprimées automatiquement au bout de 30 jours. On ne revend rien, on n'entraîne aucune IA avec vos contenus. C'est écrit noir sur blanc dans nos conditions.",
+      "Oui, en 2 clics, sans démarche par email, sans frais. L'annulation prend effet à la fin de la période en cours. Vos crédits déjà achetés restent acquis sans expiration.",
   },
   {
-    question: "Combien ça coûte ?",
+    question: "Pourquoi Maxline Studio est moins cher que HeyGen ou Rask ?",
     answer:
-      "12 € par mois pour 120 minutes de vidéo. Pas de surprise, pas de prélèvement caché. Vous pouvez arrêter quand vous voulez.",
+      "Parce que nous sommes une équipe de 1 personne avec une infrastructure self-hosted minimaliste. Pas d'investisseurs à rémunérer, pas de bureaux à Manhattan. On vous facture le service, pas la levée de fonds.",
   },
   {
-    question: "Et si je ne suis pas satisfait ?",
+    question: "Quand le lancement officiel est-il prévu ?",
     answer:
-      "Vous avez 14 jours pour tester. Si ça ne vous convient pas, vous êtes remboursé, sans discussion.",
+      "Bêta privée prévue dans les prochaines semaines, lancement public officiel dans 2-3 mois. Inscrivez-vous pour être prévenu en priorité — les premiers inscrits auront un accès gratuit prolongé.",
+  },
+  {
+    question: "Quelles langues sont supportées ?",
+    answer:
+      "Le français et l'anglais, dans les deux sens (français → anglais et anglais → français), ou une simple transcription dans la langue parlée — idéale pour l'accessibilité. L'espagnol et l'allemand arriveront selon vos retours.",
+  },
+  {
+    question: "Y aura-t-il un doublage avec voix clonée ?",
+    answer:
+      "Pas au lancement (focus sur la qualité du sous-titrage). En v2 si la traction le justifie, avec ElevenLabs en backend et consentement vocal explicite. Pas de lip-sync deepfake, jamais.",
+  },
+  {
+    question: "Comment fonctionne l'Atelier (système de fidélité) ?",
+    answer:
+      "Vos minutes utilisées s'accumulent à vie. Vous progressez dans 4 rangs — Apprenti, Correcteur, Éditeur en chef, Maître d'œuvre — et à chaque palier votre outil s'enrichit de fonctions, priorités et bonus offerts (minutes supplémentaires tous les 3 mois, bonus anniversaire, exports débloqués, etc.). Inclus dans tous les plans, sans frais. Aucun reset, jamais. Le système complet est documenté en transparence : seuils, mécaniques et calculs accessibles à tous.",
   },
 ];
