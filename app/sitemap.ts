@@ -14,6 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/", changeFrequency: "weekly", priority: 1 },
     { path: "/atelier", changeFrequency: "monthly", priority: 0.7 },
     { path: "/blog", changeFrequency: "weekly", priority: 0.6 },
+    { path: "/blog/traduire-video-francais-anglais", changeFrequency: "monthly", priority: 0.7 },
     { path: "/blog/pourquoi-maxline-studio", changeFrequency: "monthly", priority: 0.5 },
     { path: "/legal/mentions", changeFrequency: "yearly", priority: 0.2 },
     { path: "/legal/confidentialite", changeFrequency: "yearly", priority: 0.2 },

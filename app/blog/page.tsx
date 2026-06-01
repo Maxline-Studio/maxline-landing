@@ -23,6 +23,16 @@ export const metadata: Metadata = {
 
 const posts = [
   {
+    slug: "traduire-video-francais-anglais",
+    n: "02",
+    title: "Comment traduire une vidéo française en anglais (guide complet 2026)",
+    excerpt:
+      "Méthodes manuelles, semi-automatiques et automatiques pour traduire une vidéo du français vers l'anglais. Export .srt propre, erreurs à éviter, et comment choisir.",
+    date: "2026-06-01",
+    dateLabel: "1 juin 2026",
+    readingTime: "9 min de lecture",
+  },
+  {
     slug: "pourquoi-maxline-studio",
     n: "01",
     title: "Pourquoi je crée Maxline Studio",

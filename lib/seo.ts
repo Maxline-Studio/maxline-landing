@@ -72,6 +72,34 @@ export function faqPageLd(items: { question: string; answer: string }[]) {
   };
 }
 
+// Article de blog — pour les pages du Journal à intention SEO.
+export function articleLd(opts: {
+  headline: string;
+  description: string;
+  path: string;
+  datePublished: string; // ISO
+  dateModified?: string; // ISO
+  author?: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: opts.headline,
+    description: opts.description,
+    inLanguage: "fr-FR",
+    mainEntityOfPage: { "@type": "WebPage", "@id": absoluteUrl(opts.path) },
+    url: absoluteUrl(opts.path),
+    datePublished: opts.datePublished,
+    dateModified: opts.dateModified ?? opts.datePublished,
+    author: { "@type": "Person", name: opts.author ?? "Maxence Chopin" },
+    publisher: {
+      "@type": "Organization",
+      name: ORG_NAME,
+      logo: { "@type": "ImageObject", url: LOGO_URL },
+    },
+  };
+}
+
 // Fil d'Ariane (breadcrumb).
 export function breadcrumbLd(items: { name: string; path: string }[]) {
   return {
