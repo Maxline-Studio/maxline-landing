@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Politique cookies",
   description: "Politique cookies minimaliste de Maxline Studio : uniquement l'essentiel.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://www.maxlinestudio.fr/legal/cookies" },
 };
 
 export default function Cookies() {

@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description:
     "Conditions générales d'utilisation et de vente du service Maxline Studio.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://www.maxlinestudio.fr/legal/cgu" },
 };
 
 export default function CGU() {

@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Mentions légales",
   description: "Mentions légales de Maxline Studio.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://www.maxlinestudio.fr/legal/mentions" },
 };
 
 export default function MentionsLegales() {

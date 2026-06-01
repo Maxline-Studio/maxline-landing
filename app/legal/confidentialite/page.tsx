@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description:
     "Comment Maxline Studio collecte, utilise et protège vos données personnelles (RGPD).",
   robots: { index: true, follow: true },
+  alternates: { canonical: "https://www.maxlinestudio.fr/legal/confidentialite" },
 };
 
 export default function Confidentialite() {

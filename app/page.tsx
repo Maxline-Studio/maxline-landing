@@ -11,10 +11,14 @@ import { Atelier } from "@/components/sections/atelier";
 import { PricingPreview } from "@/components/sections/pricing-preview";
 import { Faq } from "@/components/sections/faq";
 import { Subscribe } from "@/components/sections/subscribe";
+import { JsonLd } from "@/components/json-ld";
+import { softwareApplicationLd, faqPageLd } from "@/lib/seo";
+import { faqs } from "@/lib/faq-data";
 
 export default function HomePage() {
   return (
     <>
+      <JsonLd data={[softwareApplicationLd, faqPageLd(faqs)]} />
       <Header />
       <main id="main-content">
         <Hero />

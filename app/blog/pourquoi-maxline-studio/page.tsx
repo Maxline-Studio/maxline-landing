@@ -4,6 +4,8 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { HandUnderline } from "@/components/hand-underline";
+import { JsonLd } from "@/components/json-ld";
+import { breadcrumbLd } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Pourquoi je crée Maxline Studio",
@@ -13,7 +15,7 @@ export const metadata: Metadata = {
     title: "Pourquoi je crée Maxline Studio",
     description:
       "Il y a un trou évident sur le marché français de la traduction vidéo. Voilà comment je suis tombé dedans, et pourquoi je décide de m'y attaquer seul.",
-    url: "https://maxlinestudio.fr/blog/pourquoi-maxline-studio",
+    url: "https://www.maxlinestudio.fr/blog/pourquoi-maxline-studio",
     type: "article",
     publishedTime: "2026-05-27T08:00:00+02:00",
     authors: ["Maxence"],
@@ -25,13 +27,20 @@ export const metadata: Metadata = {
       "Il y a un trou évident sur le marché français de la traduction vidéo. Voilà comment je suis tombé dedans.",
   },
   alternates: {
-    canonical: "https://maxlinestudio.fr/blog/pourquoi-maxline-studio",
+    canonical: "https://www.maxlinestudio.fr/blog/pourquoi-maxline-studio",
   },
 };
 
 export default function PourquoiMaxlineStudio() {
   return (
     <>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: "Accueil", path: "/" },
+          { name: "Journal", path: "/blog" },
+          { name: "Pourquoi je crée Maxline Studio", path: "/blog/pourquoi-maxline-studio" },
+        ])}
+      />
       <Header />
       <main id="main-content" className="py-12 md:py-20 bg-ivory-50 relative">
         <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />

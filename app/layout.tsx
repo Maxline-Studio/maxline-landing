@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Inter, Fraunces, Caveat, Montserrat, Anton } from "next/font/google";
 import "./globals.css";
 import { ScrollProgress } from "@/components/scroll-progress";
+import { JsonLd } from "@/components/json-ld";
+import { SITE_URL, organizationLd, websiteLd } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,7 +40,7 @@ const anton = Anton({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://maxlinestudio.fr"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default:
       "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes",
@@ -62,7 +64,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    url: "https://maxlinestudio.fr",
+    url: SITE_URL,
     siteName: "Maxline Studio",
     title: "Vos vidéos françaises, sous-titrées en anglais en 10 minutes.",
     description:
@@ -85,7 +87,7 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: "https://maxlinestudio.fr",
+    canonical: SITE_URL,
   },
 };
 
@@ -100,6 +102,7 @@ export default function RootLayout({
       className={`${inter.variable} ${fraunces.variable} ${caveat.variable} ${montserrat.variable} ${anton.variable}`}
     >
       <body>
+        <JsonLd data={[organizationLd, websiteLd]} />
         <a href="#main-content" className="skip-link">
           Aller au contenu principal
         </a>

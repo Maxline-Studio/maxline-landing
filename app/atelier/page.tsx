@@ -15,12 +15,12 @@ export const metadata: Metadata = {
   title: "L'Atelier — le système de fidélité de Maxline Studio",
   description:
     "Plus vous traduisez, plus votre atelier s'agrandit. Quatre rangs, des minutes offertes, un parrainage symétrique — tout est transparent, sans dark pattern.",
-  alternates: { canonical: "https://maxlinestudio.fr/atelier" },
+  alternates: { canonical: "https://www.maxlinestudio.fr/atelier" },
   openGraph: {
     title: "L'Atelier — le système de fidélité de Maxline Studio",
     description:
       "Quatre rangs, des minutes offertes, un parrainage symétrique. Tout est transparent.",
-    url: "https://maxlinestudio.fr/atelier",
+    url: "https://www.maxlinestudio.fr/atelier",
     type: "website",
   },
 };

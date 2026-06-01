@@ -1,0 +1,30 @@
+import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/seo";
+
+// Pages publiques indexables. À étendre quand de nouveaux articles
+// de Journal ou pages marketing sont ajoutés.
+export default function sitemap(): MetadataRoute.Sitemap {
+  const now = new Date();
+
+  const pages: {
+    path: string;
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+    priority: number;
+  }[] = [
+    { path: "/", changeFrequency: "weekly", priority: 1 },
+    { path: "/atelier", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/blog", changeFrequency: "weekly", priority: 0.6 },
+    { path: "/blog/pourquoi-maxline-studio", changeFrequency: "monthly", priority: 0.5 },
+    { path: "/legal/mentions", changeFrequency: "yearly", priority: 0.2 },
+    { path: "/legal/confidentialite", changeFrequency: "yearly", priority: 0.2 },
+    { path: "/legal/cookies", changeFrequency: "yearly", priority: 0.2 },
+    { path: "/legal/cgu", changeFrequency: "yearly", priority: 0.2 },
+  ];
+
+  return pages.map((p) => ({
+    url: absoluteUrl(p.path),
+    lastModified: now,
+    changeFrequency: p.changeFrequency,
+    priority: p.priority,
+  }));
+}

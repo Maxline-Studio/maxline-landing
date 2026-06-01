@@ -14,10 +14,10 @@ export const metadata: Metadata = {
     title: "Journal — Maxline Studio",
     description:
       "Le journal de bord de Maxline Studio. Décisions, doutes, choix techniques, chiffres. Construit en public, sans filtre.",
-    url: "https://maxlinestudio.fr/blog",
+    url: "https://www.maxlinestudio.fr/blog",
   },
   alternates: {
-    canonical: "https://maxlinestudio.fr/blog",
+    canonical: "https://www.maxlinestudio.fr/blog",
   },
 };
 
