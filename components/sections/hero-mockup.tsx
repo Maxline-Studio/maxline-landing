@@ -35,7 +35,7 @@ export function HeroMockup() {
             <div className="h-2.5 w-2.5 rounded-full bg-ivory-300" />
           </div>
           <span className="font-mono text-[10px] text-ink-500 uppercase tracking-widest">
-            transcription · v.0
+            transcription · FR → EN
           </span>
         </div>
 
@@ -96,7 +96,7 @@ export function HeroMockup() {
 
       {/* Annotation marginale flottante haut-droite */}
       <div className="absolute -top-4 -right-4 hidden sm:block bg-ink-900 text-ivory-50 px-3 py-1.5 rounded-sm font-mono text-[10px] uppercase tracking-widest font-bold rotate-3 shadow-lg">
-        REC · à venir
+        aperçu
       </div>
 
       {/* Stat flottante bas-gauche */}

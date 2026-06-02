@@ -99,6 +99,10 @@ export default async function BillingPage({
       <BillingActions
         currentPlan={profile.plan}
         hasCustomer={Boolean(profile.stripe_customer_id)}
+        isSubscribed={
+          Boolean(profile.stripe_subscription_id) &&
+          (profile.plan === "starter" || profile.plan === "plus")
+        }
       />
     </div>
   );

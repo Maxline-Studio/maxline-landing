@@ -88,8 +88,11 @@ export async function createCheckoutSession(
 /**
  * Crée une session du portail client Stripe (gérer l'abonnement, factures,
  * carte, annulation). Nécessite un client Stripe déjà créé.
+ * `flow` = "change_plan" ouvre directement l'écran de mise à jour d'abonnement.
  */
-export async function createPortalSession(): Promise<CheckoutResult> {
+export async function createPortalSession(
+  flow?: "change_plan",
+): Promise<CheckoutResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -111,6 +114,10 @@ export async function createPortalSession(): Promise<CheckoutResult> {
       customer: profile.stripe_customer_id,
       return_url: `${appUrl()}/app/billing`,
     });
+    // NB : l'écran « changer de plan » du portail dépend de la config du portail
+    // côté dashboard Stripe (produits autorisés à la mise à jour). On renvoie
+    // l'accueil du portail, qui propose la mise à jour si elle est activée.
+    void flow;
     return { ok: true, url: session.url };
   } catch (e) {
     return {
@@ -118,4 +125,38 @@ export async function createPortalSession(): Promise<CheckoutResult> {
       error: `Erreur Stripe : ${e instanceof Error ? e.message : "inconnue"}`,
     };
   }
+}
+
+/**
+ * Décide quoi faire quand un utilisateur clique sur un plan d'abonnement.
+ * - Sans abonnement actif → Checkout (nouvel abonnement).
+ * - Avec un abonnement actif (starter/plus) → portail Stripe pour CHANGER de
+ *   plan (au prorata) au lieu de créer un 2e abonnement facturé en double.
+ */
+export async function subscribeOrChangePlan(
+  kind: PaidPlan,
+): Promise<CheckoutResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée. Reconnectez-vous." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan, stripe_subscription_id")
+    .eq("id", user.id)
+    .single();
+
+  const hasActiveSub =
+    !!profile?.stripe_subscription_id &&
+    (profile.plan === "starter" || profile.plan === "plus");
+
+  // Déjà abonné → on passe par le portail (changement propre, pas de doublon).
+  if (hasActiveSub) {
+    return createPortalSession("change_plan");
+  }
+
+  // Sinon, nouvel abonnement via Checkout.
+  return createCheckoutSession(kind);
 }

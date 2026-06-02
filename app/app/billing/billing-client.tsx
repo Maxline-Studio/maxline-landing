@@ -5,6 +5,7 @@ import { ArrowRight, Check, Loader2, Settings } from "lucide-react";
 import {
   createCheckoutSession,
   createPortalSession,
+  subscribeOrChangePlan,
   type CheckoutKind,
 } from "@/lib/stripe-actions";
 
@@ -42,9 +43,11 @@ const PACKS: { kind: CheckoutKind; name: string; price: number; minutes: number 
 export function BillingActions({
   currentPlan,
   hasCustomer,
+  isSubscribed,
 }: {
   currentPlan: string;
   hasCustomer: boolean;
+  isSubscribed: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [busyKind, setBusyKind] = useState<string | null>(null);
@@ -77,9 +80,15 @@ export function BillingActions({
 
       {/* Abonnements */}
       <section>
-        <h2 className="font-display font-medium text-xl text-ink-900 mb-5">
+        <h2 className="font-display font-medium text-xl text-ink-900 mb-2">
           Abonnements mensuels
         </h2>
+        {isSubscribed && (
+          <p className="text-sm text-ink-600 mb-5">
+            Vous êtes abonné. Changer de plan se fait via le portail sécurisé
+            Stripe, au prorata — aucun double prélèvement.
+          </p>
+        )}
         <div className="grid sm:grid-cols-2 gap-4">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.kind;
@@ -119,13 +128,20 @@ export function BillingActions({
                 <button
                   type="button"
                   disabled={pending || isCurrent}
-                  onClick={() => go(() => createCheckoutSession(plan.kind), plan.kind)}
+                  onClick={() =>
+                    go(() => subscribeOrChangePlan(plan.kind), plan.kind)
+                  }
                   className="btn-pen w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {busyKind === plan.kind ? (
                     <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                   ) : isCurrent ? (
                     "Votre plan"
+                  ) : isSubscribed ? (
+                    <>
+                      Changer pour {plan.name}
+                      <ArrowRight className="h-4 w-4" aria-hidden />
+                    </>
                   ) : (
                     <>
                       Choisir {plan.name}
