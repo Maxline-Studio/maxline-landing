@@ -256,8 +256,13 @@ export function VideoDetailClient({
   };
   const regenerate = async (idx: number) => {
     setRegeneratingIdx(idx);
+    setErrorMessage(null);
     const result = await regenerateLine(initialVideo.id, idx);
-    if (result.ok && result.text) updateText(idx, result.text);
+    if (result.ok && result.text) {
+      updateText(idx, result.text);
+    } else if (result.error) {
+      setErrorMessage(result.error);
+    }
     setRegeneratingIdx(null);
   };
 

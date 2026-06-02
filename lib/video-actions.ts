@@ -8,6 +8,7 @@ import { presignPut, deleteObjects } from "@/lib/r2";
 import { isLang, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/mock-worker";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
+import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -373,15 +374,28 @@ export async function saveSubtitleStyle(
 }
 
 /**
- * Régénère la traduction d'une seule ligne.
- * TODO (différé Sprint 3) : brancher sur Claude (comme le worker) pour une vraie
- * reformulation contextuelle. Nécessite ANTHROPIC_API_KEY côté Vercel. En
- * attendant, reformulation déterministe légère (placeholder).
+ * Régénère la traduction (ou reformulation) d'une seule ligne via Claude.
+ * Réutilise la même logique que le worker : transcription complète en contexte,
+ * ton/registre préservés, contrainte de longueur sous-titre. Donne une
+ * alternative à la version actuelle (pour que l'utilisateur ait un vrai choix).
+ *
+ * - En mode traduction (source ≠ cible) : retraduit la ligne source vers la cible.
+ * - En mode transcription (source == cible, pas de `transcription_source`) :
+ *   reformule/nettoie la ligne dans la même langue.
+ *
+ * Nécessite ANTHROPIC_API_KEY côté Vercel ; sinon message clair.
  */
 export async function regenerateLine(
   videoId: string,
   index: number,
 ): Promise<{ ok: boolean; text?: string; error?: string }> {
+  if (!isAnthropicConfigured()) {
+    return {
+      ok: false,
+      error: "Régénération indisponible pour le moment (configuration manquante).",
+    };
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -390,53 +404,76 @@ export async function regenerateLine(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("transcription_source, transcription_target")
+    .select("transcription_source, transcription_target, source_lang, target_lang")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
   if (!video) return { ok: false, error: "Vidéo introuvable." };
 
-  const sourceSegs = (video.transcription_source as Segment[]) || [];
-  const source = sourceSegs[index]?.text || "";
+  const sourceSegs = (video.transcription_source as Segment[] | null) ?? [];
+  const targetSegs = (video.transcription_target as Segment[] | null) ?? [];
+  const currentTarget = targetSegs[index]?.text ?? "";
+  if (!currentTarget && sourceSegs.length === 0) {
+    return { ok: false, error: "Ligne introuvable." };
+  }
 
-  // Mock : reformulation légère. Le vrai LLM (Claude) remplacera ça.
-  const targetSegs = (video.transcription_target as Segment[]) || [];
-  const currentTarget = targetSegs[index]?.text || "";
-  const alt = mockAlternativeTranslation(currentTarget);
+  const srcLang: Lang = isLang(video.source_lang) ? video.source_lang : "fr";
+  const tgtLang: Lang = isLang(video.target_lang) ? video.target_lang : "en";
+  const isTranslation = srcLang !== tgtLang;
 
-  return { ok: true, text: alt || currentTarget || source };
-}
+  // Référence : la ligne source (mode traduction) ou la ligne cible actuelle.
+  const sourceText = sourceSegs[index]?.text ?? "";
+  const reference = isTranslation ? sourceText || currentTarget : currentTarget;
+  if (!reference) return { ok: false, error: "Ligne vide." };
 
-/** Reformulation mock d'une traduction (sera remplacée par OPUS-MT). */
-function mockAlternativeTranslation(en: string): string {
-  const map: Record<string, string> = {
-    "Hi everyone, I hope you're doing great!":
-      "Hey everybody, hope you're all doing well!",
-    "Today, we're diving into a topic close to my heart.":
-      "Today we're tackling a subject that really matters to me.",
-    "Before we start, don't forget to subscribe.":
-      "Before we begin, make sure to hit subscribe.",
-    "So, the first thing to understand is this.":
-      "Now, here's the first thing you need to grasp.",
-    "Let me show you exactly how I do it.":
-      "Here's precisely how I go about it.",
-    "And here, you can see the result on screen.":
-      "And there, the result appears on screen.",
-    "Honestly, it's simpler than you'd think.":
-      "Frankly, it's easier than it looks.",
-    "A little tip that few people know about.":
-      "A small trick most people aren't aware of.",
-    "Pay close attention to this step, it's crucial.":
-      "Watch this step carefully — it's essential.",
-    "If you enjoyed this, leave a comment.":
-      "Liked it? Drop a comment below.",
-    "See you very soon for the next part.":
-      "Catch you soon for what's next.",
-    "Thanks for watching to the end, see you soon!":
-      "Thanks for sticking around — see you next time!",
-  };
-  return map[en] || en;
+  // Contexte global = transcription cible complète (texte joint), borné.
+  const context = targetSegs
+    .map((s) => s.text)
+    .join(" ")
+    .slice(0, 6000);
+
+  const langName = (c: Lang) => (c === "en" ? "anglais" : "français");
+
+  const system = isTranslation
+    ? `Tu es traducteur·rice professionnel·le de sous-titres ${langName(srcLang)}→${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, naturelle et fluide, de la traduction d'UNE seule réplique — surtout pas du mot-à-mot. Tu préserves le ton, le registre et l'énergie. Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle traduction, sans guillemets, sans préambule, sans ponctuation superflue.`
+    : `Tu es correcteur·rice de sous-titres en ${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, plus naturelle et lisible, d'UNE seule réplique, dans la même langue, sans en changer le sens. Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle version, sans guillemets ni préambule.`;
+
+  const user2 = [
+    `Contexte (transcription complète, pour la cohérence) :`,
+    `"""`,
+    context,
+    `"""`,
+    ``,
+    isTranslation
+      ? `Réplique à traduire (${langName(srcLang)}) : « ${reference} »`
+      : `Réplique à reformuler (${langName(tgtLang)}) : « ${reference} »`,
+    currentTarget
+      ? `Version actuelle à NE PAS répéter à l'identique : « ${currentTarget} »`
+      : ``,
+    ``,
+    `Donne UNE seule alternative${isTranslation ? ` en ${langName(tgtLang)}` : ""}.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const out = await callClaude({
+      system,
+      user: user2,
+      maxTokens: 300,
+      temperature: 0.8,
+    });
+    // Nettoyage : enlève d'éventuels guillemets englobants.
+    const cleaned = out.replace(/^["«»\s]+|["«»\s]+$/g, "").trim();
+    if (!cleaned) return { ok: false, error: "Réponse vide, réessayez." };
+    return { ok: true, text: cleaned };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Régénération impossible.",
+    };
+  }
 }
 
 /**
