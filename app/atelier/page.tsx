@@ -107,7 +107,7 @@ export default function AtelierPublicPage() {
             <div className="mt-16 pt-10 border-t border-ink-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <p className="text-ink-300 max-w-md leading-relaxed">
                 L&apos;Atelier est inclus dans tous les plans, sans frais
-                supplémentaire. Il s&apos;active dès l&apos;ouverture de la bêta.
+                supplémentaire. Il s&apos;active dès votre première minute.
               </p>
               <Link
                 href="/signup"

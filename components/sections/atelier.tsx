@@ -189,7 +189,7 @@ export function Atelier() {
         </Reveal>
 
         <p className="mt-14 text-center text-sm font-mono text-ink-500 uppercase tracking-widest">
-          [ système actif dès l&apos;ouverture de la bêta &middot; détails complets sur la page /atelier ]
+          [ système actif dès votre première minute &middot; détails complets sur la page /atelier ]
         </p>
       </div>
     </section>

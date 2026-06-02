@@ -110,9 +110,9 @@ export function Header() {
                 >
                   Connexion
                 </Link>
-                <a href="/#subscribe" className="btn-pen text-sm py-2 px-4">
-                  Réserver mon accès
-                </a>
+                <Link href="/signup" className="btn-pen text-sm py-2 px-4">
+                  Créer mon atelier
+                </Link>
               </>
             )}
           </div>
@@ -186,13 +186,13 @@ export function Header() {
                   >
                     Connexion
                   </Link>
-                  <a
-                    href="/#subscribe"
+                  <Link
+                    href="/signup"
                     onClick={() => setMobileOpen(false)}
                     className="btn-pen w-full"
                   >
-                    Réserver mon accès
-                  </a>
+                    Créer mon atelier
+                  </Link>
                 </>
               )}
             </div>

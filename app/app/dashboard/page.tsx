@@ -181,8 +181,7 @@ function EmptyState() {
       </h3>
       <p className="text-sm text-ink-600 mb-6 max-w-md mx-auto">
         Sous-titrez votre première vidéo — c&apos;est{" "}
-        <span className="font-semibold">offert au lancement</span>, sans carte
-        demandée.
+        <span className="font-semibold">offert</span>, sans carte demandée.
       </p>
       <Link href="/app/upload" className="btn-pen inline-flex">
         <Upload className="h-4 w-4" aria-hidden />

@@ -109,8 +109,9 @@ export default function Confidentialite() {
             comptable légale).
           </li>
           <li>
-            <strong>Liste d&apos;attente</strong> : jusqu&apos;au lancement, puis 24
-            mois après désinscription (preuve du consentement).
+            <strong>Inscription au Journal / liste de diffusion</strong> :
+            conservée jusqu&apos;à votre désinscription, puis 24 mois (preuve du
+            consentement).
           </li>
         </ul>
       </LegalSection>

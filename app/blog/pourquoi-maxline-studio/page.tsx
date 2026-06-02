@@ -422,15 +422,15 @@ export default function PourquoiMaxlineStudio() {
               Suis la construction,
               <br />
               <span className="font-display italic font-light text-rouge-500">
-                réserve ta place.
+                essaie l&apos;outil.
               </span>
             </h2>
             <p className="text-ink-700 mb-6 leading-relaxed">
-              L&apos;inscription à la waitlist te donne l&apos;accès anticipé au
-              MVP et le tarif d&apos;origine à vie, à 12 €/mois.
+              Maxline est en ligne. Crée ton atelier et sous-titre ta première
+              vidéo gratuitement, sans carte — 12 €/mois ensuite, sans engagement.
             </p>
-            <Link href="/#subscribe" className="btn-pen text-base">
-              Réserver mon accès
+            <Link href="/signup" className="btn-pen text-base">
+              Créer mon atelier
               <ArrowRight className="h-4 w-4" />
             </Link>
           </aside>

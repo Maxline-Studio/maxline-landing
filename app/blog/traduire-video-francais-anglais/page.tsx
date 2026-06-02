@@ -367,8 +367,8 @@ export default function TraduireVideoFrancaisAnglais() {
               Déposez une vidéo française, récupérez des sous-titres anglais
               prêts à monter. En français, à 12 €/mois, sans engagement.
             </p>
-            <Link href="/#subscribe" className="btn-pen text-base">
-              Réserver mon accès
+            <Link href="/signup" className="btn-pen text-base">
+              Créer mon atelier
               <ArrowRight className="h-4 w-4" />
             </Link>
           </aside>

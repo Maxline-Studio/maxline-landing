@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CheckCircle2, Mail, AlertCircle } from "lucide-react";
+import { CheckCircle2, Mail, AlertCircle, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { HandUnderline } from "@/components/hand-underline";
 
@@ -40,7 +41,7 @@ export function Subscribe() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: data.email,
-          source: "landing-coming-soon",
+          source: "journal",
         }),
       });
 
@@ -70,22 +71,52 @@ export function Subscribe() {
       <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
         <div className="mb-12">
           <div className="flex items-center gap-3 mb-6">
-            <span className="annotation-filled">§10 · Réservation</span>
+            <span className="annotation-filled">§10 · Votre atelier</span>
           </div>
           <h2 className="font-display font-medium text-4xl md:text-5xl lg:text-6xl text-ivory-50 leading-[1.05] tracking-[-0.02em]">
-            Soyez prévenu
+            Ouvrez votre
             <br />
             <span className="font-display italic font-light text-rouge-400">
               <HandUnderline variant="ivory" style="straight">
-                du lancement
+                atelier
               </HandUnderline>
             </span>
             .
           </h2>
           <p className="mt-6 text-lg text-ink-300 max-w-xl">
-            La bêta privée ouvre d&apos;ici quelques semaines. Les premiers
-            inscrits auront un accès gratuit prolongé et le tarif d&apos;origine
-            à vie.
+            Le studio est ouvert. Créez votre compte, sous-titrez votre première
+            vidéo gratuitement — sans carte bancaire. 12 €/mois ensuite, sans
+            engagement.
+          </p>
+
+          <div className="mt-8 flex flex-col sm:flex-row gap-3">
+            <Link href="/signup" className="btn-pen group text-base">
+              Créer mon atelier
+              <ArrowRight
+                className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                aria-hidden
+              />
+            </Link>
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center px-6 h-12 rounded-sm border border-ink-600 text-ivory-50 font-medium hover:bg-ink-800 transition-colors"
+            >
+              J&apos;ai déjà un compte
+            </Link>
+          </div>
+        </div>
+
+        <div className="border-t border-ink-700 pt-12">
+          <h3 className="font-display text-2xl md:text-3xl text-ivory-50 mb-3">
+            Pas encore prêt ? Suivez le{" "}
+            <Link href="/blog" className="text-rouge-400 underline-offset-4 hover:underline">
+              Journal
+            </Link>
+            .
+          </h3>
+          <p className="text-base text-ink-300 max-w-xl mb-6">
+            Je construis Maxline en public — décisions, chiffres, coulisses.
+            Laissez votre email pour recevoir les nouveautés (rien d&apos;autre).
           </p>
         </div>
 
@@ -105,8 +136,8 @@ export function Subscribe() {
                   C&apos;est noté.
                 </h3>
                 <p className="text-ivory-50/90 leading-relaxed">
-                  Vous recevrez un email dès que la bêta privée s&apos;ouvrira.
-                  Pensez à vérifier vos spams pour la confirmation.
+                  Vous recevrez les nouveautés du Journal Maxline. Pensez à
+                  vérifier vos spams pour la confirmation.
                 </p>
               </div>
             </div>
@@ -146,7 +177,7 @@ export function Subscribe() {
                 disabled={status === "loading"}
                 className="btn-pen text-base h-12 px-6 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {status === "loading" ? "Envoi…" : "Me prévenir"}
+                {status === "loading" ? "Envoi…" : "Suivre le Journal"}
               </button>
             </div>
 

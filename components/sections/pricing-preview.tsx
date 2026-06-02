@@ -190,7 +190,7 @@ export function PricingPreview() {
 
         <Reveal delay={400}>
           <p className="mt-14 text-center text-sm text-ink-600 font-mono uppercase tracking-widest">
-            › Première vidéo de moins de 5 min offerte au lancement &middot; sans carte
+            › Première vidéo de moins de 5 min offerte &middot; sans carte bancaire
           </p>
         </Reveal>
       </div>

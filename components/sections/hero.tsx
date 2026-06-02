@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { HandUnderline } from "@/components/hand-underline";
 import { HeroMockup } from "@/components/sections/hero-mockup";
@@ -99,16 +100,16 @@ export function Hero() {
 
             {/* CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
-              <a
-                href="#subscribe"
+              <Link
+                href="/signup"
                 className="btn-pen group text-base"
               >
-                Réserver mon accès
+                Créer mon atelier
                 <ArrowRight
                   className="h-5 w-5 transition-transform group-hover:translate-x-1"
                   aria-hidden
                 />
-              </a>
+              </Link>
               <a
                 href="#how-it-works"
                 className="btn-outline text-base"
@@ -118,7 +119,7 @@ export function Hero() {
             </div>
 
             <p className="mt-6 text-sm text-ink-500 font-mono">
-              › aucune carte demandée &middot; première vidéo offerte au lancement
+              › première vidéo gratuite &middot; aucune carte demandée
             </p>
           </div>
 

@@ -83,9 +83,10 @@ export function CreatorVoices() {
             qu&apos;on construit pour.
           </h2>
           <p className="mt-6 text-lg text-ink-600 leading-relaxed max-w-2xl">
-            Pas encore de vrais clients — la beta n&apos;est pas ouverte. Voilà
-            les retours-types des huit créateurs interviewés pendant la phase
-            de validation. Quatre profils, quatre douleurs, une seule réponse.
+            Maxline vient d&apos;ouvrir : pas encore de témoignages publics à
+            afficher. Voilà les retours-types des huit créateurs interviewés
+            pendant la phase de validation. Quatre profils, quatre douleurs, une
+            seule réponse.
           </p>
         </div>
 
