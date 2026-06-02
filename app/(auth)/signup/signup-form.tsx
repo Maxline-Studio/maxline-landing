@@ -135,7 +135,7 @@ export function SignupForm({ referralCode = "" }: { referralCode?: string }) {
           >
             Mot de passe
             <span className="ml-2 text-ink-400 normal-case tracking-normal">
-              (8 caractères min.)
+              (8 caractères min., 1 lettre + 1 chiffre)
             </span>
           </label>
           <Input

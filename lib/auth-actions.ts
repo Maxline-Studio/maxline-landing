@@ -66,8 +66,16 @@ export async function signUpAction(
   if (!email || !password) {
     return { error: "Email et mot de passe requis." };
   }
+  // Exigences mot de passe — alignées sur la config Supabase Auth (min 8 +
+  // au moins une lettre et un chiffre). On valide aussi ici pour un message
+  // clair en français plutôt que l'erreur brute du serveur d'auth.
   if (password.length < 8) {
     return { error: "Le mot de passe doit faire au moins 8 caractères." };
+  }
+  if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return {
+      error: "Le mot de passe doit contenir au moins une lettre et un chiffre.",
+    };
   }
 
   // Mémorise le code de parrainage pour le réclamer après confirmation email.
