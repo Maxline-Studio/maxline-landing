@@ -58,11 +58,11 @@ export const RANK_PERKS: Record<Rank, string[]> = {
   editeur_en_chef: [
     "Export montage .fcpxml inclus, même sur Starter",
     "Accès anticipé aux nouvelles fonctions",
-    "+15 min offertes tous les 3 mois · +30 min anniversaire",
+    "+15 min offertes tous les 3 mois · +50 min anniversaire",
   ],
   maitre_doeuvre: [
     "Vote sur la prochaine fonction prioritaire",
-    "Un mois gratuit offert tous les ans",
+    "+200 min offertes chaque année",
     "+50 min offertes tous les 3 mois",
   ],
 };
@@ -75,7 +75,9 @@ export const STREAK_BONUS_MINUTES: Record<Rank, number> = {
   maitre_doeuvre: 50,
 };
 
-/** Minutes offertes le jour anniversaire de l'inscription (chaque année). */
+/** Minutes offertes le jour anniversaire de l'inscription (chaque année) — base
+ * du rang Apprenti. Le bonus réel croît avec le rang (cron SQL migration 018 :
+ * apprenti 10 · correcteur 20 · éditeur en chef 50 · maître d'œuvre 200). */
 export const ANNIVERSARY_BONUS_MINUTES = 10;
 
 /** Minutes offertes à chaque partie d'un parrainage validé. */

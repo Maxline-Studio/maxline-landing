@@ -38,7 +38,7 @@ const MECHANICS: { title: string; detail: string }[] = [
   },
   {
     title: "Anniversaire d'inscription",
-    detail: `Chaque année, le jour anniversaire de votre inscription, +${ANNIVERSARY_BONUS_MINUTES} minutes offertes et un mot personnel. Pour fêter le temps passé ensemble.`,
+    detail: `Chaque année, le jour anniversaire de votre inscription, des minutes offertes selon votre rang (de +${ANNIVERSARY_BONUS_MINUTES} à +200) et un mot personnel. Pour fêter le temps passé ensemble.`,
   },
   {
     title: "Parrainage symétrique",
