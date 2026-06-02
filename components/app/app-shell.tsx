@@ -10,6 +10,7 @@ import {
   Award,
   Settings,
   CreditCard,
+  FileText,
   LogOut,
   Menu,
   X,
@@ -22,6 +23,7 @@ import { Avatar } from "@/components/app/avatar";
 const NAV_ITEMS = [
   { href: "/app/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/app/upload", label: "Nouvelle vidéo", icon: Upload },
+  { href: "/app/translate-file", label: "Traduire un fichier", icon: FileText },
   { href: "/app/videos", label: "Mes vidéos", icon: Video },
   { href: "/app/atelier", label: "L'Atelier", icon: Award },
   { href: "/app/billing", label: "Facturation", icon: CreditCard },
