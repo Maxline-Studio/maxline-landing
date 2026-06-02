@@ -11,6 +11,7 @@ import {
   Settings,
   CreditCard,
   FileText,
+  BookText,
   LogOut,
   Menu,
   X,
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { href: "/app/translate-file", label: "Traduire un fichier", icon: FileText },
   { href: "/app/videos", label: "Mes vidéos", icon: Video },
   { href: "/app/atelier", label: "L'Atelier", icon: Award },
+  { href: "/app/glossary", label: "Glossaire", icon: BookText },
   { href: "/app/billing", label: "Facturation", icon: CreditCard },
   { href: "/app/settings", label: "Paramètres", icon: Settings },
 ];

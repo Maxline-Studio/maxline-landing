@@ -224,6 +224,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["waitlist"]["Insert"]>;
         Relationships: [];
       };
+      glossaries: {
+        Row: {
+          id: string;
+          user_id: string;
+          source_term: string;
+          target_term: string;
+          source_lang: string;
+          target_lang: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          source_term: string;
+          target_term: string;
+          source_lang?: string;
+          target_lang?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["glossaries"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
