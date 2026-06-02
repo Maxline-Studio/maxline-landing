@@ -485,7 +485,7 @@ export async function getBurnedUrl(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("burn_status, storage_key_burned")
+    .select("burn_status, storage_key_burned, original_filename")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
@@ -495,7 +495,13 @@ export async function getBurnedUrl(
   }
 
   try {
-    const url = await presignGet(video.storage_key_burned);
+    // Nom de téléchargement : base du fichier source + "-sous-titre.mp4".
+    const base =
+      (video.original_filename || "video")
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^\p{L}\p{N}\-_ ]/gu, "")
+        .trim() || "video";
+    const url = await presignGet(video.storage_key_burned, 3600, `${base}-sous-titre.mp4`);
     return { ok: true, url };
   } catch (e) {
     return {

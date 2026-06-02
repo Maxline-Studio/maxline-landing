@@ -54,10 +54,23 @@ export async function presignPut(key: string, ttlSeconds = 7200): Promise<string
   return signed.url;
 }
 
-/** URL GET présignée pour l'aperçu/lecture de la vidéo (TTL court). */
-export async function presignGet(key: string, ttlSeconds = 3600): Promise<string> {
+/** URL GET présignée pour l'aperçu/lecture de la vidéo (TTL court).
+ * `downloadName` force le téléchargement (Content-Disposition: attachment) avec
+ * ce nom de fichier, au lieu d'ouvrir le média dans le navigateur. */
+export async function presignGet(
+  key: string,
+  ttlSeconds = 3600,
+  downloadName?: string,
+): Promise<string> {
   const url = new URL(objectUrl(key));
   url.searchParams.set("X-Amz-Expires", String(ttlSeconds));
+  if (downloadName) {
+    // Le paramètre est signé (donc inclus avant sign) → R2 renvoie l'en-tête.
+    url.searchParams.set(
+      "response-content-disposition",
+      `attachment; filename="${downloadName.replace(/"/g, "")}"`,
+    );
+  }
   const signed = await client().sign(url.toString(), {
     method: "GET",
     aws: { signQuery: true },

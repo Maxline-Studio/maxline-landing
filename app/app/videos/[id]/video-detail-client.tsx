@@ -324,7 +324,15 @@ export function VideoDetailClient({
   const downloadBurned = async () => {
     const res = await getBurnedUrl(initialVideo.id);
     if (res.ok && res.url) {
-      window.location.href = res.url;
+      // Lien de téléchargement (l'URL présignée porte déjà Content-Disposition:
+      // attachment) → ne quitte pas la page de l'éditeur.
+      const a = document.createElement("a");
+      a.href = res.url;
+      a.download = "";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     } else if (res.error) {
       setErrorMessage(res.error);
     }
