@@ -1,25 +1,30 @@
 import type { NextConfig } from "next";
 
 /**
- * Content-Security-Policy en mode REPORT-ONLY (ne bloque rien, signale seulement
- * les violations dans la console). Objectif : valider que la politique couvre
- * tous les usages réels AVANT de la passer en mode bloquant (header CSP).
+ * Content-Security-Policy en mode BLOQUANT (durcie après observation du
+ * report-only). Bloque tout chargement hors des origines listées : protège
+ * contre l'injection de scripts/iframes externes, l'exfiltration (connect-src)
+ * et le clickjacking (frame-ancestors).
  *
- * Domaines runtime réels :
- *  - Supabase (auth/DB/storage)        → connect-src *.supabase.co
+ * Domaines runtime réels (audités sur le code + la prod) :
+ *  - Supabase (auth/DB/storage)        → connect-src + img *.supabase.co (pas de
+ *    websocket Realtime utilisé → https suffit)
  *  - Cloudflare R2 (upload + lecture)  → connect/media/img *.r2.cloudflarestorage.com
- *  - Stripe : 100 % serveur (checkout = redirection externe) → rien à autoriser ici
+ *  - Avatars Google OAuth              → img *.googleusercontent.com (photo de profil)
+ *  - Stripe / Anthropic / Groq         → 100 % serveur (server actions + redirection
+ *    checkout externe) → rien à autoriser côté client
  *  - Polices : next/font les sert en self (pas de Google Fonts externe)
  *
- * 'unsafe-inline'/'unsafe-eval' sur script-src restent nécessaires tant que Next
- * n'est pas câblé avec une CSP par nonce (sinon hydratation cassée). C'est
- * précisément ce que le report-only permet d'observer avant durcissement.
+ * 'unsafe-inline' (script + style) reste nécessaire : JSON-LD inline + bootstrap
+ * d'hydratation Next + styles inline (animations) tant qu'on n'a pas câblé une CSP
+ * par nonce. 'unsafe-eval' conservé par prudence (durcissement nonce = itération
+ * dédiée future). Le reste de la politique est strict.
  */
-const cspReportOnly = [
+const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.supabase.co",
+  "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.supabase.co https://*.googleusercontent.com",
   "media-src 'self' blob: https://*.r2.cloudflarestorage.com",
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co https://*.r2.cloudflarestorage.com",
@@ -49,8 +54,8 @@ const nextConfig: NextConfig = {
             value: "max-age=31536000; includeSubDomains",
           },
           {
-            key: "Content-Security-Policy-Report-Only",
-            value: cspReportOnly,
+            key: "Content-Security-Policy",
+            value: csp,
           },
         ],
       },
