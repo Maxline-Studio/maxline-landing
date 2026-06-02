@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     description:
       "Le journal de bord de Maxline Studio. Décisions, doutes, choix techniques, chiffres. Construit en public, sans filtre.",
     url: "https://www.maxlinestudio.fr/blog",
+    type: "website",
   },
   alternates: {
     canonical: "https://www.maxlinestudio.fr/blog",
@@ -22,6 +23,16 @@ export const metadata: Metadata = {
 };
 
 const posts = [
+  {
+    slug: "submagic-alternative-francais",
+    n: "03",
+    title: "Submagic en français : l'alternative pour les créateurs FR",
+    excerpt:
+      "Submagic excelle sur les captions virales. Pour des sous-titres FR↔EN propres, en français et en euros, voici l'alternative française — comparatif honnête, où chacun gagne vraiment.",
+    date: "2026-06-02",
+    dateLabel: "2 juin 2026",
+    readingTime: "8 min de lecture",
+  },
   {
     slug: "traduire-video-francais-anglais",
     n: "02",

@@ -227,6 +227,15 @@ export default function TraduireVideoFrancaisAnglais() {
               toujours mal au moins une expression.
             </p>
 
+            <p>
+              Les outils populaires ne se valent pas selon votre objectif. Si
+              vous hésitez avec un outil de caption virale, j&apos;ai écrit un{" "}
+              <Link href="/blog/submagic-alternative-francais" className="link-pen">
+                comparatif honnête entre Submagic et Maxline
+              </Link>{" "}
+              (où chacun gagne, sans langue de bois).
+            </p>
+
             <h3 className="font-serif text-2xl md:text-3xl text-neutral-900 mt-10 mb-3">
               Ce qu&apos;il faut regarder avant de choisir
             </h3>
