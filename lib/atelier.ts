@@ -56,7 +56,7 @@ export const RANK_PERKS: Record<Rank, string[]> = {
     "+5 min offertes tous les 3 mois consécutifs",
   ],
   editeur_en_chef: [
-    "Exports .fcpxml et .xml inclus, même sur Starter",
+    "Export montage .fcpxml inclus, même sur Starter",
     "Accès anticipé aux nouvelles fonctions",
     "+15 min offertes tous les 3 mois · +30 min anniversaire",
   ],

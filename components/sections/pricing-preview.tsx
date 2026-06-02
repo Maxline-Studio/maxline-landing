@@ -46,8 +46,7 @@ const plans = [
     features: [
       "360 minutes de vidéo / mois",
       "Tout le plan Starter",
-      "Export .fcpxml (DaVinci)",
-      "Export .xml (Premiere)",
+      "Export montage .fcpxml (DaVinci, Premiere, FCP)",
       "Glossaire personnalisé",
       "Traitement prioritaire",
       "Atelier + bonus accélérés",

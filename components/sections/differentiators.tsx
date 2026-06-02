@@ -14,7 +14,7 @@ const items = [
     icon: FileCode2,
     title: "Export montage propre",
     description:
-      "Fichiers .srt et .vtt parfaitement timés. .fcpxml (DaVinci) et .xml (Premiere) en v1.",
+      "Fichiers .srt et .vtt parfaitement timés, et export montage .fcpxml (DaVinci, Premiere, Final Cut).",
     tag: ".srt",
   },
   {

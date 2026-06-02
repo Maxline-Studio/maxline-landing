@@ -72,9 +72,11 @@ const PROCESSING_STATES = [
 export function VideoDetailClient({
   initialVideo,
   videoUrl,
+  canExportPro,
 }: {
   initialVideo: Video;
   videoUrl: string | null;
+  canExportPro: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialVideo.status);
@@ -275,7 +277,7 @@ export function VideoDetailClient({
 
   // Export : on sauvegarde d'abord (si modifs), puis on télécharge la version à jour.
   const downloadExport = useCallback(
-    async (fmt: "srt" | "vtt" | "txt") => {
+    async (fmt: "srt" | "vtt" | "txt" | "fcpxml") => {
       if (dirtyRef.current) await save();
       const a = document.createElement("a");
       a.href = `/app/videos/${initialVideo.id}/export?format=${fmt}`;
@@ -508,6 +510,15 @@ export function VideoDetailClient({
                       <Download className="h-4 w-4" aria-hidden />.{fmt}
                     </button>
                   ))}
+                  {canExportPro && (
+                    <button
+                      onClick={() => downloadExport("fcpxml")}
+                      title="Pour DaVinci Resolve, Premiere Pro, Final Cut"
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-encre-500 border-2 border-encre-500 rounded-sm text-sm font-semibold text-ivory-50 hover:bg-encre-600 transition-colors"
+                    >
+                      <Download className="h-4 w-4" aria-hidden />.fcpxml
+                    </button>
+                  )}
                   {burnStatus === "done" ? (
                     <button
                       onClick={downloadBurned}

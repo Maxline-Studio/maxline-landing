@@ -72,10 +72,10 @@ export function generateSubtitles(
   }
 }
 
-/** Nom de fichier d'export : base du fichier source + extension du format. */
+/** Nom de fichier d'export : base du fichier source + extension donnée. */
 export function exportFilename(
   originalFilename: string,
-  format: SubtitleFormat,
+  format: string,
 ): string {
   const base = originalFilename.replace(/\.[^.]+$/, "") || "sous-titres";
   const safe = base.replace(/[^\p{L}\p{N}\-_ ]/gu, "").trim() || "sous-titres";

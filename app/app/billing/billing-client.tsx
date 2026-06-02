@@ -30,7 +30,11 @@ const PLANS: PlanCard[] = [
     name: "Plus",
     price: 24,
     minutes: 360,
-    perks: ["Tout Starter", "+ Exports .fcpxml / .xml", "Glossaire · Priorité"],
+    perks: [
+      "Tout Starter",
+      "+ Export montage .fcpxml (DaVinci, Premiere, FCP)",
+      "Glossaire · Priorité",
+    ],
   },
 ];
 

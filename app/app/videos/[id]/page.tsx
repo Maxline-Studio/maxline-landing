@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { presignGet } from "@/lib/r2";
 import type { Video } from "@/lib/supabase/types";
+import { computeRank, RANK_ORDER } from "@/lib/atelier";
 import { VideoDetailClient } from "./video-detail-client";
 
 export const metadata: Metadata = {
@@ -35,6 +36,17 @@ export default async function VideoDetailPage({
 
   const v = video as Video;
 
+  // Accès export montage (.fcpxml) : plan Plus OU rang Éditeur en chef+.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan, lifetime_minutes_used")
+    .eq("id", user.id)
+    .single();
+  const rank = computeRank(profile?.lifetime_minutes_used ?? 0);
+  const canExportPro =
+    profile?.plan === "plus" ||
+    RANK_ORDER.indexOf(rank) >= RANK_ORDER.indexOf("editeur_en_chef");
+
   // URL présignée R2 (1h) pour l'aperçu vidéo, uniquement si traitée + fichier
   // présent. La page ne charge que la vidéo de l'utilisateur → propriété garantie.
   let videoUrl: string | null = null;
@@ -56,7 +68,11 @@ export default async function VideoDetailPage({
         Mes vidéos
       </Link>
 
-      <VideoDetailClient initialVideo={v} videoUrl={videoUrl} />
+      <VideoDetailClient
+        initialVideo={v}
+        videoUrl={videoUrl}
+        canExportPro={canExportPro}
+      />
     </div>
   );
 }
