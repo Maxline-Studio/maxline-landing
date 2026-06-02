@@ -4,6 +4,7 @@ import { ArrowRight, Upload, Video, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, Video as VideoRow } from "@/lib/supabase/types";
 import { RANK_LABELS, rankProgress, type Rank } from "@/lib/atelier";
+import { OnboardingBanner } from "@/components/app/onboarding-banner";
 
 export const metadata: Metadata = {
   title: "Tableau de bord",
@@ -39,8 +40,13 @@ export default async function DashboardPage() {
 
   const progress = rankProgress(profile.lifetime_minutes_used);
 
+  const isNewcomer = !totalVideos || totalVideos === 0;
+
   return (
     <div>
+      {/* Onboarding : guide d'accueil tant qu'aucune vidéo (masquable). */}
+      {isNewcomer && <OnboardingBanner />}
+
       {/* Salutation */}
       <div className="mb-12">
         <div className="flex items-center gap-3 mb-4">
