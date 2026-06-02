@@ -1,8 +1,7 @@
 /**
- * Types & libellés partagés du pipeline vidéo.
+ * Types & libellés partagés du pipeline vidéo (statuts, segments, étapes).
  *
- * NB (Sprint 3) : ce fichier hébergeait le worker MOCK (state machine paresseuse).
- * Le vrai worker tourne désormais sur la VM (cf. code/worker/). Il ne reste ici
+ * Le vrai worker tourne sur la VM (cf. code/worker/) ; ce fichier ne contient
  * que les types et libellés partagés par l'app (liste, détail, éditeur, badges).
  * Le format `Segment` est identique à celui produit par le worker.
  */

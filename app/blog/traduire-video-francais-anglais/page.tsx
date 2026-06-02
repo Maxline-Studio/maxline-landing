@@ -245,9 +245,9 @@ export default function TraduireVideoFrancaisAnglais() {
                   .srt
                 </code>{" "}
                 propre, pas seulement une vidéo finie figée dans le style de la
-                plateforme. Voir notre guide à venir sur{" "}
-                <Link href="/blog" className="link-pen">
-                  l&apos;export de sous-titres
+                plateforme. Maxline vous rend un{" "}
+                <Link href="/#how-it-works" className="link-pen">
+                  .srt propre prêt pour le montage
                 </Link>
                 .
               </li>

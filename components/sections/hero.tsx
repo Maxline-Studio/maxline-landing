@@ -119,7 +119,7 @@ export function Hero() {
             </div>
 
             <p className="mt-6 text-sm text-ink-500 font-mono">
-              › première vidéo gratuite &middot; aucune carte demandée
+              › première vidéo gratuite (&lt; 5 min) &middot; aucune carte demandée
             </p>
           </div>
 

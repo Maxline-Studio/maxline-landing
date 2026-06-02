@@ -42,7 +42,7 @@ import {
   type SubtitlePlayerHandle,
 } from "@/components/app/subtitle-player";
 import { formatDuration } from "@/lib/storage";
-import { STAGE_PROGRESS, type Segment } from "@/lib/mock-worker";
+import { STAGE_PROGRESS, type Segment } from "@/lib/video-types";
 import {
   normalizeSubtitleStyle,
   subtitleColorHex,

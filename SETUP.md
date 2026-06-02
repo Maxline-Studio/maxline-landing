@@ -43,7 +43,7 @@
 2. **New Project** :
    - Name : `maxline-prod`
    - Database Password : **généré fort, sauvegardé dans Bitwarden**
-   - Region : **`Europe (Frankfurt) eu-central-1`** (RGPD)
+   - Region : **`Europe (Ireland) eu-west-1`** (RGPD — région réelle du projet)
    - Plan : Free
 3. Attendre ~2 min la création.
 

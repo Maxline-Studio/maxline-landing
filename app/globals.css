@@ -268,10 +268,15 @@ input, textarea, select {
   padding: 0.3rem 0.55rem;
   text-transform: uppercase;
   line-height: 1;
-  color: var(--color-rouge-500);
+  color: var(--color-rouge-600);
   background: transparent;
-  border: 1px solid var(--color-rouge-500);
+  border: 1px solid var(--color-rouge-600);
   border-radius: 2px;
+}
+/* Variante fond sombre : rouge-300 = contraste AA (≥4.5:1) sur l'encre. */
+.annotation-on-ink {
+  color: var(--color-rouge-300);
+  border-color: var(--color-rouge-300);
 }
 
 .annotation-filled {

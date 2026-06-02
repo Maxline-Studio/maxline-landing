@@ -1,6 +1,6 @@
-# Maxline Studio — Landing "Coming Soon"
+# Maxline Studio — Application web
 
-> Landing page Next.js 15 pour Maxline Studio. Capture d'emails pré-lancement, conçue pour évoluer vers la landing officielle après lancement.
+> Application Next.js 15 (App Router) de Maxline Studio : landing « produit live », authentification, upload R2, éditeur de sous-titres, exports, facturation Stripe et Atelier. Déployée sur Vercel (www.maxlinestudio.fr). Le worker de traitement vidéo vit hors de ce repo (cf. `code/worker/`, VM GCP).
 
 ## Stack
 
@@ -78,17 +78,6 @@ landing/
 
 Voir [SETUP.md](SETUP.md) pour les instructions détaillées de déploiement Vercel + configuration domaine.
 
-## Au lancement officiel
+## Statut
 
-Pour transformer cette landing "coming soon" en landing de lancement :
-
-1. Dans `components/sections/hero.tsx` :
-   - Remplacer le badge `🚀 Prochainement` par retirer le badge ou mettre `✨ Disponible maintenant`
-   - Changer le CTA "Être prévenu du lancement" en "Essayer gratuitement →"
-   - Retirer le sticker "🚀 Prochainement" sur l'image
-2. Dans `components/header.tsx` :
-   - CTA "Être prévenu" → "Essayer gratuitement"
-3. La section `subscribe` peut être conservée pour la newsletter, ou remplacée par une CTA finale d'inscription.
-4. Pricing : ajouter des liens "Acheter" qui pointent vers Stripe Checkout.
-
-Le reste de la structure est déjà en place.
+Le produit est **live** : tous les CTA pointent vers `/signup`, le pricing est branché sur Stripe Checkout, et la section `subscribe` capture les abonnés du Journal (build in public). Le basculement « coming soon → produit live » a été fait (Phase 0).

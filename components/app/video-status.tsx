@@ -1,4 +1,4 @@
-import { STAGE_LABELS, type VideoStatus } from "@/lib/mock-worker";
+import { STAGE_LABELS, type VideoStatus } from "@/lib/video-types";
 
 /** Badge de statut d'une vidéo, cohérent avec l'identité Atelier. */
 export function VideoStatusBadge({ status }: { status: string }) {

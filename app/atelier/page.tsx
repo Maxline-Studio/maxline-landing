@@ -71,7 +71,7 @@ export default function AtelierPublicPage() {
           />
           <div className="container mx-auto max-w-4xl px-4 md:px-6 lg:px-8 relative">
             <div className="flex items-center gap-3 mb-6">
-              <span className="annotation border-rouge-400 text-rouge-400">
+              <span className="annotation annotation-on-ink">
                 § Tout en transparence
               </span>
             </div>

@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
 import { isLang, type Lang } from "@/lib/langs";
-import type { VideoStatus, Segment } from "@/lib/mock-worker";
+import type { VideoStatus, Segment } from "@/lib/video-types";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 

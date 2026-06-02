@@ -15,7 +15,7 @@ const plans = [
       "Pack 100 min — 22 €",
       "Pack 300 min — 55 €",
       "Crédits sans expiration",
-      "Tous les exports inclus",
+      "Exports sous-titres inclus (.srt, .vtt, .txt)",
       "Atelier inclus dès la première minute",
     ],
     highlighted: false,
@@ -116,7 +116,7 @@ export function PricingPreview() {
                     <p
                       className={cn(
                         "font-mono text-[10px] uppercase tracking-widest",
-                        plan.highlighted ? "text-rouge-400" : "text-ink-500",
+                        plan.highlighted ? "text-rouge-300" : "text-ink-500",
                       )}
                     >
                       {plan.subtitle}

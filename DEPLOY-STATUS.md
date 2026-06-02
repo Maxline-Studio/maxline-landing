@@ -1,6 +1,8 @@
 # État du déploiement — Landing Maxline
 
-> Document de statut. Mis à jour automatiquement par Claude au fur et à mesure des étapes du déploiement.
+> ⚠️ **Document historique** (mise en ligne initiale). Le produit est désormais live en prod (www.maxlinestudio.fr). Pour l'état réel et à jour du projet, voir la mémoire auto et les docs de cadrage `02-strategie/`.
+>
+> Document de statut. Mis à jour au fur et à mesure des étapes du déploiement initial.
 
 ---
 

@@ -26,7 +26,7 @@ export function Footer() {
               <br />
               Soigné comme par un éditeur.
             </p>
-            <span className="annotation mt-5 inline-flex border-rouge-400 text-rouge-400">
+            <span className="annotation annotation-on-ink mt-5 inline-flex">
               Fait main en France
             </span>
           </div>
