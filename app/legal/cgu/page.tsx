@@ -14,7 +14,7 @@ export default function CGU() {
     <LegalShell
       label="Conditions générales"
       title="Conditions générales d'utilisation et de vente"
-      updated="31 mai 2026"
+      updated="2 juin 2026"
       intro="Ces conditions encadrent l'utilisation de Maxline Studio. On a fait au plus clair et au plus honnête — sans piège, comme le reste."
     >
       <LegalSection title="1. Objet et acceptation">
@@ -31,8 +31,10 @@ export default function CGU() {
           Maxline Studio est un outil en ligne de <strong>sous-titrage vidéo</strong>{" "}
           : transcription automatique de la parole, traduction entre le français et
           l&apos;anglais (dans les deux sens) ou simple transcription dans la langue
-          parlée, puis génération de sous-titres exportables (.srt, .vtt, .txt). Le
-          traitement repose sur des technologies d&apos;intelligence artificielle.
+          parlée, puis génération de sous-titres exportables (.srt, .vtt, .txt et,
+          selon la formule, fichier de montage .fcpxml ou vidéo MP4 aux sous-titres
+          incrustés). Le traitement repose sur des technologies d&apos;intelligence
+          artificielle.
         </p>
         <p>
           Le service évolue régulièrement (nouvelles fonctionnalités, améliorations).
@@ -52,8 +54,12 @@ export default function CGU() {
       <LegalSection title="4. Abonnement, minutes et tarifs">
         <ul>
           <li>
-            L&apos;offre est proposée par abonnement mensuel à{" "}
-            <strong>12 €/mois</strong> (TVA non applicable, article 293 B du CGI),
+            Le service est proposé par <strong>abonnement mensuel</strong> (plusieurs
+            formules) et, en option, par <strong>packs de crédits</strong> ponctuels.
+            Les tarifs en vigueur, les quotas de minutes et le détail de chaque
+            formule sont affichés sur la{" "}
+            <a href="/#tarif">page Tarifs</a> et rappelés avant tout paiement. La TVA
+            n&apos;est pas applicable (article 293 B du CGI). L&apos;abonnement est
             sans engagement de durée.
           </li>
           <li>
@@ -79,6 +85,11 @@ export default function CGU() {
           cas d&apos;échec de paiement, l&apos;accès aux fonctions payantes peut être
           suspendu.
         </p>
+        <p>
+          Toute évolution du tarif de votre abonnement vous est notifiée à
+          l&apos;avance. Elle ne s&apos;applique qu&apos;aux périodes postérieures :
+          vous restez libre de résilier avant sa prise d&apos;effet, sans frais.
+        </p>
       </LegalSection>
 
       <LegalSection title="6. Droit de rétractation">
@@ -88,12 +99,14 @@ export default function CGU() {
           d&apos;un achat à distance.
         </p>
         <p>
-          Toutefois, Maxline Studio est un service de contenu numérique exécuté
-          immédiatement. En lançant un traitement de vidéo avant la fin de ce délai,
-          vous <strong>demandez expressément l&apos;exécution immédiate</strong> du
-          service et reconnaissez perdre votre droit de rétractation pour les
-          prestations déjà exécutées. Tant que vous n&apos;avez lancé aucun
-          traitement, vous pouvez exercer votre rétractation en écrivant à{" "}
+          Toutefois, Maxline Studio est un service de contenu numérique à exécution
+          immédiate. En lançant un traitement de vidéo avant la fin de ce délai, vous{" "}
+          <strong>demandez expressément l&apos;exécution immédiate</strong> du service
+          et reconnaissez renoncer à votre droit de rétractation pour les prestations
+          ainsi exécutées, conformément à l&apos;article L221-28 du Code de la
+          consommation. Tant que vous n&apos;avez lancé aucun traitement, votre droit
+          de rétractation reste entier : vous pouvez l&apos;exercer, sans avoir à vous
+          justifier, en écrivant à{" "}
           <a href="mailto:contact@maxlinestudio.fr">contact@maxlinestudio.fr</a>.
         </p>
       </LegalSection>
@@ -190,16 +203,16 @@ export default function CGU() {
       <LegalSection title="15. Droit applicable et médiation">
         <p>
           Les présentes conditions sont soumises au droit français. En cas de
-          litige, une solution amiable sera recherchée en priorité. Le consommateur
-          peut recourir gratuitement à un médiateur de la consommation ou à la{" "}
-          <a
-            href="https://ec.europa.eu/consumers/odr"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            plateforme européenne de règlement en ligne des litiges
-          </a>
-          . À défaut d&apos;accord, les tribunaux français sont compétents.
+          litige, contactez-nous d&apos;abord à{" "}
+          <a href="mailto:contact@maxlinestudio.fr">contact@maxlinestudio.fr</a> :
+          une solution amiable sera recherchée en priorité.
+        </p>
+        <p>
+          Conformément aux articles L611-1 et suivants du Code de la consommation,
+          vous pouvez aussi recourir gratuitement à un médiateur de la consommation.
+          Les coordonnées du médiateur dont relève l&apos;éditeur sont précisées dans
+          les <a href="/legal/mentions">mentions légales</a>. À défaut d&apos;accord
+          amiable, les tribunaux français sont compétents.
         </p>
       </LegalSection>
     </LegalShell>
