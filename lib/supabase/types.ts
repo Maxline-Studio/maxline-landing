@@ -98,6 +98,9 @@ export type Database = {
           uploaded_at: string;
           user_edited: boolean;
           user_id: string;
+          burn_status: string;
+          burn_error: string | null;
+          burn_requested_at: string | null;
         };
         Insert: {
           delete_at?: string | null;
@@ -126,6 +129,9 @@ export type Database = {
           uploaded_at?: string;
           user_edited?: boolean;
           user_id: string;
+          burn_status?: string;
+          burn_error?: string | null;
+          burn_requested_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];

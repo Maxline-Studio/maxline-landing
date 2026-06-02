@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
-import { presignPut, deleteObjects } from "@/lib/r2";
+import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
 import { isLang, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/mock-worker";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
@@ -371,6 +371,138 @@ export async function saveSubtitleStyle(
 
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+export type BurnStatus = "idle" | "queued" | "burning" | "done" | "failed";
+
+/**
+ * Demande l'incrustation MP4 (burn-in) d'une vidéo terminée. Sauvegarde d'abord
+ * les segments édités + le style (pour graver la version finale), puis met
+ * burn_status='queued' : le worker prend le relais (génère burned.mp4 sur R2).
+ *
+ * burn_status est écrit via le client admin (le rôle authenticated n'a pas le
+ * droit de modifier cette colonne — modèle migration 015).
+ */
+export async function requestBurn(
+  videoId: string,
+  segments?: Segment[],
+  style?: SubtitleStyle,
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("id, status, burn_status")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  if (video.status !== "done") {
+    return { ok: false, error: "La vidéo n'est pas encore prête." };
+  }
+  if (video.burn_status === "queued" || video.burn_status === "burning") {
+    return { ok: false, error: "Génération déjà en cours." };
+  }
+
+  // Sauvegarde des dernières éditions (texte + style) sous RLS (client user).
+  if (Array.isArray(segments)) {
+    const okSegs = segments.every(
+      (s) =>
+        typeof s.start === "number" &&
+        typeof s.end === "number" &&
+        typeof s.text === "string",
+    );
+    if (!okSegs) return { ok: false, error: "Sous-titres invalides." };
+    await supabase
+      .from("videos")
+      .update({ transcription_target: segments, user_edited: true })
+      .eq("id", videoId)
+      .eq("user_id", user.id);
+  }
+  if (style) {
+    await supabase
+      .from("videos")
+      .update({ subtitle_style: style })
+      .eq("id", videoId)
+      .eq("user_id", user.id);
+  }
+
+  // Mise en file du burn (colonne sensible → client admin).
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("videos")
+    .update({
+      burn_status: "queued",
+      burn_error: null,
+      burn_requested_at: new Date().toISOString(),
+    })
+    .eq("id", videoId);
+
+  if (error) return { ok: false, error: error.message };
+
+  revalidatePath(`/app/videos/${videoId}`);
+  return { ok: true };
+}
+
+/** Lit l'état du burn (polling côté éditeur). */
+export async function getBurnStatus(
+  videoId: string,
+): Promise<{ status: BurnStatus; error: string | null } | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("burn_status, burn_error")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video) return null;
+  return {
+    status: (video.burn_status as BurnStatus) ?? "idle",
+    error: video.burn_error ?? null,
+  };
+}
+
+/** URL présignée (1 h) pour télécharger le MP4 incrusté, si prêt. */
+export async function getBurnedUrl(
+  videoId: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("burn_status, storage_key_burned")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video || video.burn_status !== "done" || !video.storage_key_burned) {
+    return { ok: false, error: "Vidéo sous-titrée non disponible." };
+  }
+
+  try {
+    const url = await presignGet(video.storage_key_burned);
+    return { ok: true, url };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Lien indisponible.",
+    };
+  }
 }
 
 /**

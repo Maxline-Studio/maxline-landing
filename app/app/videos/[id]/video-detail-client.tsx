@@ -30,6 +30,10 @@ import {
   saveTranscriptionTarget,
   saveSubtitleStyle,
   regenerateLine,
+  requestBurn,
+  getBurnStatus,
+  getBurnedUrl,
+  type BurnStatus,
 } from "@/lib/video-actions";
 import { langLabel, langShort, isTranslation } from "@/lib/langs";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
@@ -115,6 +119,9 @@ export function VideoDetailClient({
   const [isPlaying, setIsPlaying] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
+  const [burnStatus, setBurnStatus] = useState<BurnStatus>(
+    (initialVideo.burn_status as BurnStatus) || "idle",
+  );
 
   const segmentsRef = useRef(segments);
   segmentsRef.current = segments;
@@ -279,6 +286,49 @@ export function VideoDetailClient({
     },
     [initialVideo.id, save],
   );
+
+  // ─── Incrustation MP4 (burn-in) à la demande ───
+  const burnInProgress = burnStatus === "queued" || burnStatus === "burning";
+
+  // Polling de l'état du burn tant qu'il est en cours.
+  useEffect(() => {
+    if (!burnInProgress) return;
+    let stop = false;
+    const check = async () => {
+      const res = await getBurnStatus(initialVideo.id);
+      if (stop || !res) return;
+      setBurnStatus(res.status);
+      if (res.status === "failed" && res.error) setErrorMessage(res.error);
+    };
+    const interval = setInterval(check, 3000);
+    return () => {
+      stop = true;
+      clearInterval(interval);
+    };
+  }, [burnInProgress, initialVideo.id]);
+
+  const requestBurnVideo = async () => {
+    setErrorMessage(null);
+    setBurnStatus("queued");
+    const res = await requestBurn(
+      initialVideo.id,
+      segmentsRef.current,
+      subtitleStyle,
+    );
+    if (!res.ok) {
+      setBurnStatus("idle");
+      if (res.error) setErrorMessage(res.error);
+    }
+  };
+
+  const downloadBurned = async () => {
+    const res = await getBurnedUrl(initialVideo.id);
+    if (res.ok && res.url) {
+      window.location.href = res.url;
+    } else if (res.error) {
+      setErrorMessage(res.error);
+    }
+  };
 
   // ─── Actions vidéo ───
   const handleDelete = () => {
@@ -450,18 +500,39 @@ export function VideoDetailClient({
                       <Download className="h-4 w-4" aria-hidden />.{fmt}
                     </button>
                   ))}
-                  <span
-                    className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border border-ink-300 rounded-sm text-sm text-ink-400"
-                    title="Disponible avec le rendu vidéo (à venir)"
-                  >
-                    <Download className="h-4 w-4" aria-hidden />
-                    MP4 sous-titré
-                  </span>
+                  {burnStatus === "done" ? (
+                    <button
+                      onClick={downloadBurned}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-rouge-500 border-2 border-rouge-500 rounded-sm text-sm font-semibold text-ivory-50 hover:bg-rouge-600 transition-colors"
+                    >
+                      <Download className="h-4 w-4" aria-hidden />
+                      MP4 sous-titré
+                    </button>
+                  ) : burnInProgress ? (
+                    <span className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-300 rounded-sm text-sm font-semibold text-ink-500">
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                      Génération MP4…
+                    </span>
+                  ) : (
+                    <button
+                      onClick={requestBurnVideo}
+                      className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
+                    >
+                      <Download className="h-4 w-4" aria-hidden />
+                      {burnStatus === "failed" ? "Réessayer le MP4" : "Générer le MP4 sous-titré"}
+                    </button>
+                  )}
                 </div>
                 <p className="text-xs text-ink-500 mt-3 font-mono">
                   › les exports reprennent vos dernières modifications (enregistrées
                   automatiquement)
                 </p>
+                {burnStatus === "done" && (
+                  <p className="text-xs text-ink-500 mt-1 font-mono">
+                    › le MP4 grave le texte et le style actuels. Régénérez après
+                    modification pour les répercuter.
+                  </p>
+                )}
               </div>
 
               {/* Suppression */}
