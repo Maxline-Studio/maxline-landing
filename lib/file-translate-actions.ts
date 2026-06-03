@@ -14,6 +14,7 @@ import {
   type SubtitleSegment,
 } from "@/lib/subtitles";
 import { isLang, type Lang } from "@/lib/langs";
+import { wrapLines } from "@/lib/wrap-lines";
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024; // 2 Mo : un fichier de sous-titres reste petit
 const MAX_CUES = 4000;
@@ -123,11 +124,17 @@ export async function translateSubtitleFile(params: {
   }
 
   // ─── Régénère le fichier traduit (même format, timecodes préservés) ───
-  const outSegments: SubtitleSegment[] = parsed.segments.map((s, i) => ({
-    start: s.start,
-    end: s.end,
-    text: translated[i] ?? s.text,
-  }));
+  // Sous-titres (srt/vtt) : on re-découpe en ≤ 2 lignes dans la langue cible
+  // (par caractères pour le CJK). Pour un .txt (transcription, pas des cues), on
+  // garde le texte tel quel — y insérer des retours ligne le fragmenterait.
+  const outSegments: SubtitleSegment[] = parsed.segments.map((s, i) => {
+    const t = translated[i] ?? s.text;
+    return {
+      start: s.start,
+      end: s.end,
+      text: format === "txt" ? t : wrapLines(t, targetLang),
+    };
+  });
   const outContent = generateSubtitles(outSegments, format);
 
   return { ok: true, content: outContent, billedMinutes: needed, format };

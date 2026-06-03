@@ -3,7 +3,7 @@
 // vidéo : correspondance de registre stricte, naturel natif, localisation des
 // idiomes.
 
-import { langLabel } from "@/lib/langs";
+import { langLabel, isCjk } from "@/lib/langs";
 
 /** Règle de correspondance de registre — à inclure dans tout prompt de traduction. */
 export const REGISTER_RULES =
@@ -16,7 +16,10 @@ export function subtitleTranslationSystem(
 ): string {
   const src = langLabel(sourceLang);
   const tgt = langLabel(targetLang);
+  const cjkNote = isCjk(targetLang)
+    ? ` IMPORTANT (chinois/japonais) : écriture DENSE → garde chaque sous-titre TRÈS court (idéalement ≤ 30 caractères) pour qu'il tienne sur 2 lignes courtes ; condense agressivement.`
+    : "";
   return `Tu es traducteur·rice professionnel·le de sous-titres ${src}→${tgt} pour des créateurs vidéo. Tu vises la PERFECTION : un rendu qu'un natif penserait écrit nativement, en ${tgt} PARLÉ et naturel (jamais mot-à-mot).
 ${REGISTER_RULES}
-Garde chaque sous-titre COURT (idéalement ≤ 80 caractères) sans perdre le registre. Tu renvoies EXACTEMENT le même nombre d'éléments, dans le même ordre. Réponds UNIQUEMENT par un tableau JSON de chaînes, rien d'autre.`;
+Garde chaque sous-titre COURT (idéalement ≤ 80 caractères) sans perdre le registre.${cjkNote} Tu renvoies EXACTEMENT le même nombre d'éléments, dans le même ordre. Réponds UNIQUEMENT par un tableau JSON de chaînes, rien d'autre.`;
 }

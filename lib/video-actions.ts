@@ -11,6 +11,7 @@ import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 import { REGISTER_RULES } from "@/lib/translation-prompt";
 import { translateCuesBatched } from "@/lib/translate-cues";
+import { wrapLines } from "@/lib/wrap-lines";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -725,10 +726,13 @@ export async function retranslateVideo(
         srcLang,
         targetLang,
       );
+      // Re-wrap dans la langue cible : Claude renvoie du texte sans coupure de
+      // ligne → on rétablit la découpe ≤ 2 lignes (caractères pour le CJK) pour
+      // l'éditeur, le lecteur et la gravure MP4.
       newSegs = baseSegs.map((s, i) => ({
         start: s.start,
         end: s.end,
-        text: translated[i] ?? s.text,
+        text: wrapLines(translated[i] ?? s.text, targetLang),
       }));
     } catch (e) {
       return {

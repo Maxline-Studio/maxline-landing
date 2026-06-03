@@ -72,3 +72,14 @@ export const RTL_LANGS: readonly Lang[] = ["ar"];
 export function isRtl(lang: string): boolean {
   return (RTL_LANGS as readonly string[]).includes(lang);
 }
+
+/**
+ * Langues sans espaces entre les mots (chinois, japonais) : la découpe des
+ * sous-titres se fait par caractères, pas par mots. Source unique partagée par
+ * l'app (wrap-lines) — le worker a sa propre copie (hors repo).
+ */
+export const CJK_LANGS: readonly Lang[] = ["zh", "ja"];
+
+export function isCjk(lang: string): boolean {
+  return (CJK_LANGS as readonly string[]).includes(lang);
+}
