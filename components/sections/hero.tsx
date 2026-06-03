@@ -93,9 +93,10 @@ export function Hero() {
             </p>
             <p className="mt-4 text-base text-ink-500 leading-relaxed max-w-xl">
               Aussi&nbsp;:{" "}
-              <span className="font-medium text-ink-700">anglais → français</span>
-              , et sous-titres dans la langue parlée (transcription — idéal pour
-              l&apos;accessibilité).
+              <span className="font-medium text-ink-700">10 langues au total</span>{" "}
+              (espagnol, allemand, chinois, japonais, arabe…), dans tous les sens
+              — et transcription dans la langue parlée, idéale pour
+              l&apos;accessibilité.
             </p>
 
             {/* CTAs */}

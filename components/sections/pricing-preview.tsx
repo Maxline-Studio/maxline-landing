@@ -28,6 +28,7 @@ const plans = [
     description: "Pour les créateurs réguliers",
     features: [
       "120 minutes de vidéo / mois",
+      "Traduction dans 10 langues",
       "Sous-titres .srt + .vtt",
       "Vidéo MP4 sous-titrée",
       "Éditeur sous-titres",
