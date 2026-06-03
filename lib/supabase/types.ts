@@ -101,6 +101,7 @@ export type Database = {
           burn_status: string;
           burn_error: string | null;
           burn_requested_at: string | null;
+          retranslations_used: number;
         };
         Insert: {
           delete_at?: string | null;
@@ -132,6 +133,7 @@ export type Database = {
           burn_status?: string;
           burn_error?: string | null;
           burn_requested_at?: string | null;
+          retranslations_used?: number;
         };
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];

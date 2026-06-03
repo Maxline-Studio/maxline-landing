@@ -617,10 +617,13 @@ export async function regenerateLine(
 }
 
 /**
- * Change la langue des sous-titres d'une vidéo déjà traitée, GRATUITEMENT
- * (la vidéo a déjà été facturée à l'upload). Re-traduit la transcription source
- * vers la nouvelle langue (Claude + RÈGLE D'OR) sans refaire l'ASR. Réinitialise
- * le burn (le MP4 incrusté dans l'ancienne langue devient obsolète).
+ * Change la langue des sous-titres d'une vidéo déjà traitée. Re-traduit la
+ * transcription source vers la nouvelle langue (Claude + RÈGLE D'OR) sans refaire
+ * l'ASR, et réinitialise le burn (MP4 dans l'ancienne langue obsolète).
+ *
+ * Facturation : la 1re re-traduction est GRATUITE (corriger une erreur de langue) ;
+ * les suivantes coûtent les minutes de la vidéo (chaque langue = un livrable).
+ * Un passage en transcription (cible = langue parlée) est toujours gratuit.
  */
 export async function retranslateVideo(
   videoId: string,
@@ -629,6 +632,8 @@ export async function retranslateVideo(
   ok: boolean;
   segments?: Segment[];
   targetLang?: Lang;
+  charged?: number;
+  retranslationsUsed?: number;
   error?: string;
 }> {
   if (!isAnthropicConfigured()) {
@@ -648,7 +653,7 @@ export async function retranslateVideo(
   const { data: video } = await supabase
     .from("videos")
     .select(
-      "transcription_source, transcription_target, source_lang, target_lang, status",
+      "transcription_source, transcription_target, source_lang, target_lang, status, duration_minutes, retranslations_used",
     )
     .eq("id", videoId)
     .eq("user_id", user.id)
@@ -673,6 +678,42 @@ export async function retranslateVideo(
     return { ok: false, error: "Aucun sous-titre à traduire." };
   }
 
+  // ─── Facturation : 1re re-traduction gratuite, puis minutes de la vidéo ───
+  const isTranslationChange = targetLang !== srcLang;
+  const priorRetrans = video.retranslations_used ?? 0;
+  const cost =
+    isTranslationChange && priorRetrans > 0
+      ? Math.max(1, Math.ceil(Number(video.duration_minutes) || 0))
+      : 0;
+
+  // Vérif quota AVANT l'appel Claude (fail fast, pas de coût si quota insuffisant).
+  let profile:
+    | {
+        quota_minutes_total: number;
+        quota_minutes_used: number;
+        credits_minutes: number;
+      }
+    | null = null;
+  if (cost > 0) {
+    const { data: p } = await supabase
+      .from("profiles")
+      .select("quota_minutes_total, quota_minutes_used, credits_minutes")
+      .eq("id", user.id)
+      .single();
+    if (!p) return { ok: false, error: "Profil introuvable." };
+    profile = p;
+    const avail =
+      Math.max(p.quota_minutes_total - p.quota_minutes_used, 0) +
+      p.credits_minutes;
+    if (avail < cost) {
+      return {
+        ok: false,
+        error: `Quota insuffisant : ${avail.toFixed(0)} min disponibles, cette re-traduction en demande ${cost}.`,
+      };
+    }
+  }
+
+  // ─── Re-traduction ───
   let newSegs: Segment[];
   if (targetLang === srcLang) {
     // Cible = langue parlée → simple transcription (pas de traduction).
@@ -697,14 +738,36 @@ export async function retranslateVideo(
     }
   }
 
-  // Nouvelle cible + langue ; reset du burn (MP4 dans l'ancienne langue obsolète).
-  // Écriture via client admin (cohérent avec requestBurn pour les colonnes burn).
-  const { error } = await createAdminClient()
+  // ─── Décompte des minutes (si payant) + mise à jour, via client admin ───
+  const admin = createAdminClient();
+  if (cost > 0 && profile) {
+    const quotaAvail = Math.max(
+      profile.quota_minutes_total - profile.quota_minutes_used,
+      0,
+    );
+    let newQuotaUsed = profile.quota_minutes_used;
+    let newCredits = profile.credits_minutes;
+    if (quotaAvail >= cost) {
+      newQuotaUsed += cost;
+    } else {
+      newQuotaUsed = profile.quota_minutes_total;
+      newCredits -= cost - quotaAvail;
+    }
+    const { error: cErr } = await admin
+      .from("profiles")
+      .update({ quota_minutes_used: newQuotaUsed, credits_minutes: newCredits })
+      .eq("id", user.id);
+    if (cErr) return { ok: false, error: "Erreur de décompte, réessayez." };
+  }
+
+  const newRetrans = isTranslationChange ? priorRetrans + 1 : priorRetrans;
+  const { error } = await admin
     .from("videos")
     .update({
       transcription_target: newSegs,
       target_lang: targetLang,
       user_edited: false,
+      retranslations_used: newRetrans,
       burn_status: "idle",
       burn_error: null,
       storage_key_burned: null,
@@ -715,7 +778,13 @@ export async function retranslateVideo(
     return { ok: false, error: "Erreur d'enregistrement, réessayez." };
   }
 
-  return { ok: true, segments: newSegs, targetLang };
+  return {
+    ok: true,
+    segments: newSegs,
+    targetLang,
+    charged: cost,
+    retranslationsUsed: newRetrans,
+  };
 }
 
 /**
