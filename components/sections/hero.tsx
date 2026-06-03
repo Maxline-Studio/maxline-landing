@@ -7,45 +7,50 @@ import { HandUnderline } from "@/components/hand-underline";
 import { HeroMockup } from "@/components/sections/hero-mockup";
 
 /**
- * Animation typo : le mot "english" devient "anglais" en boucle.
- * Style : la version EN est rayée au stylo rouge, puis la version FR
- * apparaît dessous comme une correction.
+ * Animation typo : la langue des sous-titres défile, l'une après l'autre, dans
+ * son écriture native (English, español, Deutsch, 中文, 日本語, العربية…).
+ * Montre d'un coup d'œil que l'outil gère toutes les langues et tous les scripts.
  */
-function TranslatingPair() {
-  const [phase, setPhase] = useState<"english" | "transitioning" | "anglais">(
-    "english",
-  );
+const TARGET_LANGS = [
+  "English",
+  "español",
+  "Deutsch",
+  "italiano",
+  "português",
+  "русский",
+  "中文",
+  "日本語",
+  "العربية",
+] as const;
+
+function CyclingLanguages() {
+  const [index, setIndex] = useState(0);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const sequence = () => {
-      // english visible → rayé → anglais arrive
-      setTimeout(() => setPhase("transitioning"), 1800);
-      setTimeout(() => setPhase("anglais"), 2400);
-      // boucle
-      setTimeout(() => setPhase("english"), 6000);
-    };
-    sequence();
-    const interval = setInterval(sequence, 6000);
+    const HOLD = 1900;
+    const FADE = 420;
+    const interval = setInterval(() => {
+      setVisible(false); // fondu sortant
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % TARGET_LANGS.length);
+        setVisible(true); // fondu entrant de la langue suivante
+      }, FADE);
+    }, HOLD + FADE);
     return () => clearInterval(interval);
   }, []);
 
-  if (phase === "anglais") {
-    return (
-      <span className="font-display italic font-light text-rouge-500 animate-fade-in">
-        anglais
-      </span>
-    );
-  }
-  if (phase === "transitioning") {
-    return (
-      <span className="font-display italic font-light text-ink-900 pen-strike">
-        english
-      </span>
-    );
-  }
+  const lang = TARGET_LANGS[index];
+  const isRtl = lang === "العربية";
+
   return (
-    <span className="font-display italic font-light text-ink-900">
-      english
+    <span
+      dir={isRtl ? "rtl" : undefined}
+      className={`font-display italic font-light text-rouge-500 inline-block transition-all duration-300 ease-out ${
+        visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+      }`}
+    >
+      {lang}
     </span>
   );
 }
@@ -77,7 +82,7 @@ export function Hero() {
               </span>
               <span className="block mt-2">sous-titrées</span>
               <span className="block">
-                en <TranslatingPair />
+                en <CyclingLanguages />
                 <span className="pen-caret" aria-hidden />
               </span>
             </h1>

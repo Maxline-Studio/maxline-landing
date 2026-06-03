@@ -3,25 +3,103 @@
 import { useEffect, useState } from "react";
 
 /**
- * Mockup repensé : une page de cahier d'éditeur où la traduction FR→EN
- * se fait en direct, sous-titre par sous-titre. Chaque ligne FR est
- * rayée au stylo et la version EN apparaît en dessous.
+ * Mockup : une page de cahier d'éditeur où la traduction se fait en direct,
+ * sous-titre par sous-titre. La ligne source (FR) est rayée au stylo et la
+ * traduction apparaît dessous — et la LANGUE CIBLE défile (FR → EN → ES → 中文
+ * → 日本語 → العربية…), dans son écriture native, pour montrer toutes les langues.
  */
-const ROWS = [
-  { tc: "00:00:02", fr: "Salut, aujourd'hui on parle de...", en: "Hi, today we're talking about..." },
-  { tc: "00:00:09", fr: "...comment traduire vos vidéos.", en: "...how to translate your videos." },
-  { tc: "00:00:14", fr: "Et c'est plus simple que prévu.", en: "And it's easier than you'd think." },
+const TC = ["00:00:02", "00:00:09", "00:00:14"];
+const SOURCE_FR = [
+  "Salut, aujourd'hui on parle de...",
+  "...comment traduire vos vidéos.",
+  "Et c'est plus simple que prévu.",
+];
+
+const LANGS: { tag: string; rtl?: boolean; rows: [string, string, string] }[] = [
+  {
+    tag: "EN",
+    rows: [
+      "Hi, today we're talking about...",
+      "...how to translate your videos.",
+      "And it's easier than you'd think.",
+    ],
+  },
+  {
+    tag: "ES",
+    rows: [
+      "Hola, hoy hablamos de...",
+      "...cómo traducir tus vídeos.",
+      "Y es más fácil de lo que crees.",
+    ],
+  },
+  {
+    tag: "DE",
+    rows: [
+      "Hallo, heute geht es um...",
+      "...wie du deine Videos übersetzt.",
+      "Und es ist einfacher als gedacht.",
+    ],
+  },
+  {
+    tag: "IT",
+    rows: [
+      "Ciao, oggi parliamo di...",
+      "...come tradurre i tuoi video.",
+      "Ed è più semplice del previsto.",
+    ],
+  },
+  {
+    tag: "PT",
+    rows: [
+      "Olá, hoje vamos falar de...",
+      "...como traduzir os teus vídeos.",
+      "E é mais simples do que parece.",
+    ],
+  },
+  {
+    tag: "RU",
+    rows: [
+      "Привет, сегодня поговорим о...",
+      "...как переводить ваши видео.",
+      "И это проще, чем кажется.",
+    ],
+  },
+  {
+    tag: "ZH",
+    rows: ["大家好，今天我们来聊聊…", "…如何翻译你的视频。", "其实比你想的更简单。"],
+  },
+  {
+    tag: "JA",
+    rows: ["こんにちは、今日のテーマは…", "…動画を翻訳する方法です。", "思ったより簡単なんです。"],
+  },
+  {
+    tag: "AR",
+    rtl: true,
+    rows: [
+      "مرحبًا، سنتحدث اليوم عن…",
+      "…كيفية ترجمة مقاطع الفيديو.",
+      "والأمر أسهل مما تظن.",
+    ],
+  },
 ];
 
 export function HeroMockup() {
   const [activeIdx, setActiveIdx] = useState(0);
+  const [langIdx, setLangIdx] = useState(0);
 
   useEffect(() => {
     const t = setInterval(() => {
-      setActiveIdx((i) => (i + 1) % ROWS.length);
+      setActiveIdx((i) => {
+        const next = (i + 1) % SOURCE_FR.length;
+        // Au bouclage des 3 lignes, on passe à la langue suivante.
+        if (next === 0) setLangIdx((l) => (l + 1) % LANGS.length);
+        return next;
+      });
     }, 2600);
     return () => clearInterval(t);
   }, []);
+
+  const lang = LANGS[langIdx] ?? LANGS[0]!;
 
   return (
     <div className="relative">
@@ -34,47 +112,53 @@ export function HeroMockup() {
             <div className="h-2.5 w-2.5 rounded-full bg-ivory-300" />
             <div className="h-2.5 w-2.5 rounded-full bg-ivory-300" />
           </div>
-          <span className="font-mono text-[10px] text-ink-500 uppercase tracking-widest">
-            transcription · FR → EN
+          <span className="font-mono text-[10px] text-ink-500 uppercase tracking-widest tabular-nums">
+            traduction · FR → {lang.tag}
           </span>
         </div>
 
         {/* Page de cahier avec lignes */}
-        <div className="relative px-6 py-8 min-h-[340px]" style={{
-          backgroundImage:
-            "linear-gradient(to bottom, transparent 31px, rgba(26,24,20,0.06) 31px, rgba(26,24,20,0.06) 32px)",
-          backgroundSize: "100% 32px",
-        }}>
+        <div
+          className="relative px-6 py-8 min-h-[340px]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to bottom, transparent 31px, rgba(26,24,20,0.06) 31px, rgba(26,24,20,0.06) 32px)",
+            backgroundSize: "100% 32px",
+          }}
+        >
           {/* Marge gauche rouge */}
           <div className="absolute left-12 top-0 bottom-0 w-px bg-rouge-500/30" aria-hidden />
 
           <div className="space-y-5 relative">
-            {ROWS.map((row, i) => {
+            {SOURCE_FR.map((fr, i) => {
               const active = i === activeIdx;
               const past = i < activeIdx;
+              const revealed = active || past;
               return (
                 <div key={i} className="flex gap-4 items-start">
                   {/* Timecode dans la marge */}
                   <span className="font-mono text-[10px] text-ink-400 pt-1 tabular-nums w-14 shrink-0">
-                    {row.tc}
+                    {TC[i]}
                   </span>
 
                   <div className="flex-1 min-w-0">
-                    {/* Ligne FR */}
+                    {/* Ligne source FR */}
                     <div
                       className={`text-[15px] leading-tight transition-colors duration-300 ${
-                        active || past
-                          ? "text-ink-400 pen-strike"
-                          : "text-ink-900"
+                        revealed ? "text-ink-400 pen-strike" : "text-ink-900"
                       }`}
                     >
-                      {row.fr}
+                      {fr}
                     </div>
 
-                    {/* Ligne EN — apparaît en dessous, rouge correcteur */}
-                    {(active || past) && (
-                      <div className="mt-1 text-[15px] leading-tight font-medium text-rouge-500 italic font-display animate-fade-in">
-                        ↳ {row.en}
+                    {/* Traduction — apparaît dessous, rouge correcteur, écriture native */}
+                    {revealed && (
+                      <div
+                        key={`${langIdx}-${i}`}
+                        dir={lang.rtl ? "rtl" : undefined}
+                        className="mt-1 text-[15px] leading-tight font-medium text-rouge-500 italic font-display animate-fade-in"
+                      >
+                        ↳ {lang.rows[i]}
                       </div>
                     )}
                   </div>
@@ -106,10 +190,10 @@ export function HeroMockup() {
         </div>
         <div>
           <p className="text-[10px] text-ink-500 font-mono uppercase tracking-widest">
-            Temps moyen
+            10 langues
           </p>
           <p className="text-sm font-display font-bold text-ink-900 tabular-nums">
-            10 min → 10 min
+            dans tous les sens
           </p>
         </div>
       </div>
