@@ -80,20 +80,33 @@ export function Faq() {
           </p>
         </div>
 
-        <div className="max-w-3xl">
-          {faqs.map((faq, idx) => (
-            <FaqItem
-              key={idx}
-              id={`faq-${idx}`}
-              question={faq.question}
-              answer={faq.answer}
-              isOpen={openIndex === idx}
-              onToggle={() => setOpenIndex(openIndex === idx ? null : idx)}
-            />
+        <div className="grid md:grid-cols-2 md:gap-x-12 lg:gap-x-20">
+          {[
+            faqs.slice(0, Math.ceil(faqs.length / 2)),
+            faqs.slice(Math.ceil(faqs.length / 2)),
+          ].map((column, colIdx) => (
+            <div key={colIdx} className="self-start">
+              {column.map((faq, i) => {
+                const idx =
+                  colIdx === 0 ? i : Math.ceil(faqs.length / 2) + i;
+                return (
+                  <FaqItem
+                    key={idx}
+                    id={`faq-${idx}`}
+                    question={faq.question}
+                    answer={faq.answer}
+                    isOpen={openIndex === idx}
+                    onToggle={() =>
+                      setOpenIndex(openIndex === idx ? null : idx)
+                    }
+                  />
+                );
+              })}
+            </div>
           ))}
         </div>
 
-        <p className="mt-10 max-w-3xl text-center text-sm text-ink-600">
+        <p className="mt-12 text-center text-sm text-ink-600">
           Une autre question ?{" "}
           <a
             href="mailto:contact@maxlinestudio.fr"

@@ -69,7 +69,8 @@ export function Subscribe() {
       <div className="absolute inset-0 paper-grain-ink pointer-events-none" aria-hidden />
 
       <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
-        <div className="mb-12 max-w-3xl">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-start">
+          <div>
           <div className="flex items-center gap-3 mb-6">
             <span className="annotation-filled">§10 · Votre atelier</span>
           </div>
@@ -104,11 +105,12 @@ export function Subscribe() {
               J&apos;ai déjà un compte
             </Link>
           </div>
-        </div>
+          </div>
 
-        <div className="border-t border-ink-700 pt-12 max-w-3xl">
-          <h3 className="font-display text-2xl md:text-3xl text-ivory-50 mb-3">
-            Pas encore prêt ? Suivez le{" "}
+          <div className="border-t border-ink-700 pt-10 lg:border-t-0 lg:border-l lg:border-ink-700 lg:pt-0 lg:pl-12 xl:pl-16">
+            <div className="mb-8">
+              <h3 className="font-display text-2xl md:text-3xl text-ivory-50 mb-3">
+                Pas encore prêt ? Suivez le{" "}
             <Link href="/blog" className="text-rouge-400 underline-offset-4 hover:underline">
               Journal
             </Link>
@@ -213,6 +215,8 @@ export function Subscribe() {
             )}
           </form>
         )}
+          </div>
+        </div>
       </div>
     </section>
   );

@@ -20,7 +20,7 @@ export function Manifesto() {
 
         <Reveal delay={100}>
           <blockquote className="relative">
-            <p className="font-display font-medium text-3xl md:text-5xl lg:text-[3.6rem] leading-[1.12] tracking-[-0.02em] text-ink-900 max-w-4xl">
+            <p className="font-display font-medium text-3xl md:text-5xl lg:text-[3.6rem] leading-[1.12] tracking-[-0.02em] text-ink-900 max-w-5xl">
               Un créateur ne devrait pas avoir à choisir entre{" "}
               <HandUnderline variant="rouge">faire</HandUnderline> et{" "}
               <HandUnderline variant="rouge">être vu</HandUnderline>.
@@ -29,7 +29,7 @@ export function Manifesto() {
         </Reveal>
 
         <Reveal delay={250}>
-          <div className="mt-16 md:mt-20 grid md:grid-cols-3 gap-10 md:gap-14 max-w-4xl">
+          <div className="mt-16 md:mt-20 grid md:grid-cols-3 gap-10 md:gap-16 lg:gap-20 max-w-6xl">
             <div className="md:col-span-2 space-y-5 text-lg text-ink-700 leading-relaxed">
               <p>
                 Aujourd&apos;hui, un créateur français qui veut percer à
