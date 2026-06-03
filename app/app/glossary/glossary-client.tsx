@@ -94,7 +94,7 @@ export function GlossaryClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
               De
             </span>
@@ -113,7 +113,7 @@ export function GlossaryClient({
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
               Vers
             </span>

@@ -13,7 +13,7 @@ import {
   generateSubtitles,
   type SubtitleSegment,
 } from "@/lib/subtitles";
-import { isLang, type Lang } from "@/lib/langs";
+import { isLang, langLabel, type Lang } from "@/lib/langs";
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024; // 2 Mo : un fichier de sous-titres reste petit
 const MAX_CUES = 4000;
@@ -23,17 +23,13 @@ export type FileTranslateResult =
   | { ok: true; content: string; billedMinutes: number; format: SubtitleFileFormat }
   | { ok: false; error: string };
 
-function langName(code: string): string {
-  return code === "en" ? "anglais" : code === "fr" ? "français" : code;
-}
-
 /** Traduit un lot de cues via Claude, alignement 1:1 strict. */
 async function translateBatch(
   texts: string[],
   sourceLang: Lang,
   targetLang: Lang,
 ): Promise<string[]> {
-  const tgt = langName(targetLang);
+  const tgt = langLabel(targetLang);
   const system = subtitleTranslationSystem(sourceLang, targetLang);
   const user = `Traduis ces ${texts.length} sous-titres en ${tgt}, dans l'ordre. Réponds par un tableau JSON de ${texts.length} chaînes :\n${JSON.stringify(texts)}`;
 

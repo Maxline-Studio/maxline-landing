@@ -21,7 +21,7 @@ export const organizationLd = {
   url: SITE_URL,
   logo: LOGO_URL,
   description:
-    "Outil de sous-titrage vidéo pour créateurs français : transcription et traduction français ↔ anglais, sous-titres exportables.",
+    "Outil de sous-titrage vidéo pour créateurs : transcription et traduction entre 10 langues (français, anglais, espagnol, allemand, italien, portugais, russe, chinois, japonais, arabe), sous-titres exportables.",
   email: CONTACT_EMAIL,
   founder: { "@type": "Person", name: "Maxence Chopin" },
   foundingDate: "2026",
@@ -46,7 +46,7 @@ export const softwareApplicationLd = {
   operatingSystem: "Web",
   url: SITE_URL,
   description:
-    "Sous-titrage automatique de vidéos YouTube et TikTok, du français vers l'anglais (et anglais → français, ou transcription dans la langue parlée). Sous-titres propres et exportables.",
+    "Sous-titrage et traduction automatiques de vidéos YouTube et TikTok entre 10 langues (français, anglais, espagnol, allemand, italien, portugais, russe, chinois, japonais, arabe), ou transcription dans la langue parlée. Sous-titres propres et exportables.",
   inLanguage: "fr-FR",
   offers: {
     "@type": "Offer",

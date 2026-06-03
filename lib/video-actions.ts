@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
 import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
-import { isLang, type Lang } from "@/lib/langs";
+import { isLang, langLabel, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/video-types";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
@@ -572,7 +572,7 @@ export async function regenerateLine(
     .join(" ")
     .slice(0, 6000);
 
-  const langName = (c: Lang) => (c === "en" ? "anglais" : "français");
+  const langName = (c: Lang) => langLabel(c);
 
   const system = isTranslation
     ? `Tu es traducteur·rice professionnel·le de sous-titres ${langName(srcLang)}→${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, naturelle et fluide, de la traduction d'UNE seule réplique — surtout pas du mot-à-mot. ${REGISTER_RULES} Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle traduction, sans guillemets, sans préambule, sans ponctuation superflue.`

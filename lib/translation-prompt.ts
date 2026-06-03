@@ -3,9 +3,7 @@
 // vidéo : correspondance de registre stricte, naturel natif, localisation des
 // idiomes.
 
-export function langLabel(code: string): string {
-  return code === "en" ? "anglais" : code === "fr" ? "français" : code;
-}
+import { langLabel } from "@/lib/langs";
 
 /** Règle de correspondance de registre — à inclure dans tout prompt de traduction. */
 export const REGISTER_RULES =

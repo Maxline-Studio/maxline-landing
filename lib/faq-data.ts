@@ -31,14 +31,14 @@ export const faqs: FaqItem[] = [
       "Parce que nous sommes une équipe de 1 personne avec une infrastructure self-hosted minimaliste. Pas d'investisseurs à rémunérer, pas de bureaux à Manhattan. On vous facture le service, pas la levée de fonds.",
   },
   {
-    question: "Quand le lancement officiel est-il prévu ?",
+    question: "Maxline est-il déjà disponible ?",
     answer:
-      "Bêta privée prévue dans les prochaines semaines, lancement public officiel dans 2-3 mois. Inscrivez-vous pour être prévenu en priorité — les premiers inscrits auront un accès gratuit prolongé.",
+      "Oui, le studio est ouvert à tous, tout de suite — pas de liste d'attente. La première vidéo de moins de 5 minutes est offerte, sans carte bancaire.",
   },
   {
     question: "Quelles langues sont supportées ?",
     answer:
-      "Le français et l'anglais, dans les deux sens (français → anglais et anglais → français), ou une simple transcription dans la langue parlée — idéale pour l'accessibilité. L'espagnol et l'allemand arriveront selon vos retours.",
+      "Dix langues : français, anglais, espagnol, allemand, italien, portugais, russe, chinois (mandarin), japonais et arabe. Vous choisissez la langue parlée et celle des sous-titres — n'importe quelle combinaison, dans les deux sens. Même langue des deux côtés = simple transcription, idéale pour l'accessibilité.",
   },
   {
     question: "Y aura-t-il un doublage avec voix clonée ?",

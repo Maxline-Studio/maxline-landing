@@ -158,18 +158,18 @@ export function TranslateFileClient({
   return (
     <div>
       {/* Sélecteur de langues */}
-      <div className="mb-5 flex flex-wrap items-end gap-x-4 gap-y-3">
+      <div className="mb-5 space-y-4">
         <div>
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1.5">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
             Langue du fichier
           </span>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {LANG_OPTIONS.map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => setSourceLang(o.id)}
-                className={`px-3 py-1.5 rounded-sm border text-sm font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
                   sourceLang === o.id
                     ? "border-rouge-500 bg-rouge-50 text-ink-900"
                     : "border-ivory-300 text-ink-600 hover:border-ink-400"
@@ -181,21 +181,17 @@ export function TranslateFileClient({
           </div>
         </div>
 
-        <span className="pb-2 text-ink-300" aria-hidden>
-          →
-        </span>
-
         <div>
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-1.5">
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
             Traduire en
           </span>
-          <div className="flex gap-1.5">
+          <div className="flex flex-wrap gap-1.5">
             {LANG_OPTIONS.map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => setTargetLang(o.id)}
-                className={`px-3 py-1.5 rounded-sm border text-sm font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
                   targetLang === o.id
                     ? "border-rouge-500 bg-rouge-50 text-ink-900"
                     : "border-ivory-300 text-ink-600 hover:border-ink-400"
@@ -207,7 +203,7 @@ export function TranslateFileClient({
           </div>
         </div>
 
-        <p className="w-full text-xs text-ink-500">
+        <p className="text-xs text-ink-500">
           Facturation : .srt/.vtt selon la durée des sous-titres ; .txt selon le
           volume de texte (~1000 caractères/minute).
         </p>

@@ -45,7 +45,8 @@ export default async function UploadPage() {
       </h1>
       <p className="text-ink-600 leading-relaxed mb-10 max-w-xl">
         Formats acceptés : MP4, MOV, AVI, MKV, WebM. Jusqu&apos;à 1 Go et 30
-        minutes. La traduction française → anglaise se fait automatiquement.
+        minutes. Choisissez la langue parlée et celle des sous-titres ci-dessous
+        (10 langues, dans les deux sens).
       </p>
 
       <UploadClient minutesAvailable={minutesAvailable} />
