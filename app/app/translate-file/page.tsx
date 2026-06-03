@@ -28,7 +28,7 @@ export default async function TranslateFilePage() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <div className="flex items-center gap-3 mb-6">
         <span className="annotation">§ Traduire un fichier</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">

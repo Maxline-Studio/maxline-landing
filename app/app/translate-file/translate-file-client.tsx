@@ -156,9 +156,9 @@ export function TranslateFileClient({
   }
 
   return (
-    <div>
-      {/* Sélecteur de langues */}
-      <div className="mb-5 space-y-4">
+    <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
+      {/* Colonne gauche — langues + repères */}
+      <div className="space-y-5">
         <div>
           <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
             Langue du fichier
@@ -207,10 +207,32 @@ export function TranslateFileClient({
           Facturation : .srt/.vtt selon la durée des sous-titres ; .txt selon le
           volume de texte (~1000 caractères/minute).
         </p>
+
+        <div className="mt-1 rounded-sm border border-ivory-300 bg-ivory-100/60 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
+            Bon à savoir
+          </p>
+          <ul className="space-y-2.5 text-sm text-ink-600">
+            <li className="flex gap-2.5">
+              <span className="text-rouge-500" aria-hidden>→</span>
+              Importez un fichier .srt, .vtt ou .txt déjà sous-titré.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="text-rouge-500" aria-hidden>→</span>
+              Les timecodes sont conservés à l&apos;identique.
+            </li>
+            <li className="flex gap-2.5">
+              <span className="text-rouge-500" aria-hidden>→</span>
+              Traduction soignée — registre et ton préservés.
+            </li>
+          </ul>
+        </div>
       </div>
 
+      {/* Colonne droite — dépôt / progression */}
+      <div className="flex flex-col">
       {phase === "translating" ? (
-        <div className="rounded-sm border-2 border-ink-300 bg-ivory-100 p-12 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[320px] rounded-sm border-2 border-ink-300 bg-ivory-100 p-12 text-center">
           <Loader2 className="h-8 w-8 text-rouge-500 animate-spin mx-auto mb-4" aria-hidden />
           <p className="font-display font-medium text-ink-900">
             Traduction en cours…
@@ -236,7 +258,7 @@ export function TranslateFileClient({
             const f = e.dataTransfer.files?.[0];
             if (f) handleFile(f);
           }}
-          className={`relative cursor-pointer rounded-sm border-2 border-dashed transition-colors p-12 md:p-16 text-center ${
+          className={`relative flex-1 flex flex-col items-center justify-center min-h-[320px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
             dragOver
               ? "border-rouge-500 bg-rouge-50"
               : "border-ink-300 bg-ivory-100 hover:border-ink-900"
@@ -293,6 +315,7 @@ export function TranslateFileClient({
           Vous n&apos;avez plus de minutes disponibles.
         </p>
       )}
+      </div>
     </div>
   );
 }

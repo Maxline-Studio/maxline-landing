@@ -158,9 +158,9 @@ export function UploadClient({
   return (
     <div>
       {phase === "idle" || phase === "error" ? (
-        <div className="grid lg:grid-cols-5 gap-6 lg:gap-10 items-start">
-          {/* Colonne gauche — choix des langues */}
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
+          {/* Colonne gauche — choix des langues + repères */}
+          <div className="space-y-5">
             <div>
               <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
                 Langue parlée
@@ -210,10 +210,32 @@ export function UploadClient({
                 ? `Transcription en ${langLabel(targetLang)} — sous-titres dans la langue parlée (idéal accessibilité).`
                 : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
             </p>
+
+            <div className="mt-1 rounded-sm border border-ivory-300 bg-ivory-100/60 p-4">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
+                Bon à savoir
+              </p>
+              <ul className="space-y-2.5 text-sm text-ink-600">
+                <li className="flex gap-2.5">
+                  <span className="text-rouge-500" aria-hidden>→</span>
+                  MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min.
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="text-rouge-500" aria-hidden>→</span>
+                  L&apos;IA transcrit et traduit, puis vous corrigez chaque ligne
+                  dans l&apos;éditeur.
+                </li>
+                <li className="flex gap-2.5">
+                  <span className="text-rouge-500" aria-hidden>→</span>
+                  Un audio clair donne le meilleur résultat (évitez une musique
+                  trop forte).
+                </li>
+              </ul>
+            </div>
           </div>
 
-          {/* Colonne droite — zone de dépôt */}
-          <div className="lg:col-span-3">
+          {/* Colonne droite — zone de dépôt (occupe toute la hauteur) */}
+          <div className="flex flex-col">
           <div
             role="button"
             tabIndex={0}
@@ -227,7 +249,7 @@ export function UploadClient({
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
-            className={`relative cursor-pointer rounded-sm border-2 border-dashed transition-colors p-12 md:p-16 text-center ${
+            className={`relative flex-1 flex flex-col items-center justify-center min-h-[320px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
               dragOver
                 ? "border-rouge-500 bg-rouge-50"
                 : "border-ink-300 bg-ivory-100 hover:border-ink-900"
