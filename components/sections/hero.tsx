@@ -8,13 +8,13 @@ import { HeroMockup } from "@/components/sections/hero-mockup";
 
 /**
  * Animation typo : la langue des sous-titres défile, l'une après l'autre, dans
- * son écriture native (English, español, Deutsch, 中文, 日本語, العربية…).
+ * son écriture native (english, español, deutsch, 中文, 日本語, العربية…).
  * Montre d'un coup d'œil que l'outil gère toutes les langues et tous les scripts.
  */
 const TARGET_LANGS = [
-  "English",
+  "english",
   "español",
-  "Deutsch",
+  "deutsch",
   "italiano",
   "português",
   "русский",

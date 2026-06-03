@@ -50,12 +50,14 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl: string | null;
     activeText?: string;
+    /** true si la langue des sous-titres s'écrit de droite à gauche (arabe…). */
+    rtl?: boolean;
     subtitleStyle?: SubtitleStyle;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
   }
 >(function SubtitlePlayer(
-  { videoUrl, activeText, subtitleStyle, onTimeUpdate, onPlayingChange },
+  { videoUrl, activeText, rtl, subtitleStyle, onTimeUpdate, onPlayingChange },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -218,6 +220,7 @@ export const SubtitlePlayer = forwardRef<
               }`}
             >
               <span
+                dir={rtl ? "rtl" : undefined}
                 className="ml-subtitle text-center whitespace-pre-line"
                 style={overlayStyleCss(subtitleStyle ?? DEFAULT_SUBTITLE_STYLE)}
               >

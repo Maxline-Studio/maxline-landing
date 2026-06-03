@@ -41,6 +41,7 @@ import {
   langShort,
   isTranslation,
   isLang,
+  isRtl,
   LANG_OPTIONS,
   type Lang,
 } from "@/lib/langs";
@@ -151,6 +152,9 @@ export function VideoDetailClient({
     Math.ceil(Number(initialVideo.duration_minutes) || 0),
   );
   const translationMode = isTranslation(sourceLang, targetLang);
+  // Sens d'écriture : l'arabe (et autres langues RTL) s'affiche de droite à gauche.
+  const targetRtl = isRtl(targetLang);
+  const sourceRtl = isRtl(sourceLang);
   // Référence source (italique) uniquement en mode traduction (sinon = doublon).
   const segmentsSource = translationMode
     ? (initialVideo.transcription_source as Segment[]) || []
@@ -601,6 +605,7 @@ export function VideoDetailClient({
                 ref={playerRef}
                 videoUrl={videoUrl}
                 activeText={activeText}
+                rtl={targetRtl}
                 subtitleStyle={subtitleStyle}
                 onTimeUpdate={setCurrentTime}
                 onPlayingChange={setIsPlaying}
@@ -691,6 +696,8 @@ export function VideoDetailClient({
                     index={idx}
                     segment={seg}
                     frText={segmentsSource[idx]?.text}
+                    targetRtl={targetRtl}
+                    sourceRtl={sourceRtl}
                     rowRef={idx === activeIndex ? activeRowRef : undefined}
                     isActive={idx === activeIndex}
                     isRegenerating={regeneratingIdx === idx}
@@ -795,6 +802,8 @@ function SegmentRow({
   index,
   segment,
   frText,
+  targetRtl,
+  sourceRtl,
   rowRef,
   isActive,
   isRegenerating,
@@ -810,6 +819,8 @@ function SegmentRow({
   index: number;
   segment: Segment;
   frText?: string;
+  targetRtl?: boolean;
+  sourceRtl?: boolean;
   rowRef?: React.Ref<HTMLElement>;
   isActive: boolean;
   isRegenerating: boolean;
@@ -861,12 +872,22 @@ function SegmentRow({
         <textarea
           value={segment.text}
           onChange={(e) => onTextChange(e.target.value)}
+          dir={targetRtl ? "rtl" : undefined}
           rows={3}
-          className="ml-scroll w-full min-h-[4.75rem] bg-white border border-ink-200 rounded-sm px-3 py-2.5 text-ink-900 leading-relaxed resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30"
+          className={`ml-scroll w-full min-h-[4.75rem] bg-white border border-ink-200 rounded-sm px-3 py-2.5 text-ink-900 leading-relaxed resize-y focus:outline-none focus:border-rouge-500 focus-visible:ring-2 focus-visible:ring-rouge-500/30 ${
+            targetRtl ? "text-right" : ""
+          }`}
           placeholder="Sous-titre…"
         />
 
-        {frText && <p className="mt-2 text-sm text-ink-400 italic">{frText}</p>}
+        {frText && (
+          <p
+            dir={sourceRtl ? "rtl" : undefined}
+            className={`mt-2 text-sm text-ink-400 italic ${sourceRtl ? "text-right" : ""}`}
+          >
+            {frText}
+          </p>
+        )}
 
         <div className="flex items-center gap-1 mt-3">
           <RowAction
