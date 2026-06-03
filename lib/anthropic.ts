@@ -6,7 +6,9 @@
 // (Production + Preview + Development). En son absence, isAnthropicConfigured()
 // renvoie false et l'appelant affiche un message clair plutôt que de crasher.
 
-const MODEL = process.env.ANTHROPIC_MODEL?.trim() || "claude-haiku-4-5-20251001";
+// Qualité : Claude Sonnet 4.5 par défaut (finesse culturelle/registre), aligné
+// sur le worker vidéo. Overridable via ANTHROPIC_MODEL sur Vercel.
+const MODEL = process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-4-5-20250929";
 
 export function isAnthropicConfigured(): boolean {
   return !!process.env.ANTHROPIC_API_KEY?.trim();

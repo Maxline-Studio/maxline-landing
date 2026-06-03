@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
+import { subtitleTranslationSystem } from "@/lib/translation-prompt";
 import {
   parseSubtitleFile,
   billedMinutes,
@@ -32,9 +33,8 @@ async function translateBatch(
   sourceLang: Lang,
   targetLang: Lang,
 ): Promise<string[]> {
-  const src = langName(sourceLang);
   const tgt = langName(targetLang);
-  const system = `Tu es traducteur·rice professionnel·le de sous-titres ${src}→${tgt} pour des créateurs vidéo. Tu traduis en ${tgt} PARLÉ et naturel (jamais mot-à-mot), en préservant le ton. Tu renvoies EXACTEMENT le même nombre d'éléments, dans le même ordre. Réponds UNIQUEMENT par un tableau JSON de chaînes, rien d'autre.`;
+  const system = subtitleTranslationSystem(sourceLang, targetLang);
   const user = `Traduis ces ${texts.length} sous-titres en ${tgt}, dans l'ordre. Réponds par un tableau JSON de ${texts.length} chaînes :\n${JSON.stringify(texts)}`;
 
   const parse = (raw: string): string[] | null => {
@@ -52,11 +52,11 @@ async function translateBatch(
     return null;
   };
 
-  let out = parse(await callClaude({ system, user, maxTokens: 8000, temperature: 0.3 }));
+  let out = parse(await callClaude({ system, user, maxTokens: 16000, temperature: 0.3 }));
   if (!out || out.length !== texts.length) {
     const stricter =
       system + `\nIMPORTANT : le tableau DOIT contenir EXACTEMENT ${texts.length} chaînes.`;
-    out = parse(await callClaude({ system: stricter, user, maxTokens: 8000, temperature: 0.2 }));
+    out = parse(await callClaude({ system: stricter, user, maxTokens: 16000, temperature: 0.2 }));
   }
   if (!out || out.length !== texts.length) {
     throw new Error(

@@ -9,6 +9,7 @@ import { isLang, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/video-types";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
+import { REGISTER_RULES } from "@/lib/translation-prompt";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -574,8 +575,8 @@ export async function regenerateLine(
   const langName = (c: Lang) => (c === "en" ? "anglais" : "français");
 
   const system = isTranslation
-    ? `Tu es traducteur·rice professionnel·le de sous-titres ${langName(srcLang)}→${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, naturelle et fluide, de la traduction d'UNE seule réplique — surtout pas du mot-à-mot. Tu préserves le ton, le registre et l'énergie. Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle traduction, sans guillemets, sans préambule, sans ponctuation superflue.`
-    : `Tu es correcteur·rice de sous-titres en ${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, plus naturelle et lisible, d'UNE seule réplique, dans la même langue, sans en changer le sens. Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle version, sans guillemets ni préambule.`;
+    ? `Tu es traducteur·rice professionnel·le de sous-titres ${langName(srcLang)}→${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, naturelle et fluide, de la traduction d'UNE seule réplique — surtout pas du mot-à-mot. ${REGISTER_RULES} Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle traduction, sans guillemets, sans préambule, sans ponctuation superflue.`
+    : `Tu es correcteur·rice de sous-titres en ${langName(tgtLang)} pour des créateurs vidéo. Tu proposes une formulation ALTERNATIVE, plus naturelle et lisible, d'UNE seule réplique, dans la même langue, sans en changer le sens. Tu préserves le registre exact (familier, argot, soutenu…) — jamais d'adoucissement. Contrainte : reste court et lisible (idéalement ≤ 80 caractères). Réponds UNIQUEMENT par la nouvelle version, sans guillemets ni préambule.`;
 
   const user2 = [
     `Contexte (transcription complète, pour la cohérence) :`,
