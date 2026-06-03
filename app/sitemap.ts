@@ -1,6 +1,7 @@
 import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo";
 import { allPairs } from "@/lib/lang-seo";
+import { USAGES } from "@/lib/usage-seo";
 
 // Pages publiques indexables. À étendre quand de nouveaux articles
 // de Journal ou pages marketing sont ajoutés.
@@ -22,6 +23,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       path: `/traduire-une-video/${p.slug}`,
       changeFrequency: "monthly" as const,
       priority: 0.6,
+    })),
+    { path: "/sous-titres", changeFrequency: "monthly", priority: 0.8 },
+    // Pages programmatiques : usages (TikTok, YouTube, accessibilité…).
+    ...USAGES.map((u) => ({
+      path: `/sous-titres/${u.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
     })),
     { path: "/blog", changeFrequency: "weekly", priority: 0.6 },
     { path: "/blog/traduire-video-francais-anglais", changeFrequency: "monthly", priority: 0.7 },
