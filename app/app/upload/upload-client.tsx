@@ -158,9 +158,9 @@ export function UploadClient({
   return (
     <div>
       {phase === "idle" || phase === "error" ? (
-        <>
-          {/* Sélecteur de langues — langue parlée → langue des sous-titres */}
-          <div className="mb-5 space-y-4">
+        <div className="grid lg:grid-cols-5 gap-6 lg:gap-10 items-start">
+          {/* Colonne gauche — choix des langues */}
+          <div className="lg:col-span-2 space-y-4">
             <div>
               <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
                 Langue parlée
@@ -212,6 +212,8 @@ export function UploadClient({
             </p>
           </div>
 
+          {/* Colonne droite — zone de dépôt */}
+          <div className="lg:col-span-3">
           <div
             role="button"
             tabIndex={0}
@@ -268,7 +270,8 @@ export function UploadClient({
               <span>{error}</span>
             </div>
           )}
-        </>
+          </div>
+        </div>
       ) : (
         <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
           {/* Infos fichier */}
