@@ -159,8 +159,8 @@ export function UploadClient({
     <div>
       {phase === "idle" || phase === "error" ? (
         <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
-          {/* Colonne gauche — choix des langues + repères */}
-          <div className="space-y-5">
+          {/* Colonne gauche — choix des langues */}
+          <div className="flex flex-col gap-5">
             <div>
               <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
                 Langue parlée
@@ -211,27 +211,10 @@ export function UploadClient({
                 : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
             </p>
 
-            <div className="mt-1 rounded-sm border border-ivory-300 bg-ivory-100/60 p-4">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-3">
-                Bon à savoir
-              </p>
-              <ul className="space-y-2.5 text-sm text-ink-600">
-                <li className="flex gap-2.5">
-                  <span className="text-rouge-500" aria-hidden>→</span>
-                  MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min.
-                </li>
-                <li className="flex gap-2.5">
-                  <span className="text-rouge-500" aria-hidden>→</span>
-                  L&apos;IA transcrit et traduit, puis vous corrigez chaque ligne
-                  dans l&apos;éditeur.
-                </li>
-                <li className="flex gap-2.5">
-                  <span className="text-rouge-500" aria-hidden>→</span>
-                  Un audio clair donne le meilleur résultat (évitez une musique
-                  trop forte).
-                </li>
-              </ul>
-            </div>
+            <p className="mt-auto pt-5 border-t border-ivory-300 text-sm text-ink-500 leading-relaxed">
+              Un audio clair donne le meilleur résultat. Après le traitement, vous
+              corrigez chaque ligne dans l&apos;éditeur.
+            </p>
           </div>
 
           {/* Colonne droite — zone de dépôt (occupe toute la hauteur) */}
@@ -249,7 +232,7 @@ export function UploadClient({
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
-            className={`relative flex-1 flex flex-col items-center justify-center min-h-[320px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
+            className={`relative flex-1 flex flex-col items-center justify-center min-h-[340px] lg:min-h-[440px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
               dragOver
                 ? "border-rouge-500 bg-rouge-50"
                 : "border-ink-300 bg-ivory-100 hover:border-ink-900"
@@ -270,6 +253,9 @@ export function UploadClient({
               <span className="text-rouge-500 font-semibold">
                 cliquez pour parcourir
               </span>
+            </p>
+            <p className="mt-3 text-xs text-ink-400">
+              MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
             </p>
             <input
               ref={inputRef}

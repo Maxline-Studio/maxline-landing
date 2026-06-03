@@ -84,12 +84,12 @@ export function Hero() {
 
             {/* Sous-titre / explication */}
             <p className="mt-10 text-lg md:text-xl text-ink-600 leading-relaxed max-w-xl">
-              L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
-              TikTok, en français, à{" "}
+              L&apos;outil de sous-titrage vidéo pour créateurs, artistes et
+              vidéastes de tous horizons. En français, à{" "}
               <span className="font-semibold text-ink-900 tabular-nums">
                 12&nbsp;€/mois
               </span>
-              . Sans piège.
+              , sans engagement.
             </p>
             <p className="mt-4 text-base text-ink-500 leading-relaxed max-w-xl">
               Aussi&nbsp;:{" "}

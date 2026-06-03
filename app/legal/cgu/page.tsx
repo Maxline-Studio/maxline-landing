@@ -15,7 +15,7 @@ export default function CGU() {
       label="Conditions générales"
       title="Conditions générales d'utilisation et de vente"
       updated="2 juin 2026"
-      intro="Ces conditions encadrent l'utilisation de Maxline Studio. On a fait au plus clair et au plus honnête — sans piège, comme le reste."
+      intro="Ces conditions encadrent l'utilisation de Maxline Studio. On a fait au plus clair et au plus honnête, comme le reste."
     >
       <LegalSection title="1. Objet et acceptation">
         <p>

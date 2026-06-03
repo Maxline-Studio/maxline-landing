@@ -28,7 +28,7 @@ export default async function TranslateFilePage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <span className="annotation">§ Traduire un fichier</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
@@ -43,10 +43,9 @@ export default async function TranslateFilePage() {
           On les traduit.
         </span>
       </h1>
-      <p className="text-ink-600 leading-relaxed mb-10 max-w-xl">
-        Importez un fichier <strong>.srt</strong>, <strong>.vtt</strong> ou{" "}
-        <strong>.txt</strong> : on traduit le texte en gardant les timecodes, et
-        vous récupérez le fichier traduit. Pas de vidéo à uploader.
+      <p className="text-ink-600 leading-relaxed mb-8 max-w-xl">
+        On traduit votre fichier en gardant les timecodes — vous récupérez le
+        fichier prêt à l&apos;emploi. Pas de vidéo à uploader.
       </p>
 
       <TranslateFileClient minutesAvailable={minutesAvailable} />

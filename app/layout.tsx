@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     template: "%s | Maxline Studio",
   },
   description:
-    "Maxline Studio sous-titre automatiquement vos vidéos YouTube et TikTok du français vers l'anglais — et aussi anglais → français, ou transcription dans la langue parlée. Sous-titres propres, exportables vers DaVinci ou Premiere. À 12 € par mois, sans piège.",
+    "Sous-titrez et traduisez vos vidéos dans 10 langues (français, anglais, espagnol, japonais, arabe…) ou transcrivez dans la langue parlée. Pour créateurs, artistes et vidéastes. Sous-titres propres, exportables vers DaVinci ou Premiere. 12 € par mois, sans engagement.",
   keywords: [
     "traduction vidéo",
     "sous-titres anglais",
@@ -68,7 +68,7 @@ export const metadata: Metadata = {
     siteName: "Maxline Studio",
     title: "Vos vidéos françaises, sous-titrées en anglais en 10 minutes.",
     description:
-      "L'outil de sous-titrage vidéo pour créateurs YouTube et TikTok, en français, à 12 €/mois.",
+      "L'outil de sous-titrage et traduction vidéo (10 langues) pour créateurs, artistes et vidéastes. En français, à 12 €/mois, sans engagement.",
   },
   twitter: {
     card: "summary_large_image",

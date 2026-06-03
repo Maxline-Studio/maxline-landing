@@ -159,7 +159,7 @@ export default function PourquoiMaxlineStudio() {
 
             <p>
               <strong>Trois :</strong> personne ne propose un tarif solo
-              honnête entre 8 et 15 €/mois, sans piège. C&apos;est soit
+              honnête entre 8 et 15 €/mois, sans coûts cachés. C&apos;est soit
               gratuit-mais-pourri, soit cher-pour-équipe.
             </p>
 

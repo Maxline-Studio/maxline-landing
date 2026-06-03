@@ -28,7 +28,7 @@ export default async function UploadPage() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <div className="flex items-center gap-3 mb-6">
         <span className="annotation">§ Nouvelle vidéo</span>
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
@@ -43,10 +43,9 @@ export default async function UploadPage() {
           On s&apos;occupe du reste.
         </span>
       </h1>
-      <p className="text-ink-600 leading-relaxed mb-10 max-w-xl">
-        Formats acceptés : MP4, MOV, AVI, MKV, WebM. Jusqu&apos;à 1 Go et 30
-        minutes. Choisissez la langue parlée et celle des sous-titres ci-dessous
-        (10 langues, dans les deux sens).
+      <p className="text-ink-600 leading-relaxed mb-8 max-w-xl">
+        Choisissez les langues, déposez votre vidéo, récupérez des sous-titres
+        prêts à publier — 10 langues, dans les deux sens.
       </p>
 
       <UploadClient minutesAvailable={minutesAvailable} />

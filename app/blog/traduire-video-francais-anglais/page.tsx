@@ -340,7 +340,7 @@ export default function TraduireVideoFrancaisAnglais() {
               <code className="text-base bg-neutral-100 px-1.5 py-0.5 rounded">
                 .vtt
               </code>
-              . En français, à 12 €/mois, sans piège.
+              . En français, à 12 €/mois, sans engagement.
             </p>
 
             <p>

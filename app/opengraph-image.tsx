@@ -165,8 +165,8 @@ export default function OpengraphImage() {
               fontFamily: "system-ui",
             }}
           >
-            L&apos;outil de sous-titrage vidéo pour créateurs YouTube et
-            TikTok, en français, à 12 €/mois. Sans piège.
+            Sous-titrage et traduction vidéo en 10 langues, pour créateurs,
+            artistes et vidéastes. En français, à 12 €/mois.
           </div>
         </div>
 
