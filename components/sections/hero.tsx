@@ -96,13 +96,6 @@ export function Hero() {
               </span>
               , sans engagement.
             </p>
-            <p className="mt-4 text-base text-ink-500 leading-relaxed max-w-xl">
-              Aussi&nbsp;:{" "}
-              <span className="font-medium text-ink-700">10 langues au total</span>{" "}
-              (espagnol, allemand, chinois, japonais, arabe…), dans tous les sens
-              — et transcription dans la langue parlée, idéale pour
-              l&apos;accessibilité.
-            </p>
 
             {/* CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
