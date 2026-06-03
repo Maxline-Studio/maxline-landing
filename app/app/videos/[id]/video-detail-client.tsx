@@ -30,12 +30,20 @@ import {
   saveTranscriptionTarget,
   saveSubtitleStyle,
   regenerateLine,
+  retranslateVideo,
   requestBurn,
   getBurnStatus,
   getBurnedUrl,
   type BurnStatus,
 } from "@/lib/video-actions";
-import { langLabel, langShort, isTranslation } from "@/lib/langs";
+import {
+  langLabel,
+  langShort,
+  isTranslation,
+  isLang,
+  LANG_OPTIONS,
+  type Lang,
+} from "@/lib/langs";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
 import {
   SubtitlePlayer,
@@ -129,7 +137,11 @@ export function VideoDetailClient({
   segmentsRef.current = segments;
 
   const sourceLang = initialVideo.source_lang || "fr";
-  const targetLang = initialVideo.target_lang || "en";
+  const [targetLang, setTargetLang] = useState<Lang>(
+    isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en",
+  );
+  const [retranslating, setRetranslating] = useState(false);
+  const [retransError, setRetransError] = useState<string | null>(null);
   const translationMode = isTranslation(sourceLang, targetLang);
   // Référence source (italique) uniquement en mode traduction (sinon = doublon).
   const segmentsSource = translationMode
@@ -273,6 +285,26 @@ export function VideoDetailClient({
       setErrorMessage(result.error);
     }
     setRegeneratingIdx(null);
+  };
+
+  // Changement de langue des sous-titres : re-traduit la transcription source
+  // vers la nouvelle langue (gratuit, la vidéo a déjà été facturée). Met à jour
+  // les segments + l'étiquette de langue, et réinitialise le MP4 incrusté.
+  const handleRetranslate = async (newLang: Lang) => {
+    if (newLang === targetLang || retranslating) return;
+    setRetranslating(true);
+    setRetransError(null);
+    const res = await retranslateVideo(initialVideo.id, newLang);
+    setRetranslating(false);
+    if (!res.ok || !res.segments) {
+      setRetransError(res.error || "Re-traduction impossible.");
+      return;
+    }
+    setSegments(res.segments);
+    setTargetLang(res.targetLang ?? newLang);
+    setBurnStatus("idle");
+    dirtyRef.current = false;
+    setSaveState("idle");
   };
 
   // Export : on sauvegarde d'abord (si modifs), puis on télécharge la version à jour.
@@ -472,6 +504,37 @@ export function VideoDetailClient({
                 Enregistrer
               </button>
             </div>
+          </div>
+
+          {/* Changer la langue des sous-titres — re-traduction incluse (gratuite) */}
+          <div className="flex flex-wrap items-center gap-2.5 mb-5">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
+              Langue des sous-titres
+            </span>
+            <select
+              value={targetLang}
+              onChange={(e) => handleRetranslate(e.target.value as Lang)}
+              disabled={retranslating}
+              aria-label="Changer la langue des sous-titres"
+              className="rounded-sm border border-ivory-300 bg-ivory-50 px-2.5 py-1 text-sm text-ink-900 disabled:opacity-50"
+            >
+              {LANG_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            {retranslating ? (
+              <span className="inline-flex items-center gap-1.5 text-sm text-ink-500">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Re-traduction…
+              </span>
+            ) : retransError ? (
+              <span className="text-xs text-rouge-600">{retransError}</span>
+            ) : (
+              <span className="text-xs text-ink-400">
+                changer la langue la re-traduit, sans coût
+              </span>
+            )}
           </div>
 
           {/* Deux panneaux. En dessous de lg : empilés (flux naturel, scroll page).

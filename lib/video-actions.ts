@@ -10,6 +10,7 @@ import type { VideoStatus, Segment } from "@/lib/video-types";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 import { REGISTER_RULES } from "@/lib/translation-prompt";
+import { translateCuesBatched } from "@/lib/translate-cues";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -613,6 +614,108 @@ export async function regenerateLine(
       error: e instanceof Error ? e.message : "Régénération impossible.",
     };
   }
+}
+
+/**
+ * Change la langue des sous-titres d'une vidéo déjà traitée, GRATUITEMENT
+ * (la vidéo a déjà été facturée à l'upload). Re-traduit la transcription source
+ * vers la nouvelle langue (Claude + RÈGLE D'OR) sans refaire l'ASR. Réinitialise
+ * le burn (le MP4 incrusté dans l'ancienne langue devient obsolète).
+ */
+export async function retranslateVideo(
+  videoId: string,
+  newTargetLang: string,
+): Promise<{
+  ok: boolean;
+  segments?: Segment[];
+  targetLang?: Lang;
+  error?: string;
+}> {
+  if (!isAnthropicConfigured()) {
+    return { ok: false, error: "Re-traduction indisponible pour le moment." };
+  }
+  if (!isLang(newTargetLang)) {
+    return { ok: false, error: "Langue invalide." };
+  }
+  const targetLang: Lang = newTargetLang;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select(
+      "transcription_source, transcription_target, source_lang, target_lang, status",
+    )
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  if (video.status !== "done") {
+    return { ok: false, error: "La vidéo n'est pas encore prête." };
+  }
+  if (targetLang === video.target_lang) {
+    return { ok: false, error: "C'est déjà la langue des sous-titres actuelle." };
+  }
+
+  const srcLang: Lang = isLang(video.source_lang) ? video.source_lang : "fr";
+  const sourceSegs = (video.transcription_source as Segment[] | null) ?? [];
+  // Repli : si la transcription source manque (anciennes vidéos), on part de la
+  // cible actuelle comme base de re-traduction.
+  const baseSegs =
+    sourceSegs.length > 0
+      ? sourceSegs
+      : ((video.transcription_target as Segment[] | null) ?? []);
+  if (baseSegs.length === 0) {
+    return { ok: false, error: "Aucun sous-titre à traduire." };
+  }
+
+  let newSegs: Segment[];
+  if (targetLang === srcLang) {
+    // Cible = langue parlée → simple transcription (pas de traduction).
+    newSegs = baseSegs.map((s) => ({ start: s.start, end: s.end, text: s.text }));
+  } else {
+    try {
+      const translated = await translateCuesBatched(
+        baseSegs.map((s) => s.text),
+        srcLang,
+        targetLang,
+      );
+      newSegs = baseSegs.map((s, i) => ({
+        start: s.start,
+        end: s.end,
+        text: translated[i] ?? s.text,
+      }));
+    } catch (e) {
+      return {
+        ok: false,
+        error: e instanceof Error ? e.message : "Échec de la re-traduction.",
+      };
+    }
+  }
+
+  // Nouvelle cible + langue ; reset du burn (MP4 dans l'ancienne langue obsolète).
+  // Écriture via client admin (cohérent avec requestBurn pour les colonnes burn).
+  const { error } = await createAdminClient()
+    .from("videos")
+    .update({
+      transcription_target: newSegs,
+      target_lang: targetLang,
+      user_edited: false,
+      burn_status: "idle",
+      burn_error: null,
+      storage_key_burned: null,
+    })
+    .eq("id", videoId)
+    .eq("user_id", user.id);
+  if (error) {
+    return { ok: false, error: "Erreur d'enregistrement, réessayez." };
+  }
+
+  return { ok: true, segments: newSegs, targetLang };
 }
 
 /**

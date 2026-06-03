@@ -2,8 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
-import { subtitleTranslationSystem } from "@/lib/translation-prompt";
+import { isAnthropicConfigured } from "@/lib/anthropic";
+import { translateCuesBatched } from "@/lib/translate-cues";
 import {
   parseSubtitleFile,
   billedMinutes,
@@ -13,54 +13,14 @@ import {
   generateSubtitles,
   type SubtitleSegment,
 } from "@/lib/subtitles";
-import { isLang, langLabel, type Lang } from "@/lib/langs";
+import { isLang, type Lang } from "@/lib/langs";
 
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024; // 2 Mo : un fichier de sous-titres reste petit
 const MAX_CUES = 4000;
-const BATCH = 60; // cues par appel Claude (alignement 1:1 fiable)
 
 export type FileTranslateResult =
   | { ok: true; content: string; billedMinutes: number; format: SubtitleFileFormat }
   | { ok: false; error: string };
-
-/** Traduit un lot de cues via Claude, alignement 1:1 strict. */
-async function translateBatch(
-  texts: string[],
-  sourceLang: Lang,
-  targetLang: Lang,
-): Promise<string[]> {
-  const tgt = langLabel(targetLang);
-  const system = subtitleTranslationSystem(sourceLang, targetLang);
-  const user = `Traduis ces ${texts.length} sous-titres en ${tgt}, dans l'ordre. Réponds par un tableau JSON de ${texts.length} chaînes :\n${JSON.stringify(texts)}`;
-
-  const parse = (raw: string): string[] | null => {
-    const a = raw.indexOf("[");
-    const b = raw.lastIndexOf("]");
-    if (a === -1 || b === -1 || b <= a) return null;
-    try {
-      const arr = JSON.parse(raw.slice(a, b + 1));
-      if (Array.isArray(arr) && arr.every((x) => typeof x === "string")) {
-        return arr as string[];
-      }
-    } catch {
-      /* ignore */
-    }
-    return null;
-  };
-
-  let out = parse(await callClaude({ system, user, maxTokens: 16000, temperature: 0.3 }));
-  if (!out || out.length !== texts.length) {
-    const stricter =
-      system + `\nIMPORTANT : le tableau DOIT contenir EXACTEMENT ${texts.length} chaînes.`;
-    out = parse(await callClaude({ system: stricter, user, maxTokens: 16000, temperature: 0.2 }));
-  }
-  if (!out || out.length !== texts.length) {
-    throw new Error(
-      `Traduction désalignée (attendu ${texts.length}, reçu ${out?.length ?? 0}).`,
-    );
-  }
-  return out.map((s) => s.trim());
-}
 
 /**
  * Traduit un fichier de sous-titres (.srt/.vtt/.txt) importé.
@@ -135,13 +95,9 @@ export async function translateSubtitleFile(params: {
 
   // ─── Traduction par lots ───
   const texts = parsed.segments.map((s) => s.text);
-  const translated: string[] = [];
+  let translated: string[];
   try {
-    for (let i = 0; i < texts.length; i += BATCH) {
-      const chunk = texts.slice(i, i + BATCH);
-      const out = await translateBatch(chunk, sourceLang, targetLang);
-      translated.push(...out);
-    }
+    translated = await translateCuesBatched(texts, sourceLang, targetLang);
   } catch (e) {
     return {
       ok: false,
