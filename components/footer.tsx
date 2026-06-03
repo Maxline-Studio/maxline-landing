@@ -68,6 +68,11 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/alternative" className="hover:text-rouge-400 transition-colors">
+                  Comparatifs
+                </Link>
+              </li>
+              <li>
                 <Link href="/outils" className="hover:text-rouge-400 transition-colors">
                   Outils gratuits
                 </Link>

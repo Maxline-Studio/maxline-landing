@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import { absoluteUrl } from "@/lib/seo";
 import { allPairs } from "@/lib/lang-seo";
 import { USAGES } from "@/lib/usage-seo";
+import { ALTERNATIVES } from "@/lib/alternative-seo";
 
 // Pages publiques indexables. À étendre quand de nouveaux articles
 // de Journal ou pages marketing sont ajoutés.
@@ -30,6 +31,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       path: `/sous-titres/${u.slug}`,
       changeFrequency: "monthly" as const,
       priority: 0.7,
+    })),
+    { path: "/alternative", changeFrequency: "monthly", priority: 0.7 },
+    // Pages programmatiques : alternatives (comparatifs concurrents).
+    ...ALTERNATIVES.map((a) => ({
+      path: `/alternative/${a.slug}`,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
     { path: "/blog", changeFrequency: "weekly", priority: 0.6 },
     { path: "/blog/traduire-video-francais-anglais", changeFrequency: "monthly", priority: 0.7 },
