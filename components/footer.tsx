@@ -58,6 +58,11 @@ export function Footer() {
                 </a>
               </li>
               <li>
+                <Link href="/outils" className="hover:text-rouge-400 transition-colors">
+                  Outils gratuits
+                </Link>
+              </li>
+              <li>
                 <Link href="/blog" className="hover:text-rouge-400 transition-colors">
                   Journal
                 </Link>

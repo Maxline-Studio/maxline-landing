@@ -13,6 +13,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }[] = [
     { path: "/", changeFrequency: "weekly", priority: 1 },
     { path: "/atelier", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/outils", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/outils/convertir-sous-titres", changeFrequency: "monthly", priority: 0.7 },
     { path: "/blog", changeFrequency: "weekly", priority: 0.6 },
     { path: "/blog/traduire-video-francais-anglais", changeFrequency: "monthly", priority: 0.7 },
     { path: "/blog/submagic-alternative-francais", changeFrequency: "monthly", priority: 0.7 },
