@@ -38,7 +38,7 @@ export function Promises() {
     <section className="relative py-24 md:py-32 bg-ivory-50 overflow-hidden">
       <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      <div className="container mx-auto max-w-6xl px-4 md:px-6 lg:px-8 relative">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
         <Reveal>
           <div className="max-w-3xl mb-14">
             <div className="flex items-center gap-3 mb-6">

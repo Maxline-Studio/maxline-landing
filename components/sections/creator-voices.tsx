@@ -66,7 +66,7 @@ export function CreatorVoices() {
     >
       <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      <div className="relative container mx-auto max-w-6xl px-4 md:px-6 lg:px-8">
+      <div className="relative container mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <div className="max-w-3xl mb-14 md:mb-16">
           <div className="flex items-center gap-3 mb-6">
             <span className="annotation">§08 · Voix de créateurs</span>

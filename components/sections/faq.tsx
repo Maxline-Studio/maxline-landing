@@ -60,8 +60,8 @@ export function Faq() {
     >
       <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      <div className="container mx-auto max-w-3xl px-4 md:px-6 lg:px-8 relative">
-        <div className="mb-14">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
+        <div className="mb-14 max-w-3xl">
           <div className="flex items-center gap-3 mb-6">
             <span className="annotation">§09 · FAQ</span>
           </div>
@@ -80,7 +80,7 @@ export function Faq() {
           </p>
         </div>
 
-        <div>
+        <div className="max-w-3xl">
           {faqs.map((faq, idx) => (
             <FaqItem
               key={idx}
@@ -93,7 +93,7 @@ export function Faq() {
           ))}
         </div>
 
-        <p className="mt-10 text-center text-sm text-ink-600">
+        <p className="mt-10 max-w-3xl text-center text-sm text-ink-600">
           Une autre question ?{" "}
           <a
             href="mailto:contact@maxlinestudio.fr"

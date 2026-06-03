@@ -11,7 +11,7 @@ export function Manifesto() {
       {/* Grain papier subtil */}
       <div className="absolute inset-0 paper-grain pointer-events-none" aria-hidden />
 
-      <div className="container mx-auto max-w-5xl px-4 md:px-6 lg:px-8 relative">
+      <div className="container mx-auto max-w-7xl px-4 md:px-6 lg:px-8 relative">
         <Reveal>
           <div className="flex items-center gap-3 mb-10">
             <span className="annotation">§01 · Notre conviction</span>
