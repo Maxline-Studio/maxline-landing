@@ -18,6 +18,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/atelier", changeFrequency: "monthly", priority: 0.7 },
     { path: "/outils", changeFrequency: "monthly", priority: 0.7 },
     { path: "/outils/convertir-sous-titres", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/outils/decaler-sous-titres", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/outils/extraire-texte-sous-titres", changeFrequency: "monthly", priority: 0.7 },
     { path: "/traduire-une-video", changeFrequency: "monthly", priority: 0.8 },
     // Pages programmatiques : 90 paires de langues (traduire X → Y).
     ...allPairs().map((p) => ({

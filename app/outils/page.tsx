@@ -9,7 +9,7 @@ import { breadcrumbLd, absoluteUrl } from "@/lib/seo";
 
 const TITLE = "Outils gratuits pour les sous-titres";
 const DESCRIPTION =
-  "Des outils gratuits et sans inscription pour vos sous-titres : convertir SRT, VTT et TXT, et bientôt extraire et synchroniser. Tout se passe dans votre navigateur.";
+  "Des outils gratuits et sans inscription pour vos sous-titres : convertir SRT/VTT/TXT, extraire le texte, et décaler les timecodes. Tout se passe dans votre navigateur.";
 const PATH = "/outils";
 
 export const metadata: Metadata = {
@@ -47,16 +47,16 @@ const TOOLS: Tool[] = [
     desc: "SRT en VTT, VTT en SRT, ou SRT/VTT en TXT. Gratuit, dans votre navigateur.",
   },
   {
+    href: "/outils/extraire-texte-sous-titres",
     icon: Scissors,
-    title: "Extraire les sous-titres",
-    desc: "Récupérer le texte d'un fichier de sous-titres, prêt à réutiliser.",
-    soon: true,
+    title: "Extraire le texte",
+    desc: "Récupérer le texte d'un fichier de sous-titres, sans les timecodes.",
   },
   {
+    href: "/outils/decaler-sous-titres",
     icon: Clock,
     title: "Décaler / synchroniser",
     desc: "Avancer ou retarder tous les timecodes d'un fichier de sous-titres.",
-    soon: true,
   },
 ];
 
