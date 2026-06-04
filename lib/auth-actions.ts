@@ -62,6 +62,11 @@ export async function signUpAction(
   const password = formData.get("password") as string;
   const displayName = (formData.get("display_name") as string)?.trim();
   const ref = sanitizeReferralCode((formData.get("ref") as string) || "");
+  // Intention de paiement (depuis la landing) : on la garde dans le lien de
+  // confirmation pour reprendre le paiement après confirmation de l'email.
+  const checkout = ((formData.get("checkout") as string) || "")
+    .replace(/[^a-z-]/gi, "")
+    .slice(0, 24);
 
   if (!email || !password) {
     return { error: "Email et mot de passe requis." };
@@ -97,7 +102,9 @@ export async function signUpAction(
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm`,
+      emailRedirectTo: checkout
+        ? `${origin}/auth/confirm?checkout=${encodeURIComponent(checkout)}`
+        : `${origin}/auth/confirm`,
       data: { name: displayName || email.split("@")[0] },
     },
   });

@@ -3,6 +3,7 @@ import { CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
 import { hasAnnualPricing } from "@/lib/stripe";
+import { parseCheckoutIntent } from "@/lib/checkout-intent";
 import { BillingActions } from "./billing-client";
 
 export const metadata: Metadata = {
@@ -20,9 +21,11 @@ const PLAN_LABELS: Record<string, string> = {
 export default async function BillingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; checkout?: string }>;
 }) {
-  const { status } = await searchParams;
+  const { status, checkout } = await searchParams;
+  // Intention de paiement reprise après inscription/connexion (depuis la landing).
+  const resume = parseCheckoutIntent(checkout);
   const supabase = await createClient();
   const {
     data: { user },
@@ -105,6 +108,8 @@ export default async function BillingPage({
           (profile.plan === "starter" || profile.plan === "plus")
         }
         annualAvailable={hasAnnualPricing()}
+        resumePlan={resume?.plan}
+        resumeInterval={resume?.interval}
       />
     </div>
   );

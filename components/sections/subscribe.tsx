@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +8,7 @@ import { z } from "zod";
 import { CheckCircle2, Mail, AlertCircle, ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { HandUnderline } from "@/components/hand-underline";
+import { createClient } from "@/lib/supabase/client";
 
 const subscribeSchema = z.object({
   email: z.string().email("Adresse email invalide"),
@@ -21,6 +22,17 @@ export function Subscribe() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Adapte le bloc compte selon l'état de connexion (défaut visiteur, pas de flash).
+  const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setLoggedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
+      setLoggedIn(!!session?.user),
+    );
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   const {
     register,
@@ -85,25 +97,37 @@ export function Subscribe() {
             .
           </h2>
           <p className="mt-6 text-lg text-ink-300 max-w-xl">
-            Le studio est ouvert. Créez votre compte, sous-titrez votre première
-            vidéo gratuitement — sans carte bancaire. 12 €/mois ensuite, sans
-            engagement.
+            {loggedIn
+              ? "Votre atelier vous attend. Déposez une vidéo, on s'occupe des sous-titres et des traductions."
+              : "Le studio est ouvert. Créez votre compte, sous-titrez votre première vidéo gratuitement — sans carte bancaire. 12 €/mois ensuite, sans engagement."}
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
-            <Link href="/signup" className="btn-pen group text-base">
-              Créer mon atelier
-              <ArrowRight
-                className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                aria-hidden
-              />
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center justify-center px-6 h-12 rounded-sm border border-ink-600 text-ivory-50 font-medium hover:bg-ink-800 transition-colors"
-            >
-              J&apos;ai déjà un compte
-            </Link>
+            {loggedIn ? (
+              <Link href="/app/upload" className="btn-pen group text-base">
+                Déposer une vidéo
+                <ArrowRight
+                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                  aria-hidden
+                />
+              </Link>
+            ) : (
+              <>
+                <Link href="/signup" className="btn-pen group text-base">
+                  Créer mon atelier
+                  <ArrowRight
+                    className="h-5 w-5 transition-transform group-hover:translate-x-1"
+                    aria-hidden
+                  />
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center justify-center px-6 h-12 rounded-sm border border-ink-600 text-ivory-50 font-medium hover:bg-ink-800 transition-colors"
+                >
+                  J&apos;ai déjà un compte
+                </Link>
+              </>
+            )}
           </div>
           </div>
 

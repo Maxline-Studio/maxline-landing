@@ -1,6 +1,7 @@
 import { GraduationCap, Pencil, BookOpen, Crown } from "lucide-react";
 import { Reveal } from "@/components/reveal";
 import { HandUnderline } from "@/components/hand-underline";
+import { AuthAwareCta } from "@/components/auth-aware-cta";
 import {
   RANK_ORDER,
   RANK_LABELS,
@@ -191,6 +192,15 @@ export function Atelier() {
         <p className="mt-14 text-center text-sm font-mono text-ink-500 uppercase tracking-widest">
           [ système actif dès votre première minute &middot; détails complets sur la page /atelier ]
         </p>
+
+        <div className="mt-8 flex justify-center">
+          <AuthAwareCta
+            loggedOutHref="/signup"
+            loggedOutLabel="Rejoindre l'Atelier"
+            loggedInHref="/app/upload"
+            loggedInLabel="Déposer une vidéo"
+          />
+        </div>
       </div>
     </section>
   );

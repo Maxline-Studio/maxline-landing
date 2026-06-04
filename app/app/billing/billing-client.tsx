@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ArrowRight, Check, Loader2, Settings } from "lucide-react";
 import {
   createCheckoutSession,
@@ -54,18 +54,45 @@ export function BillingActions({
   hasCustomer,
   isSubscribed,
   annualAvailable,
+  resumePlan,
+  resumeInterval,
 }: {
   currentPlan: string;
   hasCustomer: boolean;
   isSubscribed: boolean;
   annualAvailable: boolean;
+  /** Reprise auto du paiement après inscription/connexion (depuis la landing). */
+  resumePlan?: "starter" | "plus";
+  resumeInterval?: BillingInterval;
 }) {
   const [pending, startTransition] = useTransition();
   const [busyKind, setBusyKind] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [billingInterval, setBillingInterval] =
-    useState<BillingInterval>("month");
+  const [billingInterval, setBillingInterval] = useState<BillingInterval>(
+    resumeInterval ?? "month",
+  );
+  const [resuming, setResuming] = useState<boolean>(
+    Boolean(resumePlan && resumeInterval),
+  );
   const annual = billingInterval === "year";
+
+  // Reprise : on relance directement le paiement du plan choisi sur la landing.
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (resumedRef.current || !resumePlan || !resumeInterval) return;
+    resumedRef.current = true;
+    setBusyKind(resumePlan);
+    startTransition(async () => {
+      const res = await subscribeOrChangePlan(resumePlan, resumeInterval);
+      if (res.ok) {
+        window.location.href = res.url;
+      } else {
+        setResuming(false);
+        setError(res.error || "La reprise du paiement a échoué. Réessayez.");
+        setBusyKind(null);
+      }
+    });
+  }, [resumePlan, resumeInterval]);
 
   function go(action: () => Promise<{ ok: boolean; url?: string; error?: string }>, key: string) {
     setError(null);
@@ -83,6 +110,17 @@ export function BillingActions({
 
   return (
     <div className="space-y-12">
+      {resuming && (
+        <div
+          role="status"
+          className="flex items-center gap-3 p-4 bg-ink-900 text-ivory-50 rounded-sm"
+        >
+          <Loader2 className="h-5 w-5 animate-spin text-rouge-400" aria-hidden />
+          <span className="text-sm">
+            Redirection vers le paiement sécurisé…
+          </span>
+        </div>
+      )}
       {error && (
         <div
           role="alert"

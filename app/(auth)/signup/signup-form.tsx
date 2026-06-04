@@ -7,9 +7,16 @@ import {
   signInWithGoogleAction,
   type AuthState,
 } from "@/lib/auth-actions";
+import { billingResumeUrl } from "@/lib/checkout-intent";
 import { Input } from "@/components/ui/input";
 
-export function SignupForm({ referralCode = "" }: { referralCode?: string }) {
+export function SignupForm({
+  referralCode = "",
+  checkout,
+}: {
+  referralCode?: string;
+  checkout?: string;
+}) {
   const [state, formAction, pending] = useActionState<
     AuthState | undefined,
     FormData
@@ -62,6 +69,13 @@ export function SignupForm({ referralCode = "" }: { referralCode?: string }) {
       {/* Google OAuth */}
       <form action={signInWithGoogleAction}>
         {referralCode && <input type="hidden" name="ref" value={referralCode} />}
+        {checkout && (
+          <input
+            type="hidden"
+            name="redirect"
+            value={billingResumeUrl(checkout)}
+          />
+        )}
         <button
           type="submit"
           className="w-full h-11 inline-flex items-center justify-center gap-3 bg-white border-2 border-ink-900 text-ink-900 rounded-sm hover:bg-ink-900 hover:text-ivory-50 transition-colors font-semibold"
@@ -81,6 +95,7 @@ export function SignupForm({ referralCode = "" }: { referralCode?: string }) {
 
       <form action={formAction} className="space-y-4">
         {referralCode && <input type="hidden" name="ref" value={referralCode} />}
+        {checkout && <input type="hidden" name="checkout" value={checkout} />}
         <div>
           <label
             htmlFor="display_name"

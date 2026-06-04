@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowRight } from "lucide-react";
 import { HandUnderline } from "@/components/hand-underline";
 import { HeroMockup } from "@/components/sections/hero-mockup";
+import { AuthAwareCta } from "@/components/auth-aware-cta";
 
 /**
  * Animation typo : la langue des sous-titres défile, l'une après l'autre, dans
@@ -99,16 +98,12 @@ export function Hero() {
 
             {/* CTAs */}
             <div className="mt-10 flex flex-col sm:flex-row gap-3">
-              <Link
-                href="/signup"
-                className="btn-pen group text-base"
-              >
-                Créer mon atelier
-                <ArrowRight
-                  className="h-5 w-5 transition-transform group-hover:translate-x-1"
-                  aria-hidden
-                />
-              </Link>
+              <AuthAwareCta
+                loggedOutHref="/signup"
+                loggedOutLabel="Sous-titrer une vidéo gratuitement"
+                loggedInHref="/app/upload"
+                loggedInLabel="Déposer une vidéo"
+              />
               <a
                 href="#how-it-works"
                 className="btn-outline text-base"
