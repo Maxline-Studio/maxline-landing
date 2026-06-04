@@ -69,6 +69,7 @@ export function Header() {
               { href: "/#how-it-works", label: "Procédé", external: false },
               { href: "/#atelier", label: "L'Atelier", external: false },
               { href: "/#pricing", label: "Tarif", external: false },
+              { href: "/outils", label: "Outils", external: true },
               { href: "/blog", label: "Journal", external: true },
               { href: "/#faq", label: "FAQ", external: false },
             ].map((item) => {
@@ -142,6 +143,7 @@ export function Header() {
               { href: "/#how-it-works", label: "Procédé" },
               { href: "/#atelier", label: "L'Atelier" },
               { href: "/#pricing", label: "Tarif" },
+              { href: "/outils", label: "Outils", isLink: true },
               { href: "/blog", label: "Journal", isLink: true },
               { href: "/#faq", label: "FAQ" },
             ].map((item) => {

@@ -6,6 +6,8 @@ export const SITE_URL = "https://www.maxlinestudio.fr";
 export const ORG_NAME = "Maxline Studio";
 const LOGO_URL = `${SITE_URL}/maxline-avatar.png`;
 const FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61581498317108";
+const INSTAGRAM_URL = "https://www.instagram.com/maxlinestudio/";
+const TIKTOK_URL = "https://www.tiktok.com/@maxlinestudio";
 const CONTACT_EMAIL = "contact@maxlinestudio.fr";
 
 // Construit une URL absolue (www) à partir d'un chemin.
@@ -25,7 +27,7 @@ export const organizationLd = {
   email: CONTACT_EMAIL,
   founder: { "@type": "Person", name: "Maxence Chopin" },
   foundingDate: "2026",
-  sameAs: [FACEBOOK_URL],
+  sameAs: [FACEBOOK_URL, INSTAGRAM_URL, TIKTOK_URL],
 };
 
 // Le site lui-même.
