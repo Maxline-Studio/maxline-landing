@@ -40,6 +40,17 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   poweredByHeader: false,
+  // Anciennes URLs (structure pré-refonte, encore dans l'index Google) →
+  // redirigées vers leur équivalent actuel (308 permanent ≈ 301 SEO) pour ne pas
+  // perdre le « jus » et nettoyer le rapport « pages non indexées » de GSC.
+  async redirects() {
+    return [
+      { source: "/legal/privacy", destination: "/legal/confidentialite", permanent: true },
+      { source: "/mentions-legales", destination: "/legal/mentions", permanent: true },
+      { source: "/processus", destination: "/#how-it-works", permanent: true },
+      { source: "/contact", destination: "/legal/mentions", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {
