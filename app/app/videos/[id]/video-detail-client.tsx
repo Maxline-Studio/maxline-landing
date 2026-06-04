@@ -432,7 +432,9 @@ export function VideoDetailClient({
             <VideoStatusBadge status={status} />
             <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500 border border-ivory-300 rounded-sm px-2 py-1">
               {initialVideo.source_lang_auto && status !== "done"
-                ? `détection… → ${langShort(initialVideo.target_lang || "en")}`
+                ? initialVideo.target_same_as_source
+                  ? "détection…"
+                  : `détection… → ${langShort(initialVideo.target_lang || "en")}`
                 : isTranslation(
                       initialVideo.source_lang || "fr",
                       initialVideo.target_lang || "en",

@@ -30,7 +30,8 @@ export async function createVideoUpload(params: {
   format: string;
   /** Langue parlée, ou "auto" pour laisser le worker la détecter. */
   sourceLang?: Lang | "auto";
-  targetLang?: Lang;
+  /** Langue des sous-titres, ou "same" = dans la langue parlée (transcription). */
+  targetLang?: Lang | "same";
 }): Promise<CreateUploadResult> {
   const supabase = await createClient();
   const {
@@ -102,13 +103,28 @@ export async function createVideoUpload(params: {
   ).toISOString();
 
   const ext = params.format;
-  // Langues. Mode "auto" = détection de la langue parlée par le worker : on pose
-  // un placeholder valide (écrasé par la langue détectée) + source_lang_auto.
-  // Sinon on valide pour ne jamais insérer une langue hors liste (défaut FR).
+  // Langue parlée. Mode "auto" = détection par le worker : on pose un placeholder
+  // valide (écrasé par la langue détectée) + source_lang_auto. Sinon on valide
+  // pour ne jamais insérer une langue hors liste (défaut FR).
   const autoDetect = params.sourceLang === "auto";
   const sourceLang: Lang =
     !autoDetect && isLang(params.sourceLang) ? params.sourceLang : "fr";
-  const targetLang: Lang = isLang(params.targetLang) ? params.targetLang : "en";
+  // Cible. "same" = sous-titres dans la langue parlée (transcription). Si la
+  // source est imposée, on résout tout de suite (cible = source) ; si elle est
+  // auto-détectée, le worker résout après détection (flag + placeholder).
+  const wantSameTarget = params.targetLang === "same";
+  let targetLang: Lang;
+  let targetSameAsSource = false;
+  if (wantSameTarget) {
+    if (autoDetect) {
+      targetSameAsSource = true;
+      targetLang = "fr"; // placeholder écrasé par le worker (= source détectée)
+    } else {
+      targetLang = sourceLang;
+    }
+  } else {
+    targetLang = isLang(params.targetLang) ? params.targetLang : "en";
+  }
 
   // Insert la ligne video
   const { data: video, error: insertError } = await supabase
@@ -122,6 +138,7 @@ export async function createVideoUpload(params: {
       source_lang: sourceLang,
       target_lang: targetLang,
       source_lang_auto: autoDetect,
+      target_same_as_source: targetSameAsSource,
       status: "queued",
       delete_at: deleteAt,
     })

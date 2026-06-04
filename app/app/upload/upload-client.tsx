@@ -2,7 +2,15 @@
 
 import { useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { UploadCloud, FileVideo, AlertCircle, CheckCircle2, X } from "lucide-react";
+import {
+  UploadCloud,
+  FileVideo,
+  AlertCircle,
+  CheckCircle2,
+  X,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import {
   validateVideoFile,
   readVideoDuration,
@@ -17,7 +25,13 @@ import {
 } from "@/lib/video-actions";
 import { LANG_OPTIONS, langLabel, type Lang } from "@/lib/langs";
 
-type Phase = "idle" | "validating" | "uploading" | "finalizing" | "done" | "error";
+type Phase =
+  | "idle"
+  | "validating"
+  | "configure"
+  | "uploading"
+  | "finalizing"
+  | "done";
 
 export function UploadClient({
   minutesAvailable,
@@ -27,218 +41,164 @@ export function UploadClient({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  // "auto" = laisser le worker détecter la langue parlée (défaut).
+  // Cible : "same" = sous-titres dans la langue parlée (transcription) = défaut.
+  const [targetLang, setTargetLang] = useState<Lang | "same">("same");
+  // Langue parlée : "auto" (détection) par défaut. Override via « Avancé ».
   const [sourceLang, setSourceLang] = useState<Lang | "auto">("auto");
-  const [targetLang, setTargetLang] = useState<Lang>("en");
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
+  const [submitting, setSubmitting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fileInfo, setFileInfo] = useState<{
     name: string;
     duration: number;
     size: number;
   } | null>(null);
 
-  const handleFile = useCallback(
-    async (file: File) => {
+  // ── 1. Sélection du fichier (validation + durée), AVANT tout choix de langue ──
+  const handleSelect = useCallback(
+    async (f: File) => {
       setError(null);
       setPhase("validating");
 
-      // 1. Validation format / taille
-      const validationError = validateVideoFile(file);
+      const validationError = validateVideoFile(f);
       if (validationError) {
         setError(validationError);
-        setPhase("error");
+        setPhase("idle");
         return;
       }
 
-      // 2. Lecture durée
-      const duration = await readVideoDuration(file);
+      const duration = await readVideoDuration(f);
       if (duration === null) {
         setError(
           "Impossible de lire cette vidéo. Le fichier est peut-être corrompu.",
         );
-        setPhase("error");
+        setPhase("idle");
         return;
       }
       if (duration > MAX_DURATION_SECONDS) {
         setError(
           `Vidéo trop longue (${formatDuration(duration)}). Maximum : 30 minutes.`,
         );
-        setPhase("error");
+        setPhase("idle");
         return;
       }
 
-      // 3. Garde quota côté client (le serveur revérifie)
       const neededMin = duration / 60;
       if (neededMin > minutesAvailable) {
         setError(
           `Quota insuffisant : ${minutesAvailable.toFixed(1)} min disponibles, cette vidéo en demande ${neededMin.toFixed(1)}.`,
         );
-        setPhase("error");
+        setPhase("idle");
         return;
       }
 
-      setFileInfo({ name: file.name, duration, size: file.size });
-
-      // 4. Création de la ligne video (serveur, garde quota)
-      const ext = fileExtension(file.name);
-      const result = await createVideoUpload({
-        filename: file.name,
-        durationSeconds: duration,
-        sizeBytes: file.size,
-        format: ext,
-        sourceLang,
-        targetLang,
-      });
-
-      if (!result.ok) {
-        setError(result.error);
-        setPhase("error");
-        return;
-      }
-
-      // 5. Récupère une URL PUT présignée (Cloudflare R2) puis upload direct
-      //    navigateur → R2 (avec progression XHR). Évite le plafond Supabase Free
-      //    (50 Mo) et la limite de corps Vercel.
-      setPhase("uploading");
-      setProgress(0);
-
-      const urlResult = await createSourceUploadUrl(result.videoId);
-      if (!urlResult.ok) {
-        setError(`Préparation de l'upload échouée : ${urlResult.error}`);
-        setPhase("error");
-        return;
-      }
-
-      try {
-        await uploadWithProgress(file, urlResult.url, (pct) =>
-          setProgress(pct),
-        );
-      } catch (e) {
-        setError(
-          e instanceof Error
-            ? `Échec de l'upload : ${e.message}`
-            : "Échec de l'upload.",
-        );
-        setPhase("error");
-        return;
-      }
-
-      // 6. Finalisation : déclenche le worker
-      setPhase("finalizing");
-      await markVideoUploaded(result.videoId);
-
-      setPhase("done");
-      // Redirige vers la page de suivi de la vidéo
-      setTimeout(() => {
-        router.push(`/app/videos/${result.videoId}`);
-      }, 900);
+      setFile(f);
+      setFileInfo({ name: f.name, duration, size: f.size });
+      setPhase("configure");
     },
-    [minutesAvailable, router, sourceLang, targetLang],
+    [minutesAvailable],
   );
+
+  // ── 2. Lancement : création de la ligne + upload R2 + déclenchement worker ──
+  const handleGenerate = useCallback(async () => {
+    if (!file || !fileInfo || submitting) return; // garde anti double-soumission
+    setSubmitting(true);
+    setError(null);
+
+    const ext = fileExtension(file.name);
+    const result = await createVideoUpload({
+      filename: file.name,
+      durationSeconds: fileInfo.duration,
+      sizeBytes: file.size,
+      format: ext,
+      sourceLang,
+      targetLang,
+    });
+    if (!result.ok) {
+      setError(result.error);
+      setSubmitting(false);
+      return; // reste en "configure" pour réessayer
+    }
+
+    setPhase("uploading");
+    setProgress(0);
+
+    const urlResult = await createSourceUploadUrl(result.videoId);
+    if (!urlResult.ok) {
+      setError(`Préparation de l'upload échouée : ${urlResult.error}`);
+      setPhase("configure");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      await uploadWithProgress(file, urlResult.url, (pct) => setProgress(pct));
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? `Échec de l'upload : ${e.message}`
+          : "Échec de l'upload.",
+      );
+      setPhase("configure");
+      setSubmitting(false);
+      return;
+    }
+
+    setPhase("finalizing");
+    await markVideoUploaded(result.videoId);
+
+    setPhase("done");
+    setTimeout(() => {
+      router.push(`/app/videos/${result.videoId}`);
+    }, 900);
+  }, [file, fileInfo, sourceLang, targetLang, submitting, router]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
+    const f = e.dataTransfer.files?.[0];
+    if (f) handleSelect(f);
   };
 
   const reset = () => {
     setPhase("idle");
     setProgress(0);
     setError(null);
+    setFile(null);
     setFileInfo(null);
+    setAdvancedOpen(false);
+    setSubmitting(false);
   };
 
-  // ─── Rendu selon la phase ───
-  const busy =
-    phase === "validating" || phase === "uploading" || phase === "finalizing";
+  const busy = phase === "uploading" || phase === "finalizing";
 
+  // Phrase explicative selon les choix.
+  const helperText =
+    targetLang === "same"
+      ? "Sous-titres dans la langue parlée — parfait pour rendre votre vidéo accessible."
+      : sourceLang === "auto"
+        ? `Traduction vers ${langLabel(targetLang)} — la langue parlée est détectée automatiquement.`
+        : sourceLang === targetLang
+          ? `Transcription en ${langLabel(targetLang)}.`
+          : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`;
+
+  // ─── Rendu ───
   return (
     <div>
-      {phase === "idle" || phase === "error" ? (
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-10 items-stretch">
-          {/* Colonne gauche — choix des langues */}
-          <div className="flex flex-col gap-5">
-            <div>
-              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
-                Langue parlée
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setSourceLang("auto")}
-                  className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                    sourceLang === "auto"
-                      ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                      : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                  }`}
-                >
-                  Détection automatique
-                </button>
-                {LANG_OPTIONS.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => setSourceLang(o.id)}
-                    className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                      sourceLang === o.id
-                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
-                Sous-titres en
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {LANG_OPTIONS.map((o) => (
-                  <button
-                    key={o.id}
-                    type="button"
-                    onClick={() => setTargetLang(o.id)}
-                    className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                      targetLang === o.id
-                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <p className="text-xs text-ink-500">
-              {sourceLang === "auto"
-                ? `La langue parlée est détectée automatiquement → sous-titres en ${langLabel(targetLang)}.`
-                : sourceLang === targetLang
-                  ? `Transcription en ${langLabel(targetLang)} — sous-titres dans la langue parlée (idéal accessibilité).`
-                  : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
-            </p>
-
-            <p className="mt-auto pt-5 border-t border-ivory-300 text-sm text-ink-500 leading-relaxed">
-              Un audio clair donne le meilleur résultat. Après le traitement, vous
-              corrigez chaque ligne dans l&apos;éditeur.
-            </p>
-          </div>
-
-          {/* Colonne droite — zone de dépôt (occupe toute la hauteur) */}
-          <div className="flex flex-col">
+      {/* Étape 1 — Dépôt (le premier geste). */}
+      {(phase === "idle" || phase === "validating") && (
+        <div>
           <div
             role="button"
             tabIndex={0}
-            onClick={() => inputRef.current?.click()}
+            aria-busy={phase === "validating"}
+            onClick={() => phase === "idle" && inputRef.current?.click()}
             onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") inputRef.current?.click();
+              if (phase === "idle" && (e.key === "Enter" || e.key === " "))
+                inputRef.current?.click();
             }}
             onDragOver={(e) => {
               e.preventDefault();
@@ -246,39 +206,56 @@ export function UploadClient({
             }}
             onDragLeave={() => setDragOver(false)}
             onDrop={onDrop}
-            className={`relative flex-1 flex flex-col items-center justify-center min-h-[340px] lg:min-h-[440px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
+            className={`relative flex flex-col items-center justify-center min-h-[360px] lg:min-h-[440px] cursor-pointer rounded-sm border-2 border-dashed transition-colors p-10 text-center ${
               dragOver
                 ? "border-rouge-500 bg-rouge-50"
                 : "border-ink-300 bg-ivory-100 hover:border-ink-900"
             }`}
           >
-            <div className="inline-flex h-14 w-14 rounded-sm bg-ivory-50 border-2 border-ink-900 items-center justify-center mb-5">
-              <UploadCloud
-                className="h-6 w-6 text-ink-900"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-            </div>
-            <p className="font-display font-medium text-xl text-ink-900 mb-2">
-              Déposez votre vidéo ici
-            </p>
-            <p className="text-sm text-ink-600">
-              ou{" "}
-              <span className="text-rouge-500 font-semibold">
-                cliquez pour parcourir
-              </span>
-            </p>
-            <p className="mt-3 text-xs text-ink-400">
-              MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
-            </p>
+            {phase === "validating" ? (
+              <>
+                <Loader2
+                  className="h-7 w-7 text-rouge-500 animate-spin mb-4"
+                  aria-hidden
+                />
+                <p className="font-display font-medium text-lg text-ink-900">
+                  Lecture de la vidéo…
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex h-14 w-14 rounded-sm bg-ivory-50 border-2 border-ink-900 items-center justify-center mb-5">
+                  <UploadCloud
+                    className="h-6 w-6 text-ink-900"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                </div>
+                <p className="font-display font-medium text-xl text-ink-900 mb-2">
+                  Déposez votre vidéo ici
+                </p>
+                <p className="text-sm text-ink-600">
+                  ou{" "}
+                  <span className="text-rouge-500 font-semibold">
+                    cliquez pour parcourir
+                  </span>
+                </p>
+                <p className="mt-3 text-xs text-ink-400">
+                  MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
+                </p>
+                <p className="mt-1 text-xs text-ink-400">
+                  Vous choisirez la langue des sous-titres juste après.
+                </p>
+              </>
+            )}
             <input
               ref={inputRef}
               type="file"
               accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,.mp4,.mov,.avi,.mkv,.webm"
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
+                const f = e.target.files?.[0];
+                if (f) handleSelect(f);
               }}
             />
           </div>
@@ -292,11 +269,159 @@ export function UploadClient({
               <span>{error}</span>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Étape 2 — Configuration (après dépôt) : une seule décision visible. */}
+      {phase === "configure" && fileInfo && (
+        <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
+          {/* Fichier déposé */}
+          <div className="flex items-start gap-4 mb-7">
+            <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
+              <FileVideo
+                className="h-6 w-6 text-rouge-400"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display font-semibold text-ink-900 truncate">
+                {fileInfo.name}
+              </p>
+              <p className="text-xs text-ink-500 font-mono tabular-nums mt-0.5">
+                {formatDuration(fileInfo.duration)} ·{" "}
+                {(fileInfo.size / (1024 * 1024)).toFixed(1)} Mo
+              </p>
+            </div>
+            <button
+              onClick={reset}
+              className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-ink-500 hover:text-ink-900"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              Changer
+            </button>
+          </div>
+
+          {/* Langue des sous-titres (l'unique vraie décision) */}
+          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
+            Sous-titres en
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => setTargetLang("same")}
+              className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                targetLang === "same"
+                  ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                  : "border-ivory-300 text-ink-600 hover:border-ink-400"
+              }`}
+            >
+              Dans la langue parlée
+            </button>
+            {LANG_OPTIONS.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setTargetLang(o.id)}
+                className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                  targetLang === o.id
+                    ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                    : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                }`}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+
+          <p className="text-xs text-ink-500 mt-3">{helperText}</p>
+
+          {/* Avancé — préciser la langue parlée (rare, replié par défaut) */}
+          <div className="mt-5 pt-5 border-t border-ivory-300">
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              className="inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-900 transition-colors"
+            >
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+              Avancé · préciser la langue parlée
+            </button>
+
+            {advancedOpen && (
+              <div className="mt-3">
+                <p className="text-xs text-ink-500 mb-2">
+                  Par défaut, la langue parlée est détectée automatiquement.
+                  Précisez-la seulement si la détection se trompe (clip très
+                  court, fort accent…).
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setSourceLang("auto")}
+                    className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                      sourceLang === "auto"
+                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                    }`}
+                  >
+                    Détection automatique
+                  </button>
+                  {LANG_OPTIONS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setSourceLang(o.id)}
+                      className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                        sourceLang === o.id
+                          ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                          : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {error && (
+            <div
+              role="alert"
+              className="mt-5 flex items-start gap-2 p-3 bg-rouge-50 border border-rouge-200 rounded-sm text-sm text-rouge-700"
+            >
+              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Action */}
+          <div className="mt-7 flex items-center gap-4">
+            <button
+              onClick={handleGenerate}
+              disabled={submitting}
+              className="inline-flex items-center gap-2 bg-ink-900 text-ivory-50 px-5 py-2.5 rounded-sm font-medium hover:bg-ink-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <UploadCloud className="h-4 w-4" aria-hidden />
+              )}
+              Générer les sous-titres
+            </button>
+            <span className="text-xs text-ink-400 font-mono tabular-nums">
+              {Math.ceil(fileInfo.duration / 60)} min
+            </span>
           </div>
         </div>
-      ) : (
+      )}
+
+      {/* Étape 3 — Envoi / finalisation. */}
+      {(busy || phase === "done") && (
         <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
-          {/* Infos fichier */}
           {fileInfo && (
             <div className="flex items-start gap-4 mb-6">
               <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
@@ -324,12 +449,10 @@ export function UploadClient({
             </div>
           )}
 
-          {/* Barre de progression */}
           {busy && (
             <>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                  {phase === "validating" && "Validation…"}
                   {phase === "uploading" && "Envoi en cours…"}
                   {phase === "finalizing" && "Finalisation…"}
                 </span>
@@ -356,20 +479,10 @@ export function UploadClient({
           {phase === "done" && (
             <div className="flex items-center gap-2 text-sm text-rouge-700 font-medium">
               <CheckCircle2 className="h-4 w-4" aria-hidden />
-              Vidéo envoyée. Traduction en cours — redirection…
+              Vidéo envoyée. Traitement en cours — redirection…
             </div>
           )}
         </div>
-      )}
-
-      {phase === "error" && fileInfo && (
-        <button
-          onClick={reset}
-          className="mt-4 inline-flex items-center gap-1.5 text-sm text-ink-600 hover:text-ink-900"
-        >
-          <X className="h-4 w-4" aria-hidden />
-          Réessayer avec une autre vidéo
-        </button>
       )}
     </div>
   );
