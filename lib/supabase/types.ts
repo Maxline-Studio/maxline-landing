@@ -95,6 +95,7 @@ export type Database = {
           transcription_target: Json | null;
           source_lang: string;
           target_lang: string;
+          source_lang_auto: boolean;
           uploaded_at: string;
           user_edited: boolean;
           user_id: string;
@@ -127,6 +128,7 @@ export type Database = {
           transcription_target?: Json | null;
           source_lang?: string;
           target_lang?: string;
+          source_lang_auto?: boolean;
           uploaded_at?: string;
           user_edited?: boolean;
           user_id: string;

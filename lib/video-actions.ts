@@ -28,7 +28,8 @@ export async function createVideoUpload(params: {
   durationSeconds: number;
   sizeBytes: number;
   format: string;
-  sourceLang?: Lang;
+  /** Langue parlée, ou "auto" pour laisser le worker la détecter. */
+  sourceLang?: Lang | "auto";
   targetLang?: Lang;
 }): Promise<CreateUploadResult> {
   const supabase = await createClient();
@@ -101,8 +102,12 @@ export async function createVideoUpload(params: {
   ).toISOString();
 
   const ext = params.format;
-  // Langues (défaut FR→EN). On valide pour ne jamais insérer une langue hors liste.
-  const sourceLang: Lang = isLang(params.sourceLang) ? params.sourceLang : "fr";
+  // Langues. Mode "auto" = détection de la langue parlée par le worker : on pose
+  // un placeholder valide (écrasé par la langue détectée) + source_lang_auto.
+  // Sinon on valide pour ne jamais insérer une langue hors liste (défaut FR).
+  const autoDetect = params.sourceLang === "auto";
+  const sourceLang: Lang =
+    !autoDetect && isLang(params.sourceLang) ? params.sourceLang : "fr";
   const targetLang: Lang = isLang(params.targetLang) ? params.targetLang : "en";
 
   // Insert la ligne video
@@ -116,6 +121,7 @@ export async function createVideoUpload(params: {
       format: ext,
       source_lang: sourceLang,
       target_lang: targetLang,
+      source_lang_auto: autoDetect,
       status: "queued",
       delete_at: deleteAt,
     })

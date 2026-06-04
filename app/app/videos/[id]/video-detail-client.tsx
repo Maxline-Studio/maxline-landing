@@ -431,12 +431,14 @@ export function VideoDetailClient({
             <span className="annotation">§ Vidéo</span>
             <VideoStatusBadge status={status} />
             <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500 border border-ivory-300 rounded-sm px-2 py-1">
-              {isTranslation(
-                initialVideo.source_lang || "fr",
-                initialVideo.target_lang || "en",
-              )
-                ? `${langShort(initialVideo.source_lang || "fr")} → ${langShort(initialVideo.target_lang || "en")}`
-                : `${langShort(initialVideo.target_lang || "en")} · transcription`}
+              {initialVideo.source_lang_auto && status !== "done"
+                ? `détection… → ${langShort(initialVideo.target_lang || "en")}`
+                : isTranslation(
+                      initialVideo.source_lang || "fr",
+                      initialVideo.target_lang || "en",
+                    )
+                  ? `${langShort(initialVideo.source_lang || "fr")} → ${langShort(initialVideo.target_lang || "en")}`
+                  : `${langShort(initialVideo.target_lang || "en")} · transcription`}
             </span>
           </div>
           <h1 className="font-display font-medium text-2xl md:text-3xl leading-tight tracking-[-0.015em] text-ink-900 break-words">
@@ -453,6 +455,11 @@ export function VideoDetailClient({
               year: "numeric",
             })}
           </p>
+          {initialVideo.source_lang_auto && status === "done" && (
+            <p className="annotation mt-2">
+              Langue détectée : {langLabel(sourceLang)}
+            </p>
+          )}
         </div>
       </div>
 

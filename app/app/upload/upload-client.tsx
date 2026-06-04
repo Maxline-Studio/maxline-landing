@@ -27,7 +27,8 @@ export function UploadClient({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [sourceLang, setSourceLang] = useState<Lang>("fr");
+  // "auto" = laisser le worker détecter la langue parlée (défaut).
+  const [sourceLang, setSourceLang] = useState<Lang | "auto">("auto");
   const [targetLang, setTargetLang] = useState<Lang>("en");
   const [phase, setPhase] = useState<Phase>("idle");
   const [progress, setProgress] = useState(0);
@@ -166,6 +167,17 @@ export function UploadClient({
                 Langue parlée
               </span>
               <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSourceLang("auto")}
+                  className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+                    sourceLang === "auto"
+                      ? "border-rouge-500 bg-rouge-50 text-ink-900"
+                      : "border-ivory-300 text-ink-600 hover:border-ink-400"
+                  }`}
+                >
+                  Détection automatique
+                </button>
                 {LANG_OPTIONS.map((o) => (
                   <button
                     key={o.id}
@@ -206,9 +218,11 @@ export function UploadClient({
             </div>
 
             <p className="text-xs text-ink-500">
-              {sourceLang === targetLang
-                ? `Transcription en ${langLabel(targetLang)} — sous-titres dans la langue parlée (idéal accessibilité).`
-                : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
+              {sourceLang === "auto"
+                ? `La langue parlée est détectée automatiquement → sous-titres en ${langLabel(targetLang)}.`
+                : sourceLang === targetLang
+                  ? `Transcription en ${langLabel(targetLang)} — sous-titres dans la langue parlée (idéal accessibilité).`
+                  : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`}
             </p>
 
             <p className="mt-auto pt-5 border-t border-ivory-300 text-sm text-ink-500 leading-relaxed">

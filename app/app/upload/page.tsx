@@ -44,8 +44,8 @@ export default async function UploadPage() {
         </span>
       </h1>
       <p className="text-ink-600 leading-relaxed mb-8 max-w-xl">
-        Choisissez les langues, déposez votre vidéo, récupérez des sous-titres
-        prêts à publier — 10 langues, dans les deux sens.
+        Déposez votre vidéo, choisissez la langue des sous-titres — la langue
+        parlée est détectée automatiquement. 10 langues, dans les deux sens.
       </p>
 
       <UploadClient minutesAvailable={minutesAvailable} />
