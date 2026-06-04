@@ -8,18 +8,16 @@ import {
   type SubtitleSegment,
 } from "@/lib/subtitles";
 import { buildFcpxml } from "@/lib/fcpxml";
-import { computeRank, RANK_ORDER } from "@/lib/atelier";
 
 const FORMATS: SubtitleFormat[] = ["srt", "vtt", "txt"];
-// Formats d'export montage (perk) : réservés au plan Plus OU au rang
-// Éditeur en chef+ (« exports .fcpxml inclus même sur Starter »).
+// Formats d'export montage (perk) : réservés au plan Plus (perk qui s'achète).
 const PRO_FORMATS = ["fcpxml"] as const;
 type ProFormat = (typeof PRO_FORMATS)[number];
 
 /**
  * Export des sous-titres d'une vidéo terminée.
  * /app/videos/[id]/export?format=srt|vtt|txt|fcpxml
- * fcpxml = export montage (DaVinci/Premiere/FCP), gaté plan Plus ou rang Éditeur en chef+.
+ * fcpxml = export montage (DaVinci/Premiere/FCP), réservé au plan Plus.
  */
 export async function GET(
   request: NextRequest,
@@ -59,23 +57,16 @@ export async function GET(
     );
   }
 
-  // Gating des formats montage (perk) : plan Plus OU rang Éditeur en chef+.
+  // Gating des formats montage (perk) : réservé au plan Plus.
   if (isPro) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("plan, lifetime_minutes_used")
+      .select("plan")
       .eq("id", user.id)
       .single();
-    const rank = computeRank(profile?.lifetime_minutes_used ?? 0);
-    const rankOk =
-      RANK_ORDER.indexOf(rank) >= RANK_ORDER.indexOf("editeur_en_chef");
-    const planOk = profile?.plan === "plus";
-    if (!planOk && !rankOk) {
+    if (profile?.plan !== "plus") {
       return NextResponse.json(
-        {
-          error:
-            "Export montage réservé au plan Plus ou au rang Éditeur en chef.",
-        },
+        { error: "Export montage .fcpxml réservé au plan Plus." },
         { status: 403 },
       );
     }

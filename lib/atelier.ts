@@ -52,11 +52,9 @@ export const RANK_PERKS: Record<Rank, string[]> = {
   ],
   correcteur: [
     "Glossaire personnalisé sauvegardé",
-    "Priorité dans la file de traitement",
     "+5 min offertes tous les 3 mois consécutifs",
   ],
   editeur_en_chef: [
-    "Export montage .fcpxml inclus, même sur Starter",
     "Accès anticipé aux nouvelles fonctions",
     "+15 min offertes tous les 3 mois · +50 min anniversaire",
   ],

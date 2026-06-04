@@ -9,6 +9,7 @@ import {
   appUrl,
   type PaidPlan,
   type CreditPack,
+  type BillingInterval,
 } from "@/lib/stripe";
 
 export type CheckoutKind = PaidPlan | `credits_${CreditPack}`;
@@ -23,6 +24,7 @@ export type CheckoutResult =
  */
 export async function createCheckoutSession(
   kind: CheckoutKind,
+  interval: BillingInterval = "month",
 ): Promise<CheckoutResult> {
   const supabase = await createClient();
   const {
@@ -57,7 +59,7 @@ export async function createCheckoutSession(
 
   const isSubscription = kind === "starter" || kind === "plus";
   const priceId = isSubscription
-    ? planPriceId(kind as PaidPlan)
+    ? planPriceId(kind as PaidPlan, interval)
     : creditPriceId(kind.replace("credits_", "") as CreditPack);
 
   try {
@@ -135,6 +137,7 @@ export async function createPortalSession(
  */
 export async function subscribeOrChangePlan(
   kind: PaidPlan,
+  interval: BillingInterval = "month",
 ): Promise<CheckoutResult> {
   const supabase = await createClient();
   const {
@@ -157,6 +160,6 @@ export async function subscribeOrChangePlan(
     return createPortalSession("change_plan");
   }
 
-  // Sinon, nouvel abonnement via Checkout.
-  return createCheckoutSession(kind);
+  // Sinon, nouvel abonnement via Checkout (mensuel ou annuel).
+  return createCheckoutSession(kind, interval);
 }

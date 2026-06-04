@@ -31,7 +31,7 @@ export type Alternative = {
 };
 
 const MAXLINE_BRIEF =
-  "Sous-titrage + traduction dans 10 langues, forfait clair à 12 €/mois (120 min), édité en France, exports .srt/.vtt/.fcpxml.";
+  "Sous-titrage + traduction dans 10 langues, forfait clair à 12 €/mois (120 min), édité en France, exports .srt/.vtt/.txt (export montage .fcpxml sur Plus).";
 
 export const ALTERNATIVES: Alternative[] = [
   {

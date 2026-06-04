@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/supabase/types";
+import { hasAnnualPricing } from "@/lib/stripe";
 import { BillingActions } from "./billing-client";
 
 export const metadata: Metadata = {
@@ -103,6 +104,7 @@ export default async function BillingPage({
           Boolean(profile.stripe_subscription_id) &&
           (profile.plan === "starter" || profile.plan === "plus")
         }
+        annualAvailable={hasAnnualPricing()}
       />
     </div>
   );

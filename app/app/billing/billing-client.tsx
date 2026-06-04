@@ -9,10 +9,13 @@ import {
   type CheckoutKind,
 } from "@/lib/stripe-actions";
 
+type BillingInterval = "month" | "year";
+
 type PlanCard = {
   kind: "starter" | "plus";
   name: string;
   price: number;
+  annualPrice: number;
   minutes: number;
   perks: string[];
 };
@@ -22,6 +25,7 @@ const PLANS: PlanCard[] = [
     kind: "starter",
     name: "Starter",
     price: 12,
+    annualPrice: 115,
     minutes: 120,
     perks: ["Exports .srt + .vtt + .txt", "Éditeur en ligne", "Support FR < 24 h"],
   },
@@ -29,11 +33,12 @@ const PLANS: PlanCard[] = [
     kind: "plus",
     name: "Plus",
     price: 24,
+    annualPrice: 230,
     minutes: 360,
     perks: [
       "Tout Starter",
       "+ Export montage .fcpxml (DaVinci, Premiere, FCP)",
-      "Glossaire · Priorité",
+      "+ Traitement prioritaire",
     ],
   },
 ];
@@ -48,14 +53,19 @@ export function BillingActions({
   currentPlan,
   hasCustomer,
   isSubscribed,
+  annualAvailable,
 }: {
   currentPlan: string;
   hasCustomer: boolean;
   isSubscribed: boolean;
+  annualAvailable: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [busyKind, setBusyKind] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] =
+    useState<BillingInterval>("month");
+  const annual = billingInterval === "year";
 
   function go(action: () => Promise<{ ok: boolean; url?: string; error?: string }>, key: string) {
     setError(null);
@@ -85,13 +95,44 @@ export function BillingActions({
       {/* Abonnements */}
       <section>
         <h2 className="font-display font-medium text-xl text-ink-900 mb-2">
-          Abonnements mensuels
+          Abonnements
         </h2>
         {isSubscribed && (
           <p className="text-sm text-ink-600 mb-5">
             Vous êtes abonné. Changer de plan se fait via le portail sécurisé
             Stripe, au prorata — aucun double prélèvement.
           </p>
+        )}
+        {annualAvailable && !isSubscribed && (
+          <div className="inline-flex items-center gap-1 mb-6 p-1 bg-ivory-100 border border-ivory-300 rounded-sm">
+            <button
+              type="button"
+              onClick={() => setBillingInterval("month")}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
+                !annual
+                  ? "bg-ink-900 text-ivory-50"
+                  : "text-ink-600 hover:text-ink-900"
+              }`}
+            >
+              Mensuel
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingInterval("year")}
+              className={`px-3 py-1.5 rounded-sm text-xs font-medium transition-colors ${
+                annual
+                  ? "bg-ink-900 text-ivory-50"
+                  : "text-ink-600 hover:text-ink-900"
+              }`}
+            >
+              Annuel{" "}
+              <span
+                className={annual ? "text-rouge-300" : "text-rouge-600"}
+              >
+                −20 %
+              </span>
+            </button>
+          </div>
         )}
         <div className="grid sm:grid-cols-2 gap-4">
           {PLANS.map((plan) => {
@@ -115,11 +156,19 @@ export function BillingActions({
                 </div>
                 <div className="mb-4">
                   <span className="font-display font-extrabold text-3xl text-ink-900 tabular-nums">
-                    {plan.price} €
+                    {annual ? plan.annualPrice : plan.price} €
                   </span>
                   <span className="text-sm text-ink-500">
-                    {" "}/ mois · {plan.minutes} min
+                    {annual
+                      ? ` / an · ${plan.minutes * 12} min pour l'année`
+                      : ` / mois · ${plan.minutes} min`}
                   </span>
+                  {annual && (
+                    <p className="text-xs text-rouge-600 mt-1">
+                      ≈ {Math.round(plan.annualPrice / 12)} €/mois · 2 mois
+                      offerts
+                    </p>
+                  )}
                 </div>
                 <ul className="space-y-2 text-sm text-ink-700 mb-6">
                   {plan.perks.map((perk, i) => (
@@ -133,7 +182,10 @@ export function BillingActions({
                   type="button"
                   disabled={pending || isCurrent}
                   onClick={() =>
-                    go(() => subscribeOrChangePlan(plan.kind), plan.kind)
+                    go(
+                      () => subscribeOrChangePlan(plan.kind, billingInterval),
+                      plan.kind,
+                    )
                   }
                   className="btn-pen w-full disabled:opacity-50 disabled:cursor-not-allowed"
                 >

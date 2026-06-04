@@ -7,7 +7,9 @@ import {
   planForPriceId,
   PLAN_MINUTES,
   CREDIT_PACK_MINUTES,
+  quotaMultiplier,
   type CreditPack,
+  type BillingInterval,
 } from "@/lib/stripe";
 
 /**
@@ -110,8 +112,12 @@ export async function POST(req: NextRequest) {
         const userId = await profileIdByCustomer(customerId);
         if (!userId) break;
 
-        const priceId = sub.items.data[0]?.price.id;
+        const price = sub.items.data[0]?.price;
+        const priceId = price?.id;
         const plan = priceId ? planForPriceId(priceId) : null;
+        // Périodicité : annuel = « pool » de 12× le quota mensuel (cf. stripe.ts).
+        const interval: BillingInterval =
+          price?.recurring?.interval === "year" ? "year" : "month";
 
         // Abonnement actif → applique le plan + quota. Sinon (canceled/unpaid)
         // on laisse la gestion à subscription.deleted.
@@ -119,7 +125,7 @@ export async function POST(req: NextRequest) {
           const update: ProfileUpdate = {
             plan,
             stripe_subscription_id: sub.id,
-            quota_minutes_total: PLAN_MINUTES[plan],
+            quota_minutes_total: PLAN_MINUTES[plan] * quotaMultiplier(interval),
             quota_reset_at: subPeriodEnd(sub),
           };
           if (event.type === "customer.subscription.created") {

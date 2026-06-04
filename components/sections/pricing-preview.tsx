@@ -48,7 +48,6 @@ const plans = [
       "360 minutes de vidéo / mois",
       "Tout le plan Starter",
       "Export montage .fcpxml (DaVinci, Premiere, FCP)",
-      "Glossaire personnalisé",
       "Traitement prioritaire",
       "Atelier + bonus accélérés",
     ],
@@ -191,6 +190,7 @@ export function PricingPreview() {
         <Reveal delay={400}>
           <p className="mt-14 text-center text-sm text-ink-600 font-mono uppercase tracking-widest">
             › Première vidéo de moins de 5 min offerte &middot; sans carte bancaire
+            &middot; −20 % en annuel
           </p>
         </Reveal>
       </div>
