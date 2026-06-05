@@ -32,6 +32,8 @@ export async function createVideoUpload(params: {
   sourceLang?: Lang | "auto";
   /** Langue des sous-titres, ou "same" = dans la langue parlée (transcription). */
   targetLang?: Lang | "same";
+  /** Noms propres à respecter (marques/prénoms/noms/URLs), séparés par virgules. */
+  importantTerms?: string;
 }): Promise<CreateUploadResult> {
   const supabase = await createClient();
   const {
@@ -139,6 +141,7 @@ export async function createVideoUpload(params: {
       target_lang: targetLang,
       source_lang_auto: autoDetect,
       target_same_as_source: targetSameAsSource,
+      important_terms: (params.importantTerms || "").trim().slice(0, 600) || null,
       status: "queued",
       delete_at: deleteAt,
     })

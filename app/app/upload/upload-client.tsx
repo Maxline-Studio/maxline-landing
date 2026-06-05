@@ -45,6 +45,8 @@ export function UploadClient({
   const [targetLang, setTargetLang] = useState<Lang | "same">("same");
   // Langue parlée : "auto" (détection) par défaut. Override via « Avancé ».
   const [sourceLang, setSourceLang] = useState<Lang | "auto">("auto");
+  // Noms propres à respecter (marques/prénoms/noms/URLs) — corrige l'ASR.
+  const [importantTerms, setImportantTerms] = useState("");
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [submitting, setSubmitting] = useState(false);
@@ -116,6 +118,7 @@ export function UploadClient({
       format: ext,
       sourceLang,
       targetLang,
+      importantTerms,
     });
     if (!result.ok) {
       setError(result.error);
@@ -154,7 +157,7 @@ export function UploadClient({
     setTimeout(() => {
       router.push(`/app/videos/${result.videoId}`);
     }, 900);
-  }, [file, fileInfo, sourceLang, targetLang, submitting, router]);
+  }, [file, fileInfo, sourceLang, targetLang, importantTerms, submitting, router]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -335,6 +338,32 @@ export function UploadClient({
           </div>
 
           <p className="text-xs text-ink-500 mt-3">{helperText}</p>
+
+          {/* Noms propres à respecter (optionnel) — corrige l'orthographe des
+              marques/prénoms/noms que le modèle ne connaît pas. */}
+          <div className="mt-5">
+            <label
+              htmlFor="important-terms"
+              className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2"
+            >
+              Noms propres à respecter{" "}
+              <span className="text-ink-400 normal-case tracking-normal">
+                (optionnel)
+              </span>
+            </label>
+            <input
+              id="important-terms"
+              type="text"
+              value={importantTerms}
+              onChange={(e) => setImportantTerms(e.target.value)}
+              placeholder="ex. Maxline Studio, maxlinestudio.fr, Maxence"
+              className="w-full px-3 py-2 rounded-sm border border-ivory-300 bg-ivory-50 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none"
+            />
+            <p className="text-xs text-ink-500 mt-1.5">
+              Marques, prénoms, noms, pseudos, sites… On les écrit exactement —
+              et on ne les traduit pas.
+            </p>
+          </div>
 
           {/* Avancé — préciser la langue parlée (rare, replié par défaut) */}
           <div className="mt-5 pt-5 border-t border-ivory-300">

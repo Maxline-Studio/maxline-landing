@@ -97,6 +97,7 @@ export type Database = {
           target_lang: string;
           source_lang_auto: boolean;
           target_same_as_source: boolean;
+          important_terms: string | null;
           uploaded_at: string;
           user_edited: boolean;
           user_id: string;
@@ -131,6 +132,7 @@ export type Database = {
           target_lang?: string;
           source_lang_auto?: boolean;
           target_same_as_source?: boolean;
+          important_terms?: string | null;
           uploaded_at?: string;
           user_edited?: boolean;
           user_id: string;
