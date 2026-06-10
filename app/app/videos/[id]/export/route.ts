@@ -2,21 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
   generateSubtitles,
-  exportFilename,
   SUBTITLE_MIME,
   type SubtitleFormat,
   type SubtitleSegment,
 } from "@/lib/subtitles";
 import { buildFcpxml } from "@/lib/fcpxml";
+import { isLang, langShort } from "@/lib/langs";
+import { getSubtitle } from "@/lib/subtitles-store";
+import { generateLanguage } from "@/lib/video-actions";
 
 const FORMATS: SubtitleFormat[] = ["srt", "vtt", "txt"];
 // Formats d'export montage (perk) : réservés au plan Plus (perk qui s'achète).
 const PRO_FORMATS = ["fcpxml"] as const;
-type ProFormat = (typeof PRO_FORMATS)[number];
 
 /**
- * Export des sous-titres d'une vidéo terminée.
- * /app/videos/[id]/export?format=srt|vtt|txt|fcpxml
+ * Export des sous-titres d'une vidéo terminée, PAR LANGUE.
+ * /app/videos/[id]/export?format=srt|vtt|txt|fcpxml&lang=es
+ * - lang absent → langue actuellement affichée (videos.target_lang).
+ * - langue pas encore générée → générée à la volée (gratuit) puis exportée.
  * fcpxml = export montage (DaVinci/Premiere/FCP), réservé au plan Plus.
  */
 export async function GET(
@@ -25,6 +28,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const format = request.nextUrl.searchParams.get("format");
+  const langParam = request.nextUrl.searchParams.get("lang");
   const isStandard = !!format && (FORMATS as string[]).includes(format);
   const isPro = !!format && (PRO_FORMATS as readonly string[]).includes(format);
 
@@ -42,7 +46,7 @@ export async function GET(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("status, original_filename, transcription_target")
+    .select("status, original_filename, transcription_target, target_lang")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
@@ -72,8 +76,25 @@ export async function GET(
     }
   }
 
-  const segments = (video.transcription_target as SubtitleSegment[] | null) ?? [];
-  if (segments.length === 0) {
+  // Langue cible : paramètre validé, sinon langue affichée.
+  const lang = isLang(langParam)
+    ? langParam
+    : isLang(video.target_lang)
+      ? video.target_lang
+      : "en";
+
+  // Source de vérité = video_subtitles[lang]. Si la langue n'est pas encore
+  // générée, on la génère à la volée (gratuit) puis on exporte. Repli legacy.
+  let segments = await getSubtitle(supabase, id, lang);
+  if (!segments || segments.length === 0) {
+    const gen = await generateLanguage(id, lang);
+    if (gen.ok && gen.segments) {
+      segments = gen.segments;
+    } else {
+      segments = (video.transcription_target as SubtitleSegment[] | null) ?? [];
+    }
+  }
+  if (!segments || segments.length === 0) {
     return NextResponse.json(
       { error: "Aucun sous-titre disponible." },
       { status: 404 },
@@ -97,7 +118,7 @@ export async function GET(
     ext = fmt;
   }
 
-  const filename = exportFilename(video.original_filename, ext);
+  const filename = langExportFilename(video.original_filename, lang, ext);
 
   return new NextResponse(content, {
     status: 200,
@@ -107,4 +128,15 @@ export async function GET(
       "Cache-Control": "no-store",
     },
   });
+}
+
+/** Nom de fichier d'export avec suffixe de langue : « base_ES.srt ». */
+function langExportFilename(
+  originalFilename: string,
+  lang: string,
+  ext: string,
+): string {
+  const base = (originalFilename || "sous-titres").replace(/\.[^.]+$/, "");
+  const safe = base.replace(/[^\p{L}\p{N}\-_ ]/gu, "").trim() || "sous-titres";
+  return `${safe}_${langShort(lang)}.${ext}`;
 }

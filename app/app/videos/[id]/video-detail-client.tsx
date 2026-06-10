@@ -31,6 +31,7 @@ import {
   saveSubtitleStyle,
   regenerateLine,
   setSubtitleLanguage,
+  loadSubtitles,
   requestBurn,
   getBurnStatus,
   getBurnedUrl,
@@ -84,11 +85,13 @@ export function VideoDetailClient({
   videoUrl,
   canExportPro,
   availableLangs,
+  initialSegments,
 }: {
   initialVideo: Video;
   videoUrl: string | null;
   canExportPro: boolean;
   availableLangs: SubtitleLang[];
+  initialSegments: Record<string, Segment[]>;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialVideo.status);
@@ -122,13 +125,10 @@ export function VideoDetailClient({
     return () => clearInterval(interval);
   }, [isProcessing, poll]);
 
-  // ─── Édition des sous-titres ───
+  // ─── Édition des sous-titres (multi-langue) ───
   const playerRef = useRef<SubtitlePlayerHandle>(null);
   const activeRowRef = useRef<HTMLElement>(null);
   const dirtyRef = useRef(false);
-  const [segments, setSegments] = useState<Segment[]>(
-    (initialVideo.transcription_target as Segment[]) || [],
-  );
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -137,18 +137,49 @@ export function VideoDetailClient({
     (initialVideo.burn_status as BurnStatus) || "idle",
   );
 
-  const segmentsRef = useRef(segments);
-  segmentsRef.current = segments;
-
   const sourceLang = initialVideo.source_lang || "fr";
   const [targetLang, setTargetLang] = useState<Lang>(
     isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en",
   );
+
+  // Sous-titres de TOUTES les langues prêtes, indexés par langue (bascule
+  // instantanée sans réseau). Le worker pré-génère les 10 langues en tâche de
+  // fond ; on les complète par polling (cf. plus bas). Repli legacy pour la
+  // langue active si la table n'a encore rien (vidéos d'avant la migration).
+  const [segmentsByLang, setSegmentsByLang] = useState<
+    Record<string, Segment[]>
+  >(() => {
+    const init: Record<string, Segment[]> = { ...initialSegments };
+    const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
+    if (!init[tl]) {
+      init[tl] = (initialVideo.transcription_target as Segment[]) || [];
+    }
+    return init;
+  });
+  const segments = segmentsByLang[targetLang] ?? [];
+  const setSegments = useCallback(
+    (updater: Segment[] | ((prev: Segment[]) => Segment[])) => {
+      setSegmentsByLang((prev) => {
+        const cur = prev[targetLang] ?? [];
+        const next =
+          typeof updater === "function"
+            ? (updater as (p: Segment[]) => Segment[])(cur)
+            : updater;
+        return { ...prev, [targetLang]: next };
+      });
+    },
+    [targetLang],
+  );
+
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
+
   const [switching, setSwitching] = useState(false);
   const [switchError, setSwitchError] = useState<string | null>(null);
   // Langues déjà générées (✓ dans le menu). La langue active est toujours présente.
   const [readyLangs, setReadyLangs] = useState<Set<Lang>>(() => {
     const s = new Set<Lang>(availableLangs.map((l) => l.lang));
+    for (const l of Object.keys(initialSegments)) if (isLang(l)) s.add(l);
     if (isLang(initialVideo.target_lang)) s.add(initialVideo.target_lang);
     return s;
   });
@@ -158,7 +189,9 @@ export function VideoDetailClient({
   const sourceRtl = isRtl(sourceLang);
   // Référence source (italique) uniquement en mode traduction (sinon = doublon).
   const segmentsSource = translationMode
-    ? (initialVideo.transcription_source as Segment[]) || []
+    ? segmentsByLang[sourceLang] ??
+      (initialVideo.transcription_source as Segment[]) ??
+      []
     : [];
 
   // Style des sous-titres (perso, persisté par vidéo, sauvegarde différée).
@@ -186,13 +219,40 @@ export function VideoDetailClient({
     [],
   );
 
-  // Quand la transcription arrive (ex. transition live "en cours → terminé"),
-  // on recharge les segments — sauf si l'utilisateur a des modifs non sauvées.
+  // Le worker pré-génère les 10 langues en arrière-plan après 'done'. On
+  // complète la liste par polling court : les langues « s'allument » dans le
+  // menu et la bascule reste instantanée (cache client). On n'écrase JAMAIS une
+  // langue déjà chargée (préserve les éditions locales). Stop dès les 10 prêtes.
+  const pollAttemptsRef = useRef(0);
   useEffect(() => {
-    if (!dirtyRef.current) {
-      setSegments((initialVideo.transcription_target as Segment[]) || []);
-    }
-  }, [initialVideo.transcription_target]);
+    if (status !== "done") return;
+    if (readyLangs.size >= 10) return;
+    // Garde-fou : on arrête après ~2 min même si une langue a échoué (best-effort
+    // côté worker). Les langues manquantes restent générables à la demande.
+    if (pollAttemptsRef.current >= 30) return;
+    let stop = false;
+    const tick = async () => {
+      pollAttemptsRef.current += 1;
+      const res = await loadSubtitles(initialVideo.id);
+      if (stop || !res.ok) return;
+      const srv = res.segments;
+      if (srv) setSegmentsByLang((prev) => ({ ...srv, ...prev }));
+      if (res.langs) {
+        const ready = res.langs;
+        setReadyLangs((prev) => {
+          const n = new Set(prev);
+          for (const l of ready) if (l.status === "ready") n.add(l.lang);
+          return n;
+        });
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 4000);
+    return () => {
+      stop = true;
+      clearInterval(interval);
+    };
+  }, [status, readyLangs.size, initialVideo.id]);
 
   const activeIndex = useMemo(
     () =>
@@ -300,14 +360,29 @@ export function VideoDetailClient({
     setRegeneratingIdx(null);
   };
 
-  // Changement de langue des sous-titres : génère la langue si besoin (à la
-  // demande + cache), la pose comme langue affichée et bascule l'éditeur dessus.
-  // Modèle éco « tout inclus » : toutes les langues sont incluses (gratuit).
+  // Bascule de la langue des sous-titres. Si la langue est déjà en cache client
+  // (worker l'a pré-générée), la bascule est INSTANTANÉE ; sinon on la génère à
+  // la demande. Modèle éco « tout inclus » : toutes les langues sont gratuites.
   const handleLanguageChange = async (newLang: Lang) => {
     if (newLang === targetLang || switching) return;
-    // Sauvegarde des éventuelles modifs de la langue courante avant de basculer.
-    if (dirtyRef.current) await save();
     setSwitchError(null);
+    // Sauvegarde des modifs de la langue courante avant de basculer (save lit
+    // la langue active côté serveur, donc AVANT de poser la nouvelle active).
+    if (dirtyRef.current) await save();
+
+    const cached = segmentsByLang[newLang];
+    if (cached && cached.length > 0) {
+      // Bascule instantanée (zéro réseau côté affichage).
+      setTargetLang(newLang);
+      dirtyRef.current = false;
+      setSaveState("idle");
+      setBurnStatus("idle");
+      // En arrière-plan : pose la langue active (miroir legacy + reset burn).
+      void setSubtitleLanguage(initialVideo.id, newLang);
+      return;
+    }
+
+    // Pas encore générée (pré-génération worker en cours) → génère puis bascule.
     setSwitching(true);
     const res = await setSubtitleLanguage(initialVideo.id, newLang);
     setSwitching(false);
@@ -315,27 +390,41 @@ export function VideoDetailClient({
       setSwitchError(res.error || "Changement de langue impossible.");
       return;
     }
-    setSegments(res.segments);
-    setTargetLang(res.targetLang ?? newLang);
-    setReadyLangs((prev) => new Set(prev).add(res.targetLang ?? newLang));
+    const segs = res.segments;
+    setSegmentsByLang((prev) => ({ ...prev, [newLang]: segs }));
+    setReadyLangs((prev) => new Set(prev).add(newLang));
+    setTargetLang(newLang);
     setBurnStatus("idle");
     dirtyRef.current = false;
     setSaveState("idle");
   };
 
-  // Export : on sauvegarde d'abord (si modifs), puis on télécharge la version à jour.
+  const triggerDownload = (href: string) => {
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  // Export d'une langue : on sauvegarde d'abord (si modifs), puis on télécharge
+  // la langue AFFICHÉE à jour.
   const downloadExport = useCallback(
     async (fmt: "srt" | "vtt" | "txt" | "fcpxml") => {
       if (dirtyRef.current) await save();
-      const a = document.createElement("a");
-      a.href = `/app/videos/${initialVideo.id}/export?format=${fmt}`;
-      a.download = "";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      triggerDownload(
+        `/app/videos/${initialVideo.id}/export?format=${fmt}&lang=${targetLang}`,
+      );
     },
-    [initialVideo.id, save],
+    [initialVideo.id, save, targetLang],
   );
+
+  // Export « toutes les langues » : .zip avec un .srt + .vtt par langue prête.
+  const downloadAll = useCallback(async () => {
+    if (dirtyRef.current) await save();
+    triggerDownload(`/app/videos/${initialVideo.id}/export-all`);
+  }, [initialVideo.id, save]);
 
   // ─── Incrustation MP4 (burn-in) à la demande ───
   const burnInProgress = burnStatus === "queued" || burnStatus === "burning";
@@ -578,6 +667,14 @@ export function VideoDetailClient({
                 subtitleStyle={subtitleStyle}
                 onTimeUpdate={setCurrentTime}
                 onPlayingChange={setIsPlaying}
+                langs={LANG_OPTIONS.map((o) => ({
+                  id: o.id,
+                  label: o.label,
+                  ready: readyLangs.has(o.id),
+                }))}
+                currentLang={targetLang}
+                onLangChange={(l) => handleLanguageChange(l as Lang)}
+                switchingLang={switching}
               />
               <p className="mt-3 font-mono text-[10px] uppercase tracking-widest text-ink-500">
                 {segments.length} sous-titres · modifiez le texte, cliquez «&nbsp;Lire&nbsp;» pour vous y rendre
@@ -632,8 +729,20 @@ export function VideoDetailClient({
                       {burnStatus === "failed" ? "Réessayer le MP4" : "Générer le MP4 sous-titré"}
                     </button>
                   )}
+                  <button
+                    onClick={downloadAll}
+                    title="Un .srt + .vtt par langue, regroupés dans un .zip"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-ink-900 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ivory-50 hover:bg-ink-800 transition-colors"
+                  >
+                    <Download className="h-4 w-4" aria-hidden />
+                    Toutes les langues (.zip)
+                  </button>
                 </div>
                 <p className="text-xs text-ink-500 mt-3 font-mono">
+                  › .srt/.vtt/.txt = la langue affichée ({langShort(targetLang)}).
+                  Le .zip regroupe un fichier par langue.
+                </p>
+                <p className="text-xs text-ink-500 mt-1 font-mono">
                   › les exports reprennent vos dernières modifications (enregistrées
                   automatiquement)
                 </p>

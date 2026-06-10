@@ -54,6 +54,28 @@ export async function listLanguages(
     }));
 }
 
+/**
+ * Tous les sous-titres prêts d'une vidéo, indexés par langue. Sert à charger le
+ * lecteur multi-langue d'un coup (bascule instantanée, sans aller-retour réseau).
+ */
+export async function getAllSubtitles(
+  supabase: Client,
+  videoId: string,
+): Promise<Record<string, Segment[]>> {
+  const { data } = await supabase
+    .from("video_subtitles")
+    .select("lang, segments, status")
+    .eq("video_id", videoId);
+  const out: Record<string, Segment[]> = {};
+  for (const r of data ?? []) {
+    if (r.status !== "ready") continue;
+    if (!isLang(r.lang)) continue;
+    const segs = r.segments as Segment[] | null;
+    if (Array.isArray(segs)) out[r.lang] = segs;
+  }
+  return out;
+}
+
 /** Insère/met à jour les sous-titres d'une langue (cache après génération/édition). */
 export async function upsertSubtitle(
   supabase: Client,

@@ -16,6 +16,9 @@ import {
   Maximize,
   Minimize,
   VideoOff,
+  Languages,
+  Check,
+  Loader2,
 } from "lucide-react";
 import {
   overlayStyleCss,
@@ -55,9 +58,26 @@ export const SubtitlePlayer = forwardRef<
     subtitleStyle?: SubtitleStyle;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
+    /** Menu « Sous-titres » dans le lecteur : les 10 langues + leur état. */
+    langs?: { id: string; label: string; ready: boolean }[];
+    currentLang?: string;
+    onLangChange?: (lang: string) => void;
+    /** true pendant la génération à la demande d'une langue pas encore prête. */
+    switchingLang?: boolean;
   }
 >(function SubtitlePlayer(
-  { videoUrl, activeText, rtl, subtitleStyle, onTimeUpdate, onPlayingChange },
+  {
+    videoUrl,
+    activeText,
+    rtl,
+    subtitleStyle,
+    onTimeUpdate,
+    onPlayingChange,
+    langs,
+    currentLang,
+    onLangChange,
+    switchingLang,
+  },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +93,7 @@ export const SubtitlePlayer = forwardRef<
   const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [controlsVisible, setControlsVisible] = useState(true);
+  const [ccOpen, setCcOpen] = useState(false);
 
   useImperativeHandle(
     ref,
@@ -310,18 +331,85 @@ export const SubtitlePlayer = forwardRef<
                 {fmt(current)} / {fmt(duration)}
               </span>
 
-              <button
-                type="button"
-                onClick={toggleFullscreen}
-                aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
-                className="ml-auto text-ivory-50 hover:text-rouge-400 transition-colors"
-              >
-                {isFullscreen ? (
-                  <Minimize className="h-5 w-5" aria-hidden />
-                ) : (
-                  <Maximize className="h-5 w-5" aria-hidden />
+              <div className="ml-auto flex items-center gap-3">
+                {/* Menu « Sous-titres » : choix de la langue dans le lecteur */}
+                {langs && langs.length > 0 && onLangChange && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setCcOpen((o) => !o)}
+                      aria-label="Langue des sous-titres"
+                      aria-expanded={ccOpen}
+                      className={`inline-flex items-center gap-1 transition-colors ${
+                        ccOpen ? "text-rouge-400" : "text-ivory-50 hover:text-rouge-400"
+                      }`}
+                    >
+                      {switchingLang ? (
+                        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                      ) : (
+                        <Languages className="h-5 w-5" aria-hidden />
+                      )}
+                      <span className="font-mono text-[10px] uppercase tracking-wide hidden sm:inline">
+                        {currentLang ?? ""}
+                      </span>
+                    </button>
+                    {ccOpen && (
+                      <div
+                        className="absolute bottom-full right-0 mb-2 w-52 max-h-64 overflow-y-auto rounded-sm border border-ink-700 bg-ink-900/95 backdrop-blur py-1 shadow-xl"
+                        role="menu"
+                      >
+                        {langs.map((l) => {
+                          const active = l.id === currentLang;
+                          return (
+                            <button
+                              key={l.id}
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={active}
+                              onClick={() => {
+                                setCcOpen(false);
+                                if (!active) onLangChange(l.id);
+                              }}
+                              className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                                active
+                                  ? "text-rouge-400"
+                                  : "text-ivory-100 hover:bg-ink-800"
+                              }`}
+                            >
+                              <span>{l.label}</span>
+                              {active ? (
+                                <Check className="h-3.5 w-3.5 flex-shrink-0" aria-hidden />
+                              ) : l.ready ? (
+                                <span
+                                  className="h-1.5 w-1.5 rounded-full bg-success-500 flex-shrink-0"
+                                  title="Prête"
+                                />
+                              ) : (
+                                <span className="font-mono text-[9px] uppercase tracking-wide text-ink-400 flex-shrink-0">
+                                  générer
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 )}
-              </button>
+
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  aria-label={isFullscreen ? "Quitter le plein écran" : "Plein écran"}
+                  className="text-ivory-50 hover:text-rouge-400 transition-colors"
+                >
+                  {isFullscreen ? (
+                    <Minimize className="h-5 w-5" aria-hidden />
+                  ) : (
+                    <Maximize className="h-5 w-5" aria-hidden />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

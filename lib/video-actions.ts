@@ -12,7 +12,13 @@ import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 import { REGISTER_RULES } from "@/lib/translation-prompt";
 import { translateCuesBatched } from "@/lib/translate-cues";
 import { wrapLines } from "@/lib/wrap-lines";
-import { getSubtitle, upsertSubtitle } from "@/lib/subtitles-store";
+import {
+  getSubtitle,
+  getAllSubtitles,
+  listLanguages,
+  upsertSubtitle,
+  type SubtitleLang,
+} from "@/lib/subtitles-store";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -747,6 +753,41 @@ async function ensureLanguageSegments(
 
 const GEN_SELECT =
   "id, source_lang, target_lang, transcription_source, transcription_target, status";
+
+/**
+ * Charge l'état multi-langue d'une vidéo : langues présentes (+ statut) et leurs
+ * segments prêts, indexés par langue. Le lecteur l'appelle au montage puis en
+ * polling court tant que les 10 langues ne sont pas encore générées (le worker
+ * les pré-génère en arrière-plan après 'done') → les langues « s'allument » au
+ * fur et à mesure et la bascule reste instantanée (cache client).
+ */
+export async function loadSubtitles(videoId: string): Promise<{
+  ok: boolean;
+  langs?: SubtitleLang[];
+  segments?: Record<string, Segment[]>;
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  // RLS : la lecture ne renvoie que les sous-titres des vidéos de l'utilisateur.
+  const { data: video } = await supabase
+    .from("videos")
+    .select("id")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+
+  const [langs, segments] = await Promise.all([
+    listLanguages(supabase, videoId),
+    getAllSubtitles(supabase, videoId),
+  ]);
+  return { ok: true, langs, segments };
+}
 
 /**
  * Génère (ou renvoie le cache) les sous-titres d'une langue, SANS changer la
