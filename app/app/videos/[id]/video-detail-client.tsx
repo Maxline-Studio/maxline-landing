@@ -150,10 +150,12 @@ export function VideoDetailClient({
     Record<string, Segment[]>
   >(() => {
     const init: Record<string, Segment[]> = { ...initialSegments };
+    // Repli legacy pour la langue active UNIQUEMENT si elle a du contenu (vidéos
+    // d'avant la migration). On ne crée JAMAIS de tableau vide : un placeholder
+    // vide écraserait la vraie langue à l'arrivée des données (cf. fusion).
     const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
-    if (!init[tl]) {
-      init[tl] = (initialVideo.transcription_target as Segment[]) || [];
-    }
+    const tt = initialVideo.transcription_target as Segment[] | null;
+    if (!init[tl] && Array.isArray(tt) && tt.length > 0) init[tl] = tt;
     return init;
   });
   const segments = segmentsByLang[targetLang] ?? [];
@@ -223,6 +225,46 @@ export function VideoDetailClient({
   // complète la liste par polling court : les langues « s'allument » dans le
   // menu et la bascule reste instantanée (cache client). On n'écrase JAMAIS une
   // langue déjà chargée (préserve les éditions locales). Stop dès les 10 prêtes.
+  // Fusion serveur → état local : le serveur REMPLIT toute langue absente ou
+  // vide ; seul un contenu non vide local (= édité par l'utilisateur) est
+  // préservé. (Évite qu'un placeholder vide écrase la vraie langue à l'arrivée.)
+  const mergeServer = useCallback((srv: Record<string, Segment[]>) => {
+    setSegmentsByLang((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const [lang, segs] of Object.entries(srv)) {
+        const cur = next[lang];
+        if ((!cur || cur.length === 0) && segs.length > 0) {
+          next[lang] = segs;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, []);
+
+  // Synchro depuis les props serveur dès que la vidéo est 'done' (y compris la
+  // transition live « en cours → terminé » via router.refresh). Remplit la
+  // langue affichée immédiatement, sans attendre le 1er polling.
+  const didAlignRef = useRef(false);
+  useEffect(() => {
+    if (status !== "done") return;
+    // Une seule fois : aligne la langue affichée sur la langue principale réelle
+    // (en auto-détection, target_lang n'est résolu par le worker qu'après coup —
+    // le placeholder du montage peut différer de la langue détectée).
+    if (!didAlignRef.current) {
+      didAlignRef.current = true;
+      if (isLang(initialVideo.target_lang) && initialVideo.target_lang !== targetLang) {
+        setTargetLang(initialVideo.target_lang);
+      }
+    }
+    mergeServer(initialSegments);
+    const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
+    const legacy = initialVideo.transcription_target as Segment[] | null;
+    if (Array.isArray(legacy) && legacy.length > 0) mergeServer({ [tl]: legacy });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, initialSegments, initialVideo.transcription_target]);
+
   const pollAttemptsRef = useRef(0);
   useEffect(() => {
     if (status !== "done") return;
@@ -235,8 +277,7 @@ export function VideoDetailClient({
       pollAttemptsRef.current += 1;
       const res = await loadSubtitles(initialVideo.id);
       if (stop || !res.ok) return;
-      const srv = res.segments;
-      if (srv) setSegmentsByLang((prev) => ({ ...srv, ...prev }));
+      if (res.segments) mergeServer(res.segments);
       if (res.langs) {
         const ready = res.langs;
         setReadyLangs((prev) => {
@@ -252,7 +293,7 @@ export function VideoDetailClient({
       stop = true;
       clearInterval(interval);
     };
-  }, [status, readyLangs.size, initialVideo.id]);
+  }, [status, readyLangs.size, initialVideo.id, mergeServer]);
 
   const activeIndex = useMemo(
     () =>
