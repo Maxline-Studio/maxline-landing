@@ -12,6 +12,9 @@ import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 import { REGISTER_RULES } from "@/lib/translation-prompt";
 import { translateCuesBatched } from "@/lib/translate-cues";
 import { wrapLines } from "@/lib/wrap-lines";
+import { getSubtitle, upsertSubtitle } from "@/lib/subtitles-store";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/supabase/types";
 
 export type CreateUploadResult =
   | { ok: true; videoId: string; storageKey: string }
@@ -361,6 +364,23 @@ export async function saveTranscriptionTarget(
     }
   }
 
+  // Langue actuellement affichée = videos.target_lang (pointeur de langue active).
+  const { data: video } = await supabase
+    .from("videos")
+    .select("target_lang")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  const lang: Lang = isLang(video.target_lang) ? video.target_lang : "en";
+
+  // Source de vérité = video_subtitles[langue active] (édition par langue).
+  const up = await upsertSubtitle(supabase, videoId, lang, segments, {
+    userEdited: true,
+  });
+  if (!up.ok) return { ok: false, error: up.error };
+
+  // Miroir legacy (burn worker + export legacy lisent transcription_target).
   const { error } = await supabase
     .from("videos")
     .update({
@@ -425,7 +445,7 @@ export async function requestBurn(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("id, status, burn_status")
+    .select("id, status, burn_status, target_lang")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
@@ -447,6 +467,9 @@ export async function requestBurn(
         typeof s.text === "string",
     );
     if (!okSegs) return { ok: false, error: "Sous-titres invalides." };
+    // Cache table (langue active) + miroir legacy (lu par le worker burn).
+    const lang: Lang = isLang(video.target_lang) ? video.target_lang : "en";
+    await upsertSubtitle(supabase, videoId, lang, segments, { userEdited: true });
     await supabase
       .from("videos")
       .update({ transcription_target: segments, user_edited: true })
@@ -643,33 +666,98 @@ export async function regenerateLine(
   }
 }
 
+/** Forme minimale d'une vidéo nécessaire pour générer une langue. */
+type VideoForGen = {
+  id: string;
+  source_lang: string | null;
+  target_lang: string | null;
+  transcription_source: Segment[] | null;
+  transcription_target: Segment[] | null;
+};
+
 /**
- * Change la langue des sous-titres d'une vidéo déjà traitée. Re-traduit la
- * transcription source vers la nouvelle langue (Claude + RÈGLE D'OR) sans refaire
- * l'ASR, et réinitialise le burn (MP4 dans l'ancienne langue obsolète).
+ * Renvoie les sous-titres d'une langue, en la GÉNÉRANT à la demande si absente
+ * (puis mise en cache dans video_subtitles — jamais re-générée). Modèle éco A
+ * « tout inclus » : c'est GRATUIT (aucun quota/crédit consommé). La timeline est
+ * partagée (alignement 1:1 sur la transcription source).
  *
- * Facturation : la 1re re-traduction est GRATUITE (corriger une erreur de langue) ;
- * les suivantes coûtent les minutes de la vidéo (chaque langue = un livrable).
- * Un passage en transcription (cible = langue parlée) est toujours gratuit.
+ * - lang == source parlée → transcription (copie de la source, sans Claude) ;
+ * - sinon → traduction source→lang via Claude (RÈGLE D'OR) + découpe CJK/RTL.
  */
-export async function retranslateVideo(
+async function ensureLanguageSegments(
+  supabase: SupabaseClient<Database>,
+  video: VideoForGen,
+  lang: Lang,
+): Promise<{ segments: Segment[]; generated: boolean; userEdited: boolean }> {
+  // Déjà en cache ?
+  const { data: existing } = await supabase
+    .from("video_subtitles")
+    .select("segments, user_edited")
+    .eq("video_id", video.id)
+    .eq("lang", lang)
+    .maybeSingle();
+  const cached = existing?.segments as Segment[] | undefined;
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return { segments: cached, generated: false, userEdited: !!existing!.user_edited };
+  }
+
+  const srcLang: Lang = isLang(video.source_lang) ? video.source_lang : "fr";
+  // Base = transcription source (table → repli colonnes legacy pour les vidéos
+  // d'avant la migration / traitées avant le déploiement du worker).
+  let base = await getSubtitle(supabase, video.id, srcLang);
+  if (!base || base.length === 0) {
+    base =
+      (video.transcription_source as Segment[] | null) ??
+      (video.transcription_target as Segment[] | null) ??
+      [];
+  }
+  if (base.length === 0) {
+    throw new Error("Aucun sous-titre source à traduire.");
+  }
+
+  let segments: Segment[];
+  if (lang === srcLang) {
+    // Transcription dans la langue parlée : pas de traduction.
+    segments = base.map((s) => ({ start: s.start, end: s.end, text: s.text }));
+  } else {
+    if (!isAnthropicConfigured()) {
+      throw new Error("Génération indisponible pour le moment.");
+    }
+    const translated = await translateCuesBatched(
+      base.map((s) => s.text),
+      srcLang,
+      lang,
+    );
+    // Claude renvoie du texte sans coupure de ligne → on rétablit la découpe
+    // ≤ 2 lignes (par caractères pour le CJK) pour l'éditeur/lecteur/MP4.
+    segments = base.map((s, i) => ({
+      start: s.start,
+      end: s.end,
+      text: wrapLines(translated[i] ?? s.text, lang),
+    }));
+  }
+
+  const up = await upsertSubtitle(supabase, video.id, lang, segments, {
+    userEdited: false,
+    status: "ready",
+  });
+  if (!up.ok) throw new Error(up.error || "Échec d'enregistrement.");
+  return { segments, generated: true, userEdited: false };
+}
+
+const GEN_SELECT =
+  "id, source_lang, target_lang, transcription_source, transcription_target, status";
+
+/**
+ * Génère (ou renvoie le cache) les sous-titres d'une langue, SANS changer la
+ * langue affichée. Utilisé pour la génération à la volée (exports, pré-chargement).
+ * Gratuit (modèle éco A).
+ */
+export async function generateLanguage(
   videoId: string,
-  newTargetLang: string,
-): Promise<{
-  ok: boolean;
-  segments?: Segment[];
-  targetLang?: Lang;
-  charged?: number;
-  retranslationsUsed?: number;
-  error?: string;
-}> {
-  if (!isAnthropicConfigured()) {
-    return { ok: false, error: "Re-traduction indisponible pour le moment." };
-  }
-  if (!isLang(newTargetLang)) {
-    return { ok: false, error: "Langue invalide." };
-  }
-  const targetLang: Lang = newTargetLang;
+  lang: string,
+): Promise<{ ok: boolean; segments?: Segment[]; generated?: boolean; error?: string }> {
+  if (!isLang(lang)) return { ok: false, error: "Langue invalide." };
 
   const supabase = await createClient();
   const {
@@ -679,9 +767,7 @@ export async function retranslateVideo(
 
   const { data: video } = await supabase
     .from("videos")
-    .select(
-      "transcription_source, transcription_target, source_lang, target_lang, status, duration_minutes, retranslations_used",
-    )
+    .select(GEN_SELECT)
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
@@ -689,132 +775,82 @@ export async function retranslateVideo(
   if (video.status !== "done") {
     return { ok: false, error: "La vidéo n'est pas encore prête." };
   }
-  if (targetLang === video.target_lang) {
-    return { ok: false, error: "C'est déjà la langue des sous-titres actuelle." };
+
+  try {
+    const r = await ensureLanguageSegments(supabase, video as VideoForGen, lang);
+    return { ok: true, segments: r.segments, generated: r.generated };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Génération impossible.",
+    };
+  }
+}
+
+/**
+ * Change la langue des sous-titres AFFICHÉE : génère la langue si besoin (à la
+ * demande + cache), la pose comme langue active (videos.target_lang) et met à
+ * jour le miroir legacy transcription_target (que le worker burn lit). Comme le
+ * MP4 incrusté actuel est dans l'ancienne langue, on réinitialise le burn.
+ *
+ * Gratuit (modèle éco A « tout inclus » — plus de facturation par langue).
+ */
+export async function setSubtitleLanguage(
+  videoId: string,
+  lang: string,
+): Promise<{
+  ok: boolean;
+  segments?: Segment[];
+  targetLang?: Lang;
+  generated?: boolean;
+  error?: string;
+}> {
+  if (!isLang(lang)) return { ok: false, error: "Langue invalide." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select(GEN_SELECT)
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  if (video.status !== "done") {
+    return { ok: false, error: "La vidéo n'est pas encore prête." };
   }
 
-  const srcLang: Lang = isLang(video.source_lang) ? video.source_lang : "fr";
-  const sourceSegs = (video.transcription_source as Segment[] | null) ?? [];
-  // Repli : si la transcription source manque (anciennes vidéos), on part de la
-  // cible actuelle comme base de re-traduction.
-  const baseSegs =
-    sourceSegs.length > 0
-      ? sourceSegs
-      : ((video.transcription_target as Segment[] | null) ?? []);
-  if (baseSegs.length === 0) {
-    return { ok: false, error: "Aucun sous-titre à traduire." };
+  let r: { segments: Segment[]; generated: boolean; userEdited: boolean };
+  try {
+    r = await ensureLanguageSegments(supabase, video as VideoForGen, lang);
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Génération impossible.",
+    };
   }
 
-  // ─── Facturation : 1re re-traduction gratuite, puis minutes de la vidéo ───
-  const isTranslationChange = targetLang !== srcLang;
-  const priorRetrans = video.retranslations_used ?? 0;
-  const cost =
-    isTranslationChange && priorRetrans > 0
-      ? Math.max(1, Math.ceil(Number(video.duration_minutes) || 0))
-      : 0;
-
-  // Vérif quota AVANT l'appel Claude (fail fast, pas de coût si quota insuffisant).
-  let profile:
-    | {
-        quota_minutes_total: number;
-        quota_minutes_used: number;
-        credits_minutes: number;
-      }
-    | null = null;
-  if (cost > 0) {
-    const { data: p } = await supabase
-      .from("profiles")
-      .select("quota_minutes_total, quota_minutes_used, credits_minutes")
-      .eq("id", user.id)
-      .single();
-    if (!p) return { ok: false, error: "Profil introuvable." };
-    profile = p;
-    const avail =
-      Math.max(p.quota_minutes_total - p.quota_minutes_used, 0) +
-      p.credits_minutes;
-    if (avail < cost) {
-      return {
-        ok: false,
-        error: `Quota insuffisant : ${avail.toFixed(0)} min disponibles, cette re-traduction en demande ${cost}.`,
-      };
-    }
-  }
-
-  // ─── Re-traduction ───
-  let newSegs: Segment[];
-  if (targetLang === srcLang) {
-    // Cible = langue parlée → simple transcription (pas de traduction).
-    newSegs = baseSegs.map((s) => ({ start: s.start, end: s.end, text: s.text }));
-  } else {
-    try {
-      const translated = await translateCuesBatched(
-        baseSegs.map((s) => s.text),
-        srcLang,
-        targetLang,
-      );
-      // Re-wrap dans la langue cible : Claude renvoie du texte sans coupure de
-      // ligne → on rétablit la découpe ≤ 2 lignes (caractères pour le CJK) pour
-      // l'éditeur, le lecteur et la gravure MP4.
-      newSegs = baseSegs.map((s, i) => ({
-        start: s.start,
-        end: s.end,
-        text: wrapLines(translated[i] ?? s.text, targetLang),
-      }));
-    } catch (e) {
-      return {
-        ok: false,
-        error: e instanceof Error ? e.message : "Échec de la re-traduction.",
-      };
-    }
-  }
-
-  // ─── Décompte des minutes (si payant) + mise à jour, via client admin ───
+  // Langue active + miroir legacy + reset burn. burn_status est une colonne
+  // sensible (réservée à service_role, migration 015) → client admin.
   const admin = createAdminClient();
-  if (cost > 0 && profile) {
-    const quotaAvail = Math.max(
-      profile.quota_minutes_total - profile.quota_minutes_used,
-      0,
-    );
-    let newQuotaUsed = profile.quota_minutes_used;
-    let newCredits = profile.credits_minutes;
-    if (quotaAvail >= cost) {
-      newQuotaUsed += cost;
-    } else {
-      newQuotaUsed = profile.quota_minutes_total;
-      newCredits -= cost - quotaAvail;
-    }
-    const { error: cErr } = await admin
-      .from("profiles")
-      .update({ quota_minutes_used: newQuotaUsed, credits_minutes: newCredits })
-      .eq("id", user.id);
-    if (cErr) return { ok: false, error: "Erreur de décompte, réessayez." };
-  }
-
-  const newRetrans = isTranslationChange ? priorRetrans + 1 : priorRetrans;
   const { error } = await admin
     .from("videos")
     .update({
-      transcription_target: newSegs,
-      target_lang: targetLang,
-      user_edited: false,
-      retranslations_used: newRetrans,
+      target_lang: lang,
+      transcription_target: r.segments,
+      user_edited: r.userEdited,
       burn_status: "idle",
       burn_error: null,
       storage_key_burned: null,
     })
-    .eq("id", videoId)
-    .eq("user_id", user.id);
-  if (error) {
-    return { ok: false, error: "Erreur d'enregistrement, réessayez." };
-  }
+    .eq("id", videoId);
+  if (error) return { ok: false, error: "Erreur d'enregistrement, réessayez." };
 
-  return {
-    ok: true,
-    segments: newSegs,
-    targetLang,
-    charged: cost,
-    retranslationsUsed: newRetrans,
-  };
+  return { ok: true, segments: r.segments, targetLang: lang, generated: r.generated };
 }
 
 /**

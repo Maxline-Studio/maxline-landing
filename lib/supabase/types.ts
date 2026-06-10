@@ -144,6 +144,26 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];
       };
+      video_subtitles: {
+        Row: {
+          video_id: string;
+          lang: string;
+          segments: Json;
+          status: string;
+          user_edited: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          video_id: string;
+          lang: string;
+          segments: Json;
+          status?: string;
+          user_edited?: boolean;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["video_subtitles"]["Insert"]>;
+        Relationships: [];
+      };
       rewards_ledger: {
         Row: {
           id: string;

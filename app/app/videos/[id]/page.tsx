@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { presignGet } from "@/lib/r2";
 import type { Video } from "@/lib/supabase/types";
+import { listLanguages } from "@/lib/subtitles-store";
 import { VideoDetailClient } from "./video-detail-client";
 
 export const metadata: Metadata = {
@@ -54,6 +55,10 @@ export default async function VideoDetailPage({
     }
   }
 
+  // Langues déjà générées (pour cocher le menu « Langue des sous-titres »).
+  const availableLangs =
+    v.status === "done" ? await listLanguages(supabase, v.id) : [];
+
   return (
     <div className="w-full">
       <Link
@@ -68,6 +73,7 @@ export default async function VideoDetailPage({
         initialVideo={v}
         videoUrl={videoUrl}
         canExportPro={canExportPro}
+        availableLangs={availableLangs}
       />
     </div>
   );

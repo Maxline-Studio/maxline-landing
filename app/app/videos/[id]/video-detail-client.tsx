@@ -30,12 +30,13 @@ import {
   saveTranscriptionTarget,
   saveSubtitleStyle,
   regenerateLine,
-  retranslateVideo,
+  setSubtitleLanguage,
   requestBurn,
   getBurnStatus,
   getBurnedUrl,
   type BurnStatus,
 } from "@/lib/video-actions";
+import type { SubtitleLang } from "@/lib/subtitles-store";
 import {
   langLabel,
   langShort,
@@ -82,10 +83,12 @@ export function VideoDetailClient({
   initialVideo,
   videoUrl,
   canExportPro,
+  availableLangs,
 }: {
   initialVideo: Video;
   videoUrl: string | null;
   canExportPro: boolean;
+  availableLangs: SubtitleLang[];
 }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialVideo.status);
@@ -141,16 +144,14 @@ export function VideoDetailClient({
   const [targetLang, setTargetLang] = useState<Lang>(
     isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en",
   );
-  const [retranslating, setRetranslating] = useState(false);
-  const [retransError, setRetransError] = useState<string | null>(null);
-  const [retransUsed, setRetransUsed] = useState<number>(
-    initialVideo.retranslations_used ?? 0,
-  );
-  const [pendingLang, setPendingLang] = useState<Lang | null>(null);
-  const retransCost = Math.max(
-    1,
-    Math.ceil(Number(initialVideo.duration_minutes) || 0),
-  );
+  const [switching, setSwitching] = useState(false);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  // Langues déjà générées (✓ dans le menu). La langue active est toujours présente.
+  const [readyLangs, setReadyLangs] = useState<Set<Lang>>(() => {
+    const s = new Set<Lang>(availableLangs.map((l) => l.lang));
+    if (isLang(initialVideo.target_lang)) s.add(initialVideo.target_lang);
+    return s;
+  });
   const translationMode = isTranslation(sourceLang, targetLang);
   // Sens d'écriture : l'arabe (et autres langues RTL) s'affiche de droite à gauche.
   const targetRtl = isRtl(targetLang);
@@ -299,43 +300,27 @@ export function VideoDetailClient({
     setRegeneratingIdx(null);
   };
 
-  // Changement de langue des sous-titres : re-traduit la transcription source
-  // vers la nouvelle langue (sans re-ASR). 1re fois gratuite ; les suivantes
-  // coûtent les minutes de la vidéo → on demande confirmation du coût.
-  const willCharge = (newLang: Lang) =>
-    newLang !== sourceLang && newLang !== targetLang && retransUsed > 0;
-
-  const requestRetranslate = (newLang: Lang) => {
-    if (newLang === targetLang || retranslating) return;
-    setRetransError(null);
-    if (willCharge(newLang)) {
-      setPendingLang(newLang); // affiche la confirmation du coût
-    } else {
-      handleRetranslate(newLang);
-    }
-  };
-
-  const handleRetranslate = async (newLang: Lang) => {
-    if (newLang === targetLang || retranslating) return;
-    setPendingLang(null);
-    setRetranslating(true);
-    setRetransError(null);
-    const res = await retranslateVideo(initialVideo.id, newLang);
-    setRetranslating(false);
+  // Changement de langue des sous-titres : génère la langue si besoin (à la
+  // demande + cache), la pose comme langue affichée et bascule l'éditeur dessus.
+  // Modèle éco « tout inclus » : toutes les langues sont incluses (gratuit).
+  const handleLanguageChange = async (newLang: Lang) => {
+    if (newLang === targetLang || switching) return;
+    // Sauvegarde des éventuelles modifs de la langue courante avant de basculer.
+    if (dirtyRef.current) await save();
+    setSwitchError(null);
+    setSwitching(true);
+    const res = await setSubtitleLanguage(initialVideo.id, newLang);
+    setSwitching(false);
     if (!res.ok || !res.segments) {
-      setRetransError(res.error || "Re-traduction impossible.");
+      setSwitchError(res.error || "Changement de langue impossible.");
       return;
     }
     setSegments(res.segments);
     setTargetLang(res.targetLang ?? newLang);
-    if (typeof res.retranslationsUsed === "number") {
-      setRetransUsed(res.retranslationsUsed);
-    }
+    setReadyLangs((prev) => new Set(prev).add(res.targetLang ?? newLang));
     setBurnStatus("idle");
     dirtyRef.current = false;
     setSaveState("idle");
-    // Débit effectué → rafraîchit les minutes affichées (barre latérale).
-    if (res.charged && res.charged > 0) router.refresh();
   };
 
   // Export : on sauvegarde d'abord (si modifs), puis on télécharge la version à jour.
@@ -546,7 +531,7 @@ export function VideoDetailClient({
             </div>
           </div>
 
-          {/* Changer la langue des sous-titres (re-traduction) */}
+          {/* Langue des sous-titres : les 10 langues, générées à la demande + cache */}
           <div className="mb-5">
             <div className="flex flex-wrap items-center gap-2.5">
               <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
@@ -554,54 +539,29 @@ export function VideoDetailClient({
               </span>
               <select
                 value={targetLang}
-                onChange={(e) => requestRetranslate(e.target.value as Lang)}
-                disabled={retranslating}
+                onChange={(e) => handleLanguageChange(e.target.value as Lang)}
+                disabled={switching}
                 aria-label="Changer la langue des sous-titres"
                 className="rounded-sm border border-ivory-300 bg-ivory-50 px-2.5 py-1 text-sm text-ink-900 disabled:opacity-50"
               >
                 {LANG_OPTIONS.map((o) => (
                   <option key={o.id} value={o.id}>
-                    {o.label}
+                    {readyLangs.has(o.id) ? `${o.label} ✓` : `${o.label} — à générer`}
                   </option>
                 ))}
               </select>
-              {retranslating ? (
+              {switching ? (
                 <span className="inline-flex items-center gap-1.5 text-sm text-ink-500">
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Re-traduction…
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> Génération…
                 </span>
-              ) : retransError ? (
-                <span className="text-xs text-rouge-600">{retransError}</span>
+              ) : switchError ? (
+                <span className="text-xs text-rouge-600">{switchError}</span>
               ) : (
                 <span className="text-xs text-ink-400">
-                  {retransUsed === 0
-                    ? "1re re-traduction offerte · ensuite, minutes de la vidéo"
-                    : `re-traduire = ${retransCost} min`}
+                  Les 10 langues sont incluses · générées au 1ᵉʳ choix, puis instantanées
                 </span>
               )}
             </div>
-
-            {pendingLang && !retranslating && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-3 rounded-sm border border-ink-300 bg-ivory-100 px-3 py-2">
-                <span className="text-sm text-ink-800">
-                  Re-traduire en <strong>{langLabel(pendingLang)}</strong>{" "}
-                  coûtera <strong>{retransCost} min</strong>.
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleRetranslate(pendingLang)}
-                  className="btn-pen text-sm py-1.5"
-                >
-                  Confirmer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPendingLang(null)}
-                  className="text-sm text-ink-600 hover:text-ink-900 underline underline-offset-2"
-                >
-                  Annuler
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Deux panneaux. En dessous de lg : empilés (flux naturel, scroll page).
