@@ -1,4 +1,5 @@
 import { STAGE_LABELS, type VideoStatus } from "@/lib/video-types";
+import { langLabel } from "@/lib/langs";
 
 /** Badge de statut d'une vidéo, cohérent avec l'identité Atelier. */
 export function VideoStatusBadge({ status }: { status: string }) {
@@ -25,6 +26,23 @@ export function VideoStatusBadge({ status }: { status: string }) {
   );
 }
 
-export function stageLabel(status: string): string {
+/**
+ * Libellé d'étape, désormais ADAPTÉ aux langues réelles de la vidéo (au lieu du
+ * « Transcription française / Traduction anglaise » codé en dur d'origine).
+ */
+export function stageLabel(
+  status: string,
+  opts?: { sourceLang?: string; targetLang?: string },
+): string {
+  const src = opts?.sourceLang;
+  const tgt = opts?.targetLang;
+  if (status === "transcribing") {
+    return src ? `Transcription en ${langLabel(src)}` : "Transcription";
+  }
+  if (status === "translating") {
+    // Cible = source → c'est une transcription (pas de traduction).
+    if (src && tgt && src === tgt) return `Transcription en ${langLabel(tgt)}`;
+    return tgt ? `Traduction en ${langLabel(tgt)}` : "Traduction";
+  }
   return STAGE_LABELS[status as VideoStatus] || status;
 }

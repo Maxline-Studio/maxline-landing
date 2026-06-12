@@ -24,8 +24,8 @@ export type VideoStatus =
 export const STAGE_LABELS: Record<VideoStatus, string> = {
   queued: "En attente",
   extracting_audio: "Extraction de l'audio",
-  transcribing: "Transcription française",
-  translating: "Traduction anglaise",
+  transcribing: "Transcription",
+  translating: "Traduction",
   aligning: "Alignement des sous-titres",
   generating_subtitles: "Génération des sous-titres",
   burning_in: "Incrustation vidéo",

@@ -606,7 +606,16 @@ export function VideoDetailClient({
           <div className="flex items-center gap-3 mb-4">
             <Loader2 className="h-5 w-5 text-rouge-400 animate-spin" aria-hidden />
             <span className="font-display font-medium text-lg">
-              {stageLabel(status)}…
+              {stageLabel(status, {
+                sourceLang: initialVideo.source_lang_auto
+                  ? undefined
+                  : initialVideo.source_lang,
+                targetLang:
+                  initialVideo.target_same_as_source &&
+                  initialVideo.source_lang_auto
+                    ? undefined
+                    : initialVideo.target_lang,
+              })}…
             </span>
           </div>
           <div className="h-2 bg-ink-800 rounded-full overflow-hidden mb-2">
