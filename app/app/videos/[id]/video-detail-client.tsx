@@ -65,6 +65,18 @@ import {
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
+// Cue = segment + identifiant STABLE (clé React). Indispensable : sans clé
+// stable, insérer/supprimer une ligne décale toutes les clés par index et React
+// réutilise les mauvais composants (timecodes faux). L'id ne vit que côté client
+// (on le retire avant d'enregistrer/exporter).
+type Cue = Segment & { id: string };
+let cueIdSeq = 0;
+const nextCueId = () => `c${cueIdSeq++}`;
+const withIds = (segs: Segment[]): Cue[] =>
+  segs.map((s) => ({ ...s, id: nextCueId() }));
+const stripIds = (cues: Cue[]): Segment[] =>
+  cues.map(({ id: _id, ...s }) => s);
+
 const PROCESSING_STATES = [
   "queued",
   "extracting_audio",
@@ -146,26 +158,29 @@ export function VideoDetailClient({
   // instantanée sans réseau). Le worker pré-génère les 10 langues en tâche de
   // fond ; on les complète par polling (cf. plus bas). Repli legacy pour la
   // langue active si la table n'a encore rien (vidéos d'avant la migration).
-  const [segmentsByLang, setSegmentsByLang] = useState<
-    Record<string, Segment[]>
-  >(() => {
-    const init: Record<string, Segment[]> = { ...initialSegments };
-    // Repli legacy pour la langue active UNIQUEMENT si elle a du contenu (vidéos
-    // d'avant la migration). On ne crée JAMAIS de tableau vide : un placeholder
-    // vide écraserait la vraie langue à l'arrivée des données (cf. fusion).
-    const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
-    const tt = initialVideo.transcription_target as Segment[] | null;
-    if (!init[tl] && Array.isArray(tt) && tt.length > 0) init[tl] = tt;
-    return init;
-  });
+  const [segmentsByLang, setSegmentsByLang] = useState<Record<string, Cue[]>>(
+    () => {
+      const init: Record<string, Cue[]> = {};
+      for (const [lang, segs] of Object.entries(initialSegments)) {
+        init[lang] = withIds(segs);
+      }
+      // Repli legacy pour la langue active UNIQUEMENT si elle a du contenu (vidéos
+      // d'avant la migration). On ne crée JAMAIS de tableau vide : un placeholder
+      // vide écraserait la vraie langue à l'arrivée des données (cf. fusion).
+      const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
+      const tt = initialVideo.transcription_target as Segment[] | null;
+      if (!init[tl] && Array.isArray(tt) && tt.length > 0) init[tl] = withIds(tt);
+      return init;
+    },
+  );
   const segments = segmentsByLang[targetLang] ?? [];
   const setSegments = useCallback(
-    (updater: Segment[] | ((prev: Segment[]) => Segment[])) => {
+    (updater: Cue[] | ((prev: Cue[]) => Cue[])) => {
       setSegmentsByLang((prev) => {
         const cur = prev[targetLang] ?? [];
         const next =
           typeof updater === "function"
-            ? (updater as (p: Segment[]) => Segment[])(cur)
+            ? (updater as (p: Cue[]) => Cue[])(cur)
             : updater;
         return { ...prev, [targetLang]: next };
       });
@@ -235,7 +250,7 @@ export function VideoDetailClient({
       for (const [lang, segs] of Object.entries(srv)) {
         const cur = next[lang];
         if ((!cur || cur.length === 0) && segs.length > 0) {
-          next[lang] = segs;
+          next[lang] = withIds(segs);
           changed = true;
         }
       }
@@ -315,7 +330,10 @@ export function VideoDetailClient({
   const save = useCallback(async () => {
     if (!dirtyRef.current) return;
     setSaveState("saving");
-    const result = await saveTranscriptionTarget(initialVideo.id, segmentsRef.current);
+    const result = await saveTranscriptionTarget(
+      initialVideo.id,
+      stripIds(segmentsRef.current),
+    );
     if (result.ok) {
       dirtyRef.current = false;
       setSaveState("saved");
@@ -362,7 +380,8 @@ export function VideoDetailClient({
       const next = prev[idx + 1];
       const newStart = cur ? cur.end : 0;
       const newEnd = next ? next.start : newStart + 2;
-      const newSeg: Segment = {
+      const newSeg: Cue = {
+        id: nextCueId(),
         start: newStart,
         end: Math.max(newEnd, newStart + 0.5),
         text: "",
@@ -380,7 +399,8 @@ export function VideoDetailClient({
       const a = prev[idx];
       const b = prev[idx + 1];
       if (!a || !b) return prev;
-      const merged: Segment = {
+      const merged: Cue = {
+        id: a.id,
         start: a.start,
         end: b.end,
         text: `${a.text} ${b.text}`.trim(),
@@ -432,7 +452,7 @@ export function VideoDetailClient({
       return;
     }
     const segs = res.segments;
-    setSegmentsByLang((prev) => ({ ...prev, [newLang]: segs }));
+    setSegmentsByLang((prev) => ({ ...prev, [newLang]: withIds(segs) }));
     setReadyLangs((prev) => new Set(prev).add(newLang));
     setTargetLang(newLang);
     setBurnStatus("idle");
@@ -492,7 +512,7 @@ export function VideoDetailClient({
     setBurnStatus("queued");
     const res = await requestBurn(
       initialVideo.id,
-      segmentsRef.current,
+      stripIds(segmentsRef.current),
       subtitleStyle,
     );
     if (!res.ok) {
@@ -811,7 +831,7 @@ export function VideoDetailClient({
               <div className="space-y-3">
                 {segments.map((seg, idx) => (
                   <SegmentRow
-                    key={idx}
+                    key={seg.id}
                     index={idx}
                     segment={seg}
                     frText={segmentsSource[idx]?.text}
