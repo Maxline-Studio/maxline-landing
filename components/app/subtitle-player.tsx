@@ -25,6 +25,7 @@ import {
   DEFAULT_SUBTITLE_STYLE,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
+import { speakerColor } from "@/lib/speakers";
 
 export type SubtitlePlayerHandle = {
   /** Place la lecture à `seconds` et démarre. */
@@ -53,6 +54,10 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl: string | null;
     activeText?: string;
+    /** Locuteur du sous-titre actif (diarisation) → couleur par voix. */
+    activeSpeaker?: number;
+    /** true si la vidéo a plusieurs locuteurs (active la couleur par voix). */
+    multiSpeaker?: boolean;
     /** true si la langue des sous-titres s'écrit de droite à gauche (arabe…). */
     rtl?: boolean;
     subtitleStyle?: SubtitleStyle;
@@ -69,6 +74,8 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl,
     activeText,
+    activeSpeaker,
+    multiSpeaker,
     rtl,
     subtitleStyle,
     onTimeUpdate,
@@ -80,6 +87,7 @@ export const SubtitlePlayer = forwardRef<
   },
   ref,
 ) {
+  const speakerHex = multiSpeaker ? speakerColor(activeSpeaker) : null;
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,7 +251,10 @@ export const SubtitlePlayer = forwardRef<
               <span
                 dir={rtl ? "rtl" : undefined}
                 className="ml-subtitle text-center whitespace-pre-line"
-                style={overlayStyleCss(subtitleStyle ?? DEFAULT_SUBTITLE_STYLE)}
+                style={{
+                  ...overlayStyleCss(subtitleStyle ?? DEFAULT_SUBTITLE_STYLE),
+                  ...(speakerHex ? { color: speakerHex } : {}),
+                }}
               >
                 {activeText}
               </span>

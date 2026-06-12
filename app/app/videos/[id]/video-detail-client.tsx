@@ -48,6 +48,7 @@ import {
   type Lang,
 } from "@/lib/langs";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
+import { countSpeakers, speakerColor, speakerLabel } from "@/lib/speakers";
 import {
   SubtitlePlayer,
   type SubtitlePlayerHandle,
@@ -556,6 +557,10 @@ export function VideoDetailClient({
   };
 
   const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
+  const activeSpeaker =
+    activeIndex >= 0 ? segments[activeIndex]?.speaker : undefined;
+  // Plusieurs voix détectées (diarisation) → on colore par locuteur.
+  const multiSpeaker = countSpeakers(segments) > 1;
 
   return (
     <div>
@@ -733,6 +738,8 @@ export function VideoDetailClient({
                 ref={playerRef}
                 videoUrl={videoUrl}
                 activeText={activeText}
+                activeSpeaker={activeSpeaker}
+                multiSpeaker={multiSpeaker}
                 rtl={targetRtl}
                 subtitleStyle={subtitleStyle}
                 onTimeUpdate={setCurrentTime}
@@ -844,6 +851,7 @@ export function VideoDetailClient({
                     index={idx}
                     segment={seg}
                     frText={segmentsSource[idx]?.text}
+                    multiSpeaker={multiSpeaker}
                     targetRtl={targetRtl}
                     sourceRtl={sourceRtl}
                     rowRef={idx === activeIndex ? activeRowRef : undefined}
@@ -950,6 +958,7 @@ function SegmentRow({
   index,
   segment,
   frText,
+  multiSpeaker,
   targetRtl,
   sourceRtl,
   rowRef,
@@ -967,6 +976,7 @@ function SegmentRow({
   index: number;
   segment: Segment;
   frText?: string;
+  multiSpeaker?: boolean;
   targetRtl?: boolean;
   sourceRtl?: boolean;
   rowRef?: React.Ref<HTMLElement>;
@@ -996,6 +1006,18 @@ function SegmentRow({
           <span className="font-mono text-[10px] text-ink-400 tabular-nums w-6">
             {String(index + 1).padStart(2, "0")}
           </span>
+          {multiSpeaker && typeof segment.speaker === "number" && (
+            <span
+              className="inline-flex items-center gap-1 font-mono text-[9px] uppercase tracking-wide text-ink-600"
+              title="Locuteur détecté"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full border border-ink-300"
+                style={{ backgroundColor: speakerColor(segment.speaker) ?? "#C8C2B6" }}
+              />
+              {speakerLabel(segment.speaker)}
+            </span>
+          )}
           <TimecodeInput
             value={segment.start}
             onChange={(v) => onTimingChange("start", v)}

@@ -724,7 +724,12 @@ async function ensureLanguageSegments(
   let segments: Segment[];
   if (lang === srcLang) {
     // Transcription dans la langue parlée : pas de traduction.
-    segments = base.map((s) => ({ start: s.start, end: s.end, text: s.text }));
+    segments = base.map((s) => ({
+      start: s.start,
+      end: s.end,
+      text: s.text,
+      speaker: s.speaker,
+    }));
   } else {
     if (!isAnthropicConfigured()) {
       throw new Error("Génération indisponible pour le moment.");
@@ -735,11 +740,13 @@ async function ensureLanguageSegments(
       lang,
     );
     // Claude renvoie du texte sans coupure de ligne → on rétablit la découpe
-    // ≤ 2 lignes (par caractères pour le CJK) pour l'éditeur/lecteur/MP4.
+    // ≤ 2 lignes (par caractères pour le CJK) pour l'éditeur/lecteur/MP4. Le
+    // locuteur (diarisation) est conservé tel quel (timeline partagée).
     segments = base.map((s, i) => ({
       start: s.start,
       end: s.end,
       text: wrapLines(translated[i] ?? s.text, lang),
+      speaker: s.speaker,
     }));
   }
 

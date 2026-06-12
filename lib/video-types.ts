@@ -6,7 +6,13 @@
  * Le format `Segment` est identique à celui produit par le worker.
  */
 
-export type Segment = { start: number; end: number; text: string };
+export type Segment = {
+  start: number;
+  end: number;
+  text: string;
+  /** Index du locuteur (diarisation) si connu : couleur/découpe par voix. */
+  speaker?: number;
+};
 
 export type VideoStatus =
   | "queued"
