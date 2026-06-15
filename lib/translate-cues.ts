@@ -22,38 +22,65 @@ function parseJsonArray(raw: string): string[] | null {
   return null;
 }
 
-/** Traduit un lot de cues, alignement 1:1 strict (retry une fois si désaligné). */
+/** Appel Claude qui ne lève jamais (erreur réseau/HTTP → null). */
+async function safeCall(args: {
+  system: string;
+  user: string;
+  temperature: number;
+}): Promise<string | null> {
+  try {
+    return await callClaude({ ...args, maxTokens: 16000 });
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Traduit un lot de cues, GARANTI aligné (n entrées) et ne lève JAMAIS.
+ * Robustesse : appel + retry strict ; si toujours désaligné (refus de Claude,
+ * format cassé, erreur API) et lot > 1 → on coupe en deux pour isoler le cue
+ * fautif ; lot de 1 toujours en échec → on conserve le TEXTE SOURCE. Ainsi un
+ * incident ne fait jamais échouer la génération (au pire, lignes non traduites).
+ */
 async function translateOneBatch(
   texts: string[],
   sourceLang: string,
   targetLang: string,
 ): Promise<string[]> {
+  const n = texts.length;
+  if (n === 0) return [];
+
   const tgt = langLabel(targetLang);
   const system = subtitleTranslationSystem(sourceLang, targetLang);
-  const user = `Traduis ces ${texts.length} sous-titres en ${tgt}, dans l'ordre. Réponds par un tableau JSON de ${texts.length} chaînes :\n${JSON.stringify(texts)}`;
+  const user = `Traduis ces ${n} sous-titres en ${tgt}, dans l'ordre. Réponds par un tableau JSON de ${n} chaînes :\n${JSON.stringify(texts)}`;
 
-  let out = parseJsonArray(
-    await callClaude({ system, user, maxTokens: 16000, temperature: 0.3 }),
-  );
-  if (!out || out.length !== texts.length) {
+  const raw1 = await safeCall({ system, user, temperature: 0.3 });
+  let out = raw1 ? parseJsonArray(raw1) : null;
+
+  if (!out || out.length !== n) {
     const stricter =
       system +
-      `\nIMPORTANT : le tableau DOIT contenir EXACTEMENT ${texts.length} chaînes.`;
-    out = parseJsonArray(
-      await callClaude({ system: stricter, user, maxTokens: 16000, temperature: 0.2 }),
-    );
+      `\nIMPORTANT : réponds UNIQUEMENT par un tableau JSON d'EXACTEMENT ${n} chaînes, rien d'autre.`;
+    const raw2 = await safeCall({ system: stricter, user, temperature: 0.2 });
+    out = raw2 ? parseJsonArray(raw2) : null;
   }
-  if (!out || out.length !== texts.length) {
-    throw new Error(
-      `Traduction désalignée (attendu ${texts.length}, reçu ${out?.length ?? 0}).`,
-    );
+
+  if (out && out.length === n) return out.map((s) => s.trim());
+
+  if (n > 1) {
+    const mid = Math.ceil(n / 2);
+    const left = await translateOneBatch(texts.slice(0, mid), sourceLang, targetLang);
+    const right = await translateOneBatch(texts.slice(mid), sourceLang, targetLang);
+    return [...left, ...right];
   }
-  return out.map((s) => s.trim());
+
+  // 1 cue, toujours rien → repli sur le texte source (jamais d'échec global).
+  return [texts[0] ?? ""];
 }
 
 /**
- * Traduit une liste complète de cues (par lots de 60), alignement 1:1 strict.
- * Lève en cas d'échec/désalignement.
+ * Traduit une liste complète de cues (par lots), alignement 1:1 garanti.
+ * Ne lève jamais : au pire, certaines lignes restent en langue source.
  */
 export async function translateCuesBatched(
   texts: string[],
