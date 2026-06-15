@@ -62,6 +62,9 @@ import {
   COLOR_OPTIONS,
   SIZE_OPTIONS,
   SPEAKER_MODE_OPTIONS,
+  POSITION_OPTIONS,
+  OUTLINE_WIDTH_OPTIONS,
+  BG_OPACITY_OPTIONS,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 
@@ -1345,6 +1348,121 @@ function SubtitleStylePanel({
               style={{ backgroundColor: subtitleColorHex(c.id) }}
             />
           ))}
+        </div>
+      </div>
+
+      {/* Couleur du texte (indépendante du fond/contour) */}
+      <div>
+        <FieldLabel>Couleur du texte</FieldLabel>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => onChange({ textColor: "auto" })}
+            className={chipCls(style.textColor === "auto")}
+          >
+            Auto
+          </button>
+          {COLOR_OPTIONS.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => onChange({ textColor: c.id })}
+              title={c.label}
+              aria-label={`Texte ${c.label}`}
+              className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                style.textColor === c.id
+                  ? "border-ink-900 scale-110"
+                  : "border-ivory-300 hover:scale-105"
+              }`}
+              style={{ backgroundColor: subtitleColorHex(c.id) }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Position + effets de texte */}
+      <div className="flex gap-8 flex-wrap">
+        <div>
+          <FieldLabel>Position</FieldLabel>
+          <div className="flex gap-1.5">
+            {POSITION_OPTIONS.map((p) => (
+              <button
+                key={p.id}
+                onClick={() => onChange({ position: p.id })}
+                className={chipCls(style.position === p.id)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <FieldLabel>Effets</FieldLabel>
+          <div className="flex gap-1.5">
+            <button
+              onClick={() => onChange({ bold: !style.bold })}
+              className={chipCls(style.bold)}
+              style={{ fontWeight: 800 }}
+            >
+              Gras
+            </button>
+            <button
+              onClick={() => onChange({ italic: !style.italic })}
+              className={chipCls(style.italic)}
+              style={{ fontStyle: "italic" }}
+            >
+              Italique
+            </button>
+            <button
+              onClick={() => onChange({ uppercase: !style.uppercase })}
+              className={chipCls(style.uppercase)}
+              title="Tout en majuscules"
+            >
+              ABC
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Lisibilité : contour (mode contour) OU opacité (mode fond), + ombre */}
+      <div className="flex gap-8 flex-wrap">
+        {style.mode === "outline" ? (
+          <div>
+            <FieldLabel>Épaisseur du contour</FieldLabel>
+            <div className="flex gap-1.5">
+              {OUTLINE_WIDTH_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => onChange({ outlineWidth: o.id })}
+                  className={chipCls(style.outlineWidth === o.id)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <FieldLabel>Opacité du fond</FieldLabel>
+            <div className="flex gap-1.5">
+              {BG_OPACITY_OPTIONS.map((o) => (
+                <button
+                  key={o.id}
+                  onClick={() => onChange({ bgOpacity: o.id })}
+                  className={chipCls(style.bgOpacity === o.id)}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <FieldLabel>Ombre</FieldLabel>
+          <button
+            onClick={() => onChange({ shadow: !style.shadow })}
+            className={chipCls(style.shadow)}
+          >
+            {style.shadow ? "Activée" : "Désactivée"}
+          </button>
         </div>
       </div>
 

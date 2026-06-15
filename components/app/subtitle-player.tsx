@@ -248,7 +248,13 @@ export const SubtitlePlayer = forwardRef<
             <div
               aria-live="polite"
               className={`absolute inset-x-0 flex justify-center px-3 pointer-events-none transition-[bottom] duration-200 ${
-                controlsVisible ? "bottom-16" : "bottom-6"
+                style.position === "center"
+                  ? "top-1/2 -translate-y-1/2"
+                  : style.position === "top"
+                    ? "top-6"
+                    : controlsVisible
+                      ? "bottom-16"
+                      : "bottom-6"
               }`}
             >
               <span
