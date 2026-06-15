@@ -15,12 +15,17 @@ export type SubtitleFont =
 export type SubtitleSize = "s" | "m" | "l";
 export type SubtitleMode = "background" | "outline";
 export type SubtitleColor = "black" | "white" | "rouge" | "encre" | "vert";
+/** Distinction des voix (diarisation) : aucune (blanc), couleur du texte, ou
+ * couleur du fond/contour, au choix de l'utilisateur. */
+export type SubtitleSpeakerMode = "off" | "text" | "box";
 
 export type SubtitleStyle = {
   font: SubtitleFont;
   size: SubtitleSize;
   mode: SubtitleMode;
   color: SubtitleColor;
+  /** Comment différencier les locuteurs (par défaut : aucune → texte blanc). */
+  speakerMode: SubtitleSpeakerMode;
 };
 
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
@@ -28,6 +33,7 @@ export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   size: "m",
   mode: "background",
   color: "black",
+  speakerMode: "off",
 };
 
 export const FONT_OPTIONS: { id: SubtitleFont; label: string }[] = [
@@ -50,6 +56,15 @@ export const SIZE_OPTIONS: { id: SubtitleSize; label: string }[] = [
   { id: "s", label: "S" },
   { id: "m", label: "M" },
   { id: "l", label: "L" },
+];
+
+export const SPEAKER_MODE_OPTIONS: {
+  id: SubtitleSpeakerMode;
+  label: string;
+}[] = [
+  { id: "off", label: "Aucune" },
+  { id: "text", label: "Couleur du texte" },
+  { id: "box", label: "Couleur du fond" },
 ];
 
 const FONT_VAR: Record<SubtitleFont, string> = {
@@ -85,7 +100,35 @@ export function normalizeSubtitleStyle(raw: unknown): SubtitleStyle {
     mode: s.mode === "outline" ? "outline" : "background",
     color:
       s.color && COLOR_HEX[s.color] ? s.color : DEFAULT_SUBTITLE_STYLE.color,
+    speakerMode:
+      s.speakerMode === "text" || s.speakerMode === "box"
+        ? s.speakerMode
+        : "off",
   };
+}
+
+/**
+ * Surcharge CSS à appliquer pour un locuteur donné (diarisation), selon le mode
+ * choisi. `speakerHex` = couleur du locuteur (null pour le locuteur principal ou
+ * si distinction désactivée) → renvoie {} (texte blanc/style par défaut).
+ */
+export function speakerOverrideCss(
+  style: SubtitleStyle,
+  speakerHex: string | null,
+): CSSProperties {
+  if (!speakerHex || style.speakerMode === "off") return {};
+  if (style.speakerMode === "text") {
+    return { color: speakerHex };
+  }
+  // "box" : la couleur du locuteur habille le fond (ou le contour), texte foncé
+  // lisible (la palette de voix est claire).
+  if (style.mode === "background") {
+    return { backgroundColor: speakerHex, color: "#1A1814" };
+  }
+  return {
+    WebkitTextStroke: `0.06em ${speakerHex}`,
+    color: "#F8F4E9",
+  } as CSSProperties;
 }
 
 /** Calcule le style CSS de l'overlay de sous-titre.

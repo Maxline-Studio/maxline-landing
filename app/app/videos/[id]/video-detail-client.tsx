@@ -61,6 +61,7 @@ import {
   FONT_OPTIONS,
   COLOR_OPTIONS,
   SIZE_OPTIONS,
+  SPEAKER_MODE_OPTIONS,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 
@@ -758,7 +759,11 @@ export function VideoDetailClient({
               </p>
 
               {/* Panneau : style des sous-titres */}
-              <SubtitleStylePanel style={subtitleStyle} onChange={updateStyle} />
+              <SubtitleStylePanel
+                style={subtitleStyle}
+                onChange={updateStyle}
+                multiSpeaker={multiSpeaker}
+              />
 
               {/* Exports */}
               <div className="mt-4 bg-ivory-100 border border-ivory-200 rounded-sm p-6">
@@ -1249,9 +1254,11 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 function SubtitleStylePanel({
   style,
   onChange,
+  multiSpeaker,
 }: {
   style: SubtitleStyle;
   onChange: (patch: Partial<SubtitleStyle>) => void;
+  multiSpeaker?: boolean;
 }) {
   return (
     <div className="mt-4 rounded-sm border border-ivory-200 bg-ivory-50 p-4 space-y-4">
@@ -1340,6 +1347,28 @@ function SubtitleStylePanel({
           ))}
         </div>
       </div>
+
+      {/* Distinction des voix (diarisation) — visible seulement si plusieurs voix.
+          Par défaut « Aucune » : texte blanc, mais lignes déjà séparées par voix. */}
+      {multiSpeaker && (
+        <div>
+          <FieldLabel>Distinction des voix</FieldLabel>
+          <div className="flex flex-wrap gap-1.5">
+            {SPEAKER_MODE_OPTIONS.map((o) => (
+              <button
+                key={o.id}
+                onClick={() => onChange({ speakerMode: o.id })}
+                className={chipCls(style.speakerMode === o.id)}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 font-mono text-[9px] text-ink-400">
+            Plusieurs voix détectées · chaque voix est déjà sur sa propre ligne.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

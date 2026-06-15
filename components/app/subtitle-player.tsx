@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import {
   overlayStyleCss,
+  speakerOverrideCss,
   DEFAULT_SUBTITLE_STYLE,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
@@ -87,7 +88,9 @@ export const SubtitlePlayer = forwardRef<
   },
   ref,
 ) {
+  const style = subtitleStyle ?? DEFAULT_SUBTITLE_STYLE;
   const speakerHex = multiSpeaker ? speakerColor(activeSpeaker) : null;
+  const speakerCss = speakerOverrideCss(style, speakerHex);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -252,8 +255,8 @@ export const SubtitlePlayer = forwardRef<
                 dir={rtl ? "rtl" : undefined}
                 className="ml-subtitle text-center whitespace-pre-line"
                 style={{
-                  ...overlayStyleCss(subtitleStyle ?? DEFAULT_SUBTITLE_STYLE),
-                  ...(speakerHex ? { color: speakerHex } : {}),
+                  ...overlayStyleCss(style),
+                  ...speakerCss,
                 }}
               >
                 {activeText}
