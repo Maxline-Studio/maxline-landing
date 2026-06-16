@@ -2,11 +2,13 @@
 
 import {
   forwardRef,
+  Fragment,
   useCallback,
   useEffect,
   useImperativeHandle,
   useRef,
   useState,
+  type CSSProperties,
 } from "react";
 import {
   Play,
@@ -23,10 +25,12 @@ import {
 import {
   overlayStyleCss,
   speakerOverrideCss,
+  highlightHex,
   DEFAULT_SUBTITLE_STYLE,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 import { speakerColor } from "@/lib/speakers";
+import type { WordTiming } from "@/lib/video-types";
 
 export type SubtitlePlayerHandle = {
   /** Place la lecture à `seconds` et démarre. */
@@ -55,6 +59,9 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl: string | null;
     activeText?: string;
+    /** Timings par mot du sous-titre actif (karaoké) — si présents et animation
+     * activée, le mot courant est surligné en suivant la lecture. */
+    activeWords?: WordTiming[];
     /** Locuteur du sous-titre actif (diarisation) → couleur par voix. */
     activeSpeaker?: number;
     /** true si la vidéo a plusieurs locuteurs (active la couleur par voix). */
@@ -75,6 +82,7 @@ export const SubtitlePlayer = forwardRef<
   {
     videoUrl,
     activeText,
+    activeWords,
     activeSpeaker,
     multiSpeaker,
     rtl,
@@ -134,6 +142,21 @@ export const SubtitlePlayer = forwardRef<
     [],
   );
 
+  // Karaoké : suivi du temps à la fréquence d'affichage (rAF) pendant la lecture,
+  // pour un surlignage fluide (l'événement natif `timeupdate` n'est émis que
+  // ~4 fois/s → mot-à-mot saccadé). Actif uniquement si une animation est demandée.
+  useEffect(() => {
+    if (!isPlaying || (subtitleStyle?.animation ?? "none") === "none") return;
+    let raf = 0;
+    const tick = () => {
+      const v = videoRef.current;
+      if (v) setCurrent(v.currentTime);
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [isPlaying, subtitleStyle?.animation]);
+
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
@@ -180,6 +203,54 @@ export const SubtitlePlayer = forwardRef<
   };
 
   const showVolumeMuted = muted || volume === 0;
+
+  // Karaoké : actif si l'animation est demandée ET que des timings par mot sont
+  // disponibles (sinon repli sur le texte simple — CJK, vidéos anciennes).
+  const karaokeOn =
+    style.animation !== "none" &&
+    !!activeWords &&
+    activeWords.length > 0 &&
+    !!activeText;
+
+  /** Rend le sous-titre actif : tokens surlignés (karaoké) ou texte simple. */
+  const renderSubtitle = () => {
+    if (!karaokeOn) return activeText;
+    const hl = highlightHex(style.highlight);
+    const lines = activeText!.split("\n");
+    let idx = 0;
+    return lines.map((line, li) => {
+      const toks = line.trim().split(/\s+/).filter(Boolean);
+      return (
+        <Fragment key={li}>
+          {li > 0 && <br />}
+          {toks.map((tok, ti) => {
+            const w = activeWords![idx++];
+            const on =
+              !!w &&
+              (style.animation === "word"
+                ? current >= w.start && current < w.end
+                : current >= w.start);
+            const tokenStyle: CSSProperties = !on
+              ? {}
+              : style.animation === "word"
+                ? {
+                    color: hl,
+                    display: "inline-block",
+                    transform: "scale(1.06)",
+                    transition: "transform 90ms ease-out",
+                  }
+                : { color: hl };
+            return (
+              <span key={ti} style={tokenStyle}>
+                {tok}
+                {ti < toks.length - 1 ? " " : ""}
+              </span>
+            );
+          })}
+        </Fragment>
+      );
+    });
+  };
 
   return (
     <div
@@ -265,7 +336,7 @@ export const SubtitlePlayer = forwardRef<
                   ...speakerCss,
                 }}
               >
-                {activeText}
+                {renderSubtitle()}
               </span>
             </div>
           )}

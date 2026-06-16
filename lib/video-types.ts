@@ -6,12 +6,24 @@
  * Le format `Segment` est identique à celui produit par le worker.
  */
 
+/** Mot (token d'affichage) horodaté pour le karaoké mot-à-mot. Slots CONTIGUS
+ * (`end` d'un mot = `start` du suivant). `text` = token tel qu'affiché → s'aligne
+ * 1:1 avec le texte du cue découpé sur les espaces. Cf. worker karaoke.ts. */
+export type WordTiming = {
+  text: string;
+  start: number;
+  end: number;
+};
+
 export type Segment = {
   start: number;
   end: number;
   text: string;
   /** Index du locuteur (diarisation) si connu : couleur/découpe par voix. */
   speaker?: number;
+  /** Timings par mot (karaoké), optionnel. Absent pour le CJK et les vidéos
+   * d'avant le karaoké → le lecteur retombe alors sur l'affichage classique. */
+  words?: WordTiming[];
 };
 
 export type VideoStatus =

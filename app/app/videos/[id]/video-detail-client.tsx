@@ -65,6 +65,8 @@ import {
   POSITION_OPTIONS,
   OUTLINE_WIDTH_OPTIONS,
   BG_OPACITY_OPTIONS,
+  ANIMATION_OPTIONS,
+  HIGHLIGHT_OPTIONS,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 
@@ -561,6 +563,8 @@ export function VideoDetailClient({
   };
 
   const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
+  const activeWords =
+    activeIndex >= 0 ? segments[activeIndex]?.words : undefined;
   const activeSpeaker =
     activeIndex >= 0 ? segments[activeIndex]?.speaker : undefined;
   // Plusieurs voix détectées (diarisation) → on colore par locuteur.
@@ -742,6 +746,7 @@ export function VideoDetailClient({
                 ref={playerRef}
                 videoUrl={videoUrl}
                 activeText={activeText}
+                activeWords={activeWords}
                 activeSpeaker={activeSpeaker}
                 multiSpeaker={multiSpeaker}
                 rtl={targetRtl}
@@ -1464,6 +1469,46 @@ function SubtitleStylePanel({
             {style.shadow ? "Activée" : "Désactivée"}
           </button>
         </div>
+      </div>
+
+      {/* Animation karaoké (mot-à-mot). Désactivée par défaut. */}
+      <div>
+        <FieldLabel>Animation (karaoké)</FieldLabel>
+        <div className="flex flex-wrap gap-1.5">
+          {ANIMATION_OPTIONS.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => onChange({ animation: o.id })}
+              className={chipCls(style.animation === o.id)}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {style.animation !== "none" && (
+          <div className="mt-2.5">
+            <FieldLabel>Couleur de surlignage</FieldLabel>
+            <div className="flex flex-wrap gap-2">
+              {HIGHLIGHT_OPTIONS.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => onChange({ highlight: c.id })}
+                  title={c.label}
+                  aria-label={`Surlignage ${c.label}`}
+                  className={`h-7 w-7 rounded-full border-2 transition-transform ${
+                    style.highlight === c.id
+                      ? "border-ink-900 scale-110"
+                      : "border-ivory-300 hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: c.hex }}
+                />
+              ))}
+            </div>
+            <p className="mt-1.5 font-mono text-[9px] text-ink-400">
+              Le mot prononcé est surligné au fil de la lecture · gravé aussi dans le MP4.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Distinction des voix (diarisation) — visible seulement si plusieurs voix.

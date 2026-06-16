@@ -23,6 +23,10 @@ export type SubtitleTextColor = SubtitleColor | "auto";
 export type SubtitlePosition = "bottom" | "center" | "top";
 export type SubtitleOutlineWidth = "thin" | "medium" | "thick";
 export type SubtitleBgOpacity = "full" | "medium" | "light";
+/** Animation karaoké mot-à-mot : aucune / remplissage progressif / mot courant. */
+export type SubtitleAnimation = "none" | "fill" | "word";
+/** Couleur de surlignage du karaoké. */
+export type SubtitleHighlight = "jaune" | "rouge" | "vert" | "bleu" | "blanc";
 
 export type SubtitleStyle = {
   font: SubtitleFont;
@@ -42,6 +46,10 @@ export type SubtitleStyle = {
   shadow: boolean;
   /** Opacité de la boîte (mode fond). */
   bgOpacity: SubtitleBgOpacity;
+  /** Animation karaoké (par défaut : aucune). */
+  animation: SubtitleAnimation;
+  /** Couleur de surlignage du karaoké. */
+  highlight: SubtitleHighlight;
 };
 
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
@@ -58,6 +66,8 @@ export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   outlineWidth: "medium",
   shadow: false,
   bgOpacity: "full",
+  animation: "none",
+  highlight: "jaune",
 };
 
 export const FONT_OPTIONS: { id: SubtitleFont; label: string }[] = [
@@ -120,6 +130,38 @@ export const BG_OPACITY_OPTIONS: { id: SubtitleBgOpacity; label: string }[] = [
   { id: "medium", label: "Moyen" },
   { id: "light", label: "Léger" },
 ];
+
+export const ANIMATION_OPTIONS: { id: SubtitleAnimation; label: string }[] = [
+  { id: "none", label: "Aucune" },
+  { id: "fill", label: "Remplissage" },
+  { id: "word", label: "Mot actif" },
+];
+
+/** Couleurs de surlignage du karaoké (mêmes valeurs que le worker burn.ts). */
+const HIGHLIGHT_HEX: Record<SubtitleHighlight, string> = {
+  jaune: "#FFE45C",
+  rouge: "#C8392F",
+  vert: "#2E7D5B",
+  bleu: "#5CC8FF",
+  blanc: "#F8F4E9",
+};
+
+export const HIGHLIGHT_OPTIONS: {
+  id: SubtitleHighlight;
+  label: string;
+  hex: string;
+}[] = [
+  { id: "jaune", label: "Jaune", hex: HIGHLIGHT_HEX.jaune },
+  { id: "rouge", label: "Rouge", hex: HIGHLIGHT_HEX.rouge },
+  { id: "vert", label: "Vert", hex: HIGHLIGHT_HEX.vert },
+  { id: "bleu", label: "Bleu", hex: HIGHLIGHT_HEX.bleu },
+  { id: "blanc", label: "Blanc", hex: HIGHLIGHT_HEX.blanc },
+];
+
+/** Hex de la couleur de surlignage karaoké (pour l'overlay du lecteur). */
+export function highlightHex(highlight: SubtitleHighlight): string {
+  return HIGHLIGHT_HEX[highlight];
+}
 
 const OUTLINE_EM: Record<SubtitleOutlineWidth, number> = {
   thin: 0.04,
@@ -196,6 +238,12 @@ export function normalizeSubtitleStyle(raw: unknown): SubtitleStyle {
       s.bgOpacity === "medium" || s.bgOpacity === "light"
         ? s.bgOpacity
         : "full",
+    animation:
+      s.animation === "fill" || s.animation === "word" ? s.animation : "none",
+    highlight:
+      s.highlight && HIGHLIGHT_HEX[s.highlight as SubtitleHighlight]
+        ? (s.highlight as SubtitleHighlight)
+        : "jaune",
   };
 }
 

@@ -12,6 +12,7 @@ import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
 import { REGISTER_RULES } from "@/lib/translation-prompt";
 import { translateCuesBatched } from "@/lib/translate-cues";
 import { wrapLines } from "@/lib/wrap-lines";
+import { withProratedWords } from "@/lib/karaoke";
 import {
   getSubtitle,
   getAllSubtitles,
@@ -380,8 +381,13 @@ export async function saveTranscriptionTarget(
   if (!video) return { ok: false, error: "Vidéo introuvable." };
   const lang: Lang = isLang(video.target_lang) ? video.target_lang : "en";
 
+  // Karaoké : si une ligne a été éditée, ses timings par mot ne sont plus alignés
+  // → on les recalcule au prorata (withProratedWords garde les timings réels des
+  // lignes non touchées). CJK : pas de words.
+  const aligned = segments.map((s) => withProratedWords(s, lang));
+
   // Source de vérité = video_subtitles[langue active] (édition par langue).
-  const up = await upsertSubtitle(supabase, videoId, lang, segments, {
+  const up = await upsertSubtitle(supabase, videoId, lang, aligned, {
     userEdited: true,
   });
   if (!up.ok) return { ok: false, error: up.error };
@@ -390,7 +396,7 @@ export async function saveTranscriptionTarget(
   const { error } = await supabase
     .from("videos")
     .update({
-      transcription_target: segments,
+      transcription_target: aligned,
       user_edited: true,
     })
     .eq("id", videoId)
@@ -475,10 +481,13 @@ export async function requestBurn(
     if (!okSegs) return { ok: false, error: "Sous-titres invalides." };
     // Cache table (langue active) + miroir legacy (lu par le worker burn).
     const lang: Lang = isLang(video.target_lang) ? video.target_lang : "en";
-    await upsertSubtitle(supabase, videoId, lang, segments, { userEdited: true });
+    // Karaoké : on réaligne les timings par mot avant de graver (le burn lit
+    // transcription_target).
+    const aligned = segments.map((s) => withProratedWords(s, lang));
+    await upsertSubtitle(supabase, videoId, lang, aligned, { userEdited: true });
     await supabase
       .from("videos")
-      .update({ transcription_target: segments, user_edited: true })
+      .update({ transcription_target: aligned, user_edited: true })
       .eq("id", videoId)
       .eq("user_id", user.id);
   }
@@ -723,13 +732,15 @@ async function ensureLanguageSegments(
 
   let segments: Segment[];
   if (lang === srcLang) {
-    // Transcription dans la langue parlée : pas de traduction.
-    segments = base.map((s) => ({
-      start: s.start,
-      end: s.end,
-      text: s.text,
-      speaker: s.speaker,
-    }));
+    // Transcription dans la langue parlée : pas de traduction. On conserve les
+    // timings par mot RÉELS de la source si présents (withProratedWords les garde
+    // tant que le texte n'a pas changé), sinon on les calcule au prorata.
+    segments = base.map((s) =>
+      withProratedWords(
+        { start: s.start, end: s.end, text: s.text, speaker: s.speaker, words: s.words },
+        lang,
+      ),
+    );
   } else {
     if (!isAnthropicConfigured()) {
       throw new Error("Génération indisponible pour le moment.");
@@ -741,13 +752,19 @@ async function ensureLanguageSegments(
     );
     // Claude renvoie du texte sans coupure de ligne → on rétablit la découpe
     // ≤ 2 lignes (par caractères pour le CJK) pour l'éditeur/lecteur/MP4. Le
-    // locuteur (diarisation) est conservé tel quel (timeline partagée).
-    segments = base.map((s, i) => ({
-      start: s.start,
-      end: s.end,
-      text: wrapLines(translated[i] ?? s.text, lang),
-      speaker: s.speaker,
-    }));
+    // locuteur (diarisation) est conservé tel quel (timeline partagée). Karaoké :
+    // timings par mot répartis au prorata sur le texte traduit.
+    segments = base.map((s, i) =>
+      withProratedWords(
+        {
+          start: s.start,
+          end: s.end,
+          text: wrapLines(translated[i] ?? s.text, lang),
+          speaker: s.speaker,
+        },
+        lang,
+      ),
+    );
   }
 
   const up = await upsertSubtitle(supabase, video.id, lang, segments, {
