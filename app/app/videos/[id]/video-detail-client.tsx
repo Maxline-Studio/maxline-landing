@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Save,
   Check,
+  ChevronDown,
 } from "lucide-react";
 import type { Video } from "@/lib/supabase/types";
 import {
@@ -53,7 +54,7 @@ import {
   SubtitlePlayer,
   type SubtitlePlayerHandle,
 } from "@/components/app/subtitle-player";
-import { formatDuration } from "@/lib/storage";
+import { formatDuration, isAudioExtension, fileExtension } from "@/lib/storage";
 import { STAGE_PROGRESS, type Segment } from "@/lib/video-types";
 import {
   normalizeSubtitleStyle,
@@ -155,6 +156,9 @@ export function VideoDetailClient({
   const [burnStatus, setBurnStatus] = useState<BurnStatus>(
     (initialVideo.burn_status as BurnStatus) || "idle",
   );
+
+  // Source audio (podcast) : pas de piste vidéo → lecteur audio + pas de MP4 gravé.
+  const isAudio = isAudioExtension(fileExtension(initialVideo.original_filename));
 
   const sourceLang = initialVideo.source_lang || "fr";
   const [targetLang, setTargetLang] = useState<Lang>(
@@ -740,6 +744,7 @@ export function VideoDetailClient({
               <SubtitlePlayer
                 ref={playerRef}
                 videoUrl={videoUrl}
+                isAudio={isAudio}
                 activeText={activeText}
                 activeWords={activeWords}
                 activeSpeaker={activeSpeaker}
@@ -792,28 +797,30 @@ export function VideoDetailClient({
                       <Download className="h-4 w-4" aria-hidden />.fcpxml
                     </button>
                   )}
-                  {burnStatus === "done" ? (
-                    <button
-                      onClick={downloadBurned}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-rouge-500 border-2 border-rouge-500 rounded-sm text-sm font-semibold text-ivory-50 hover:bg-rouge-600 transition-colors"
-                    >
-                      <Download className="h-4 w-4" aria-hidden />
-                      MP4 sous-titré
-                    </button>
-                  ) : burnInProgress ? (
-                    <span className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-300 rounded-sm text-sm font-semibold text-ink-500">
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      Génération MP4…
-                    </span>
-                  ) : (
-                    <button
-                      onClick={requestBurnVideo}
-                      className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
-                    >
-                      <Download className="h-4 w-4" aria-hidden />
-                      {burnStatus === "failed" ? "Réessayer le MP4" : "Générer le MP4 sous-titré"}
-                    </button>
-                  )}
+                  {/* MP4 incrusté : vidéo uniquement (un audio n'a pas de piste vidéo). */}
+                  {!isAudio &&
+                    (burnStatus === "done" ? (
+                      <button
+                        onClick={downloadBurned}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-rouge-500 border-2 border-rouge-500 rounded-sm text-sm font-semibold text-ivory-50 hover:bg-rouge-600 transition-colors"
+                      >
+                        <Download className="h-4 w-4" aria-hidden />
+                        MP4 sous-titré
+                      </button>
+                    ) : burnInProgress ? (
+                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-300 rounded-sm text-sm font-semibold text-ink-500">
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        Génération MP4…
+                      </span>
+                    ) : (
+                      <button
+                        onClick={requestBurnVideo}
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-900 rounded-sm text-sm font-semibold text-ink-900 hover:bg-ink-900 hover:text-ivory-50 transition-colors"
+                      >
+                        <Download className="h-4 w-4" aria-hidden />
+                        {burnStatus === "failed" ? "Réessayer le MP4" : "Générer le MP4 sous-titré"}
+                      </button>
+                    ))}
                   <button
                     onClick={downloadAll}
                     title="Un .srt + .vtt par langue, regroupés dans un .zip"
@@ -1263,17 +1270,33 @@ function SubtitleStylePanel({
   onChange: (patch: Partial<SubtitleStyle>) => void;
   multiSpeaker?: boolean;
 }) {
+  // Replié par défaut : réduit fortement le scroll de l'éditeur. L'en-tête rappelle
+  // ce qu'on y trouve (dont l'animation karaoké) pour la découvrabilité.
+  const [open, setOpen] = useState(false);
   return (
-    <div className="mt-4 rounded-sm border border-ivory-200 bg-ivory-50 p-4 space-y-4">
-      <div className="flex items-baseline gap-2 flex-wrap">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-ink-600">
-          Style des sous-titres
+    <div className="mt-4 rounded-sm border border-ivory-200 bg-ivory-50 p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left"
+      >
+        <span className="flex items-baseline gap-2 flex-wrap">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-ink-600">
+            Style des sous-titres
+          </span>
+          <span className="font-mono text-[9px] text-ink-400">
+            police, couleurs, position, animation karaoké…
+          </span>
         </span>
-        <span className="font-mono text-[9px] text-ink-400">
-          aperçu · sera gravé avec le rendu MP4
-        </span>
-      </div>
+        <ChevronDown
+          className={`h-4 w-4 flex-shrink-0 text-ink-500 transition-transform ${open ? "rotate-180" : ""}`}
+          aria-hidden
+        />
+      </button>
 
+      {open && (
+        <div className="mt-4 space-y-4">
       {/* Police */}
       <div>
         <FieldLabel>Police</FieldLabel>
@@ -1525,6 +1548,8 @@ function SubtitleStylePanel({
           <p className="mt-1.5 font-mono text-[9px] text-ink-400">
             Plusieurs voix détectées · chaque voix est déjà sur sa propre ligne.
           </p>
+        </div>
+      )}
         </div>
       )}
     </div>

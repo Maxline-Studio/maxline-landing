@@ -18,6 +18,7 @@ import {
   Maximize,
   Minimize,
   VideoOff,
+  AudioLines,
   Languages,
   Check,
   Loader2,
@@ -58,6 +59,8 @@ export const SubtitlePlayer = forwardRef<
   SubtitlePlayerHandle,
   {
     videoUrl: string | null;
+    /** Source audio (podcast) : pas de piste vidéo → fond audio + pas de MP4. */
+    isAudio?: boolean;
     activeText?: string;
     /** Timings par mot du sous-titre actif (karaoké) — si présents et animation
      * activée, le mot courant est surligné en suivant la lecture. */
@@ -81,6 +84,7 @@ export const SubtitlePlayer = forwardRef<
 >(function SubtitlePlayer(
   {
     videoUrl,
+    isAudio = false,
     activeText,
     activeWords,
     activeSpeaker,
@@ -313,6 +317,18 @@ export const SubtitlePlayer = forwardRef<
             }}
             onError={() => setError(true)}
           />
+
+          {/* Fond « audio » (podcast) : pas de piste vidéo → visuel sobre, les
+              sous-titres (et le karaoké) s'affichent par-dessus. */}
+          {isAudio && (
+            <div className="absolute inset-0 flex items-center justify-center bg-ink-900 pointer-events-none">
+              <AudioLines
+                className={`h-14 w-14 text-ivory-50/35 ${isPlaying ? "animate-pulse" : ""}`}
+                strokeWidth={1.25}
+                aria-hidden
+              />
+            </div>
+          )}
 
           {/* Sous-titre (overlay maison, au-dessus des contrôles) */}
           {activeText && (

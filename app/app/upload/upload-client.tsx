@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   UploadCloud,
   FileVideo,
+  FileAudio,
   AlertCircle,
   CheckCircle2,
   X,
@@ -16,6 +17,7 @@ import {
   readVideoDuration,
   fileExtension,
   formatDuration,
+  isAudioFile,
   MAX_DURATION_SECONDS,
 } from "@/lib/storage";
 import {
@@ -57,6 +59,7 @@ export function UploadClient({
     name: string;
     duration: number;
     size: number;
+    audio: boolean;
   } | null>(null);
 
   // ── 1. Sélection du fichier (validation + durée), AVANT tout choix de langue ──
@@ -72,17 +75,18 @@ export function UploadClient({
         return;
       }
 
+      const audio = isAudioFile(f);
       const duration = await readVideoDuration(f);
       if (duration === null) {
         setError(
-          "Impossible de lire cette vidéo. Le fichier est peut-être corrompu.",
+          `Impossible de lire ce fichier ${audio ? "audio" : "vidéo"}. Il est peut-être corrompu.`,
         );
         setPhase("idle");
         return;
       }
       if (duration > MAX_DURATION_SECONDS) {
         setError(
-          `Vidéo trop longue (${formatDuration(duration)}). Maximum : 30 minutes.`,
+          `Fichier trop long (${formatDuration(duration)}). Maximum : 30 minutes.`,
         );
         setPhase("idle");
         return;
@@ -98,7 +102,7 @@ export function UploadClient({
       }
 
       setFile(f);
-      setFileInfo({ name: f.name, duration, size: f.size });
+      setFileInfo({ name: f.name, duration, size: f.size, audio });
       setPhase("configure");
     },
     [minutesAvailable],
@@ -181,7 +185,7 @@ export function UploadClient({
   // Phrase explicative selon les choix.
   const helperText =
     targetLang === "same"
-      ? "Sous-titres dans la langue parlée — parfait pour rendre votre vidéo accessible."
+      ? "Sous-titres dans la langue parlée — parfait pour rendre votre contenu accessible."
       : sourceLang === "auto"
         ? `Traduction vers ${langLabel(targetLang)} — la langue parlée est détectée automatiquement.`
         : sourceLang === targetLang
@@ -235,7 +239,7 @@ export function UploadClient({
                   />
                 </div>
                 <p className="font-display font-medium text-xl text-ink-900 mb-2">
-                  Déposez votre vidéo ici
+                  Déposez votre vidéo ou audio ici
                 </p>
                 <p className="text-sm text-ink-600">
                   ou{" "}
@@ -244,7 +248,8 @@ export function UploadClient({
                   </span>
                 </p>
                 <p className="mt-3 text-xs text-ink-400">
-                  MP4, MOV, AVI, MKV, WebM · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
+                  Vidéo (MP4, MOV, AVI, MKV, WebM) ou audio/podcast (MP3, WAV,
+                  M4A, AAC, OGG, FLAC) · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
                 </p>
                 <p className="mt-1 text-xs text-ink-400">
                   Vous choisirez la langue des sous-titres juste après.
@@ -254,7 +259,7 @@ export function UploadClient({
             <input
               ref={inputRef}
               type="file"
-              accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,.mp4,.mov,.avi,.mkv,.webm"
+              accept="video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm,.mp4,.mov,.avi,.mkv,.webm,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.weba"
               className="hidden"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -281,11 +286,11 @@ export function UploadClient({
           {/* Fichier déposé */}
           <div className="flex items-start gap-4 mb-7">
             <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
-              <FileVideo
-                className="h-6 w-6 text-rouge-400"
-                strokeWidth={1.75}
-                aria-hidden
-              />
+              {fileInfo.audio ? (
+                <FileAudio className="h-6 w-6 text-rouge-400" strokeWidth={1.75} aria-hidden />
+              ) : (
+                <FileVideo className="h-6 w-6 text-rouge-400" strokeWidth={1.75} aria-hidden />
+              )}
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-display font-semibold text-ink-900 truncate">
