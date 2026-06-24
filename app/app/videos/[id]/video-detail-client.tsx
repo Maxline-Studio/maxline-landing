@@ -181,19 +181,6 @@ export function VideoDetailClient({
     },
   );
   const segments = segmentsByLang[targetLang] ?? [];
-  const setSegments = useCallback(
-    (updater: Cue[] | ((prev: Cue[]) => Cue[])) => {
-      setSegmentsByLang((prev) => {
-        const cur = prev[targetLang] ?? [];
-        const next =
-          typeof updater === "function"
-            ? (updater as (p: Cue[]) => Cue[])(cur)
-            : updater;
-        return { ...prev, [targetLang]: next };
-      });
-    },
-    [targetLang],
-  );
 
   const segmentsRef = useRef(segments);
   segmentsRef.current = segments;
@@ -332,7 +319,25 @@ export function VideoDetailClient({
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
     setSaveState("dirty");
+    // Un MP4 déjà gravé devient PÉRIMÉ dès la première édition → on l'invalide
+    // (retour à "idle") pour ne jamais proposer le téléchargement d'une version
+    // obsolète : l'utilisateur doit regraver pour intégrer ses modifs.
+    setBurnStatus((b) => (b === "done" ? "idle" : b));
   }, []);
+
+  // Applique une édition aux sous-titres de la langue active. CLÉ : on met à jour
+  // segmentsRef SYNCHRONIQUEMENT (avant le re-rendu) pour que la sauvegarde et
+  // les exports/MP4 lisent toujours la toute dernière version — même si on
+  // télécharge juste après avoir édité un timecode (blur + clic dans le même tick).
+  const applyEdit = useCallback(
+    (fn: (prev: Cue[]) => Cue[]) => {
+      const next = fn(segmentsRef.current);
+      segmentsRef.current = next;
+      setSegmentsByLang((prev) => ({ ...prev, [targetLang]: next }));
+      markDirty();
+    },
+    [targetLang, markDirty],
+  );
 
   const save = useCallback(async () => {
     if (!dirtyRef.current) return;
@@ -371,18 +376,14 @@ export function VideoDetailClient({
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
-  const updateText = (idx: number, text: string) => {
-    setSegments((prev) => prev.map((s, i) => (i === idx ? { ...s, text } : s)));
-    markDirty();
-  };
-  const updateTiming = (idx: number, field: "start" | "end", value: number) => {
-    setSegments((prev) =>
+  const updateText = (idx: number, text: string) =>
+    applyEdit((prev) => prev.map((s, i) => (i === idx ? { ...s, text } : s)));
+  const updateTiming = (idx: number, field: "start" | "end", value: number) =>
+    applyEdit((prev) =>
       prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
     );
-    markDirty();
-  };
-  const addLineAfter = (idx: number) => {
-    setSegments((prev) => {
+  const addLineAfter = (idx: number) =>
+    applyEdit((prev) => {
       const cur = prev[idx];
       const next = prev[idx + 1];
       const newStart = cur ? cur.end : 0;
@@ -395,14 +396,10 @@ export function VideoDetailClient({
       };
       return [...prev.slice(0, idx + 1), newSeg, ...prev.slice(idx + 1)];
     });
-    markDirty();
-  };
-  const deleteLine = (idx: number) => {
-    setSegments((prev) => prev.filter((_, i) => i !== idx));
-    markDirty();
-  };
-  const mergeWithNext = (idx: number) => {
-    setSegments((prev) => {
+  const deleteLine = (idx: number) =>
+    applyEdit((prev) => prev.filter((_, i) => i !== idx));
+  const mergeWithNext = (idx: number) =>
+    applyEdit((prev) => {
       const a = prev[idx];
       const b = prev[idx + 1];
       if (!a || !b) return prev;
@@ -414,8 +411,6 @@ export function VideoDetailClient({
       };
       return [...prev.slice(0, idx), merged, ...prev.slice(idx + 2)];
     });
-    markDirty();
-  };
   const regenerate = async (idx: number) => {
     setRegeneratingIdx(idx);
     setErrorMessage(null);
