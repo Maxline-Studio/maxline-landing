@@ -152,10 +152,12 @@ export function VideoDetailClient({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [regeneratingIdx, setRegeneratingIdx] = useState<number | null>(null);
   const [burnStatus, setBurnStatus] = useState<BurnStatus>(
     (initialVideo.burn_status as BurnStatus) || "idle",
   );
+  const [burnProgress, setBurnProgress] = useState(0);
 
   // Source audio (podcast) : pas de piste vidéo → lecteur audio + pas de MP4 gravé.
   const isAudio = isAudioExtension(fileExtension(initialVideo.original_filename));
@@ -352,6 +354,7 @@ export function VideoDetailClient({
     );
     if (result.ok) {
       dirtyRef.current = false;
+      setLastSavedAt(Date.now());
       setSaveState("saved");
       setTimeout(() => {
         if (!dirtyRef.current) setSaveState("idle");
@@ -361,13 +364,23 @@ export function VideoDetailClient({
     }
   }, [initialVideo.id]);
 
-  // Auto-save toutes les 10 s, et sauvegarde avant de quitter.
+  // Auto-save toutes les 10 s (filet), et sauvegarde avant de quitter.
   useEffect(() => {
     const interval = setInterval(() => {
       if (dirtyRef.current) save();
     }, 10000);
     return () => clearInterval(interval);
   }, [save]);
+
+  // Auto-save RÉACTIF : ~1,2 s après une modification (débounce) → l'indicateur
+  // « Enregistré à … » se met à jour vite et lève le doute « est-ce sauvegardé ? ».
+  useEffect(() => {
+    if (saveState !== "dirty") return;
+    const t = setTimeout(() => {
+      if (dirtyRef.current) save();
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [saveState, save]);
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -504,6 +517,7 @@ export function VideoDetailClient({
       const res = await getBurnStatus(initialVideo.id);
       if (stop || !res) return;
       setBurnStatus(res.status);
+      setBurnProgress(res.progress);
       if (res.status === "failed" && res.error) setErrorMessage(res.error);
     };
     const interval = setInterval(check, 3000);
@@ -515,6 +529,7 @@ export function VideoDetailClient({
 
   const requestBurnVideo = async () => {
     setErrorMessage(null);
+    setBurnProgress(0);
     setBurnStatus("queued");
     const res = await requestBurn(
       initialVideo.id,
@@ -682,7 +697,7 @@ export function VideoDetailClient({
                 : `Transcription ${langLabel(targetLang)}`}
             </h2>
             <div className="flex items-center gap-3">
-              <SaveIndicator state={saveState} />
+              <SaveIndicator state={saveState} lastSavedAt={lastSavedAt} />
               <button
                 onClick={save}
                 disabled={
@@ -808,9 +823,9 @@ export function VideoDetailClient({
                         MP4 sous-titré
                       </button>
                     ) : burnInProgress ? (
-                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-300 rounded-sm text-sm font-semibold text-ink-500">
+                      <span className="inline-flex items-center gap-2 px-3 py-2 bg-ivory-50 border-2 border-ink-300 rounded-sm text-sm font-semibold text-ink-500 tabular-nums">
                         <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                        Génération MP4…
+                        Génération MP4… {burnProgress > 0 ? `${burnProgress}%` : ""}
                       </span>
                     ) : (
                       <button
@@ -830,6 +845,24 @@ export function VideoDetailClient({
                     Toutes les langues (.zip)
                   </button>
                 </div>
+
+                {/* Barre de progression MP4 : le réencodage complet peut durer
+                    plusieurs minutes → un vrai % vaut mieux qu'un spinner figé. */}
+                {burnInProgress && (
+                  <div className="mt-4">
+                    <div className="h-2 bg-ivory-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-rouge-500 transition-all duration-700 ease-out"
+                        style={{ width: `${Math.max(3, burnProgress)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-ink-500 mt-1.5 font-mono">
+                      Incrustation en cours ({burnProgress}%) — réencodage complet de
+                      la vidéo, cela peut prendre quelques minutes.
+                    </p>
+                  </div>
+                )}
+
                 <p className="text-xs text-ink-500 mt-3 font-mono">
                   › .srt/.vtt/.txt = la langue affichée ({langShort(targetLang)}).
                   Le .zip regroupe un fichier par langue.
@@ -1205,40 +1238,51 @@ function parseTimecode(str: string): number | null {
   return null;
 }
 
-function SaveIndicator({ state }: { state: SaveState }) {
-  if (state === "idle") return null;
-  const config: Record<
-    Exclude<SaveState, "idle">,
-    { label: string; className: string; icon: React.ReactNode }
-  > = {
-    dirty: {
-      label: "Modifications non enregistrées",
-      className: "text-ink-500",
-      icon: <span className="h-1.5 w-1.5 rounded-full bg-rouge-500" />,
-    },
-    saving: {
-      label: "Enregistrement…",
-      className: "text-ink-500",
-      icon: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
-    },
-    saved: {
-      label: "Enregistré",
-      className: "text-success-600",
-      icon: <Check className="h-3.5 w-3.5" />,
-    },
-    error: {
-      label: "Erreur d'enregistrement",
-      className: "text-rouge-600",
-      icon: <span className="h-1.5 w-1.5 rounded-full bg-rouge-600" />,
-    },
-  };
-  const c = config[state];
+function SaveIndicator({
+  state,
+  lastSavedAt,
+}: {
+  state: SaveState;
+  lastSavedAt: number | null;
+}) {
+  // Heure « HH:MM:SS » du dernier enregistrement réussi.
+  const savedTime =
+    lastSavedAt != null
+      ? new Date(lastSavedAt).toLocaleTimeString("fr-FR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      : null;
+
+  // Statut TOUJOURS visible (jamais null) → aucun doute « est-ce enregistré ? ».
+  let label: string;
+  let className: string;
+  let icon: React.ReactNode;
+  if (state === "saving") {
+    label = "Enregistrement…";
+    className = "text-ink-500";
+    icon = <Loader2 className="h-3.5 w-3.5 animate-spin" />;
+  } else if (state === "dirty") {
+    label = "Modifications en attente…";
+    className = "text-ink-500";
+    icon = <span className="h-1.5 w-1.5 rounded-full bg-rouge-500" />;
+  } else if (state === "error") {
+    label = "Échec de l'enregistrement";
+    className = "text-rouge-600";
+    icon = <span className="h-1.5 w-1.5 rounded-full bg-rouge-600" />;
+  } else {
+    // idle / saved : tout est enregistré.
+    label = savedTime ? `Enregistré à ${savedTime}` : "À jour";
+    className = "text-success-600";
+    icon = <Check className="h-3.5 w-3.5" />;
+  }
   return (
     <span
-      className={`hidden sm:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest ${c.className}`}
+      className={`hidden sm:inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest ${className}`}
     >
-      {c.icon}
-      {c.label}
+      {icon}
+      {label}
     </span>
   );
 }

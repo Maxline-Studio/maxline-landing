@@ -516,27 +516,46 @@ export async function requestBurn(
   return { ok: true };
 }
 
-/** Lit l'état du burn (polling côté éditeur). */
+/** Lit l'état du burn + la progression (polling côté éditeur). */
 export async function getBurnStatus(
   videoId: string,
-): Promise<{ status: BurnStatus; error: string | null } | null> {
+): Promise<{ status: BurnStatus; error: string | null; progress: number } | null> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: video } = await supabase
+  // On lit burn_progress si la colonne existe (migration 025). Repli SANS cette
+  // colonne si elle n'est pas encore appliquée → le polling ne casse jamais.
+  const withProgress = await supabase
     .from("videos")
-    .select("burn_status, burn_error")
+    .select("burn_status, burn_error, burn_progress")
     .eq("id", videoId)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+
+  let video = withProgress.data as {
+    burn_status?: string;
+    burn_error?: string | null;
+    burn_progress?: number;
+  } | null;
+
+  if (withProgress.error) {
+    const fallback = await supabase
+      .from("videos")
+      .select("burn_status, burn_error")
+      .eq("id", videoId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    video = fallback.data;
+  }
 
   if (!video) return null;
   return {
     status: (video.burn_status as BurnStatus) ?? "idle",
     error: video.burn_error ?? null,
+    progress: typeof video.burn_progress === "number" ? video.burn_progress : 0,
   };
 }
 

@@ -4,6 +4,7 @@ import { Upload, Video as VideoIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import type { Video } from "@/lib/supabase/types";
 import { VideoStatusBadge } from "@/components/app/video-status";
+import { DeleteVideoButton } from "@/components/app/delete-video-button";
 import { formatDuration } from "@/lib/storage";
 
 export const metadata: Metadata = {
@@ -102,10 +103,10 @@ export default async function VideosPage({
       ) : (
         <ul className="space-y-3">
           {list.map((video) => (
-            <li key={video.id}>
+            <li key={video.id} className="relative">
               <Link
                 href={`/app/videos/${video.id}`}
-                className="flex items-center gap-4 bg-ivory-50 border-2 border-ink-900 rounded-sm p-4 hover:shadow-[4px_4px_0_0_rgba(26,24,20,1)] transition-shadow"
+                className="flex items-center gap-4 bg-ivory-50 border-2 border-ink-900 rounded-sm p-4 pr-24 hover:shadow-[4px_4px_0_0_rgba(26,24,20,1)] transition-shadow"
               >
                 <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
                   <VideoIcon
@@ -132,6 +133,13 @@ export default async function VideosPage({
                 </div>
                 <VideoStatusBadge status={video.status} />
               </Link>
+              {/* Suppression directe (au-dessus du lien, ne navigue pas). */}
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                <DeleteVideoButton
+                  videoId={video.id}
+                  filename={video.original_filename}
+                />
+              </div>
             </li>
           ))}
         </ul>
