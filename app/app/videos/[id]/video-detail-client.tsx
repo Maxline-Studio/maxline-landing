@@ -871,6 +871,11 @@ export function VideoDetailClient({
                   › les exports reprennent vos dernières modifications (enregistrées
                   automatiquement)
                 </p>
+                <p className="text-xs text-ink-500 mt-1 font-mono">
+                  › le téléchargement ne démarre pas ? Une extension (bloqueur de
+                  pub/cookies) peut le bloquer — désactivez-la sur cette page, ou
+                  faites un clic droit → «&nbsp;Enregistrer sous&nbsp;».
+                </p>
                 {burnStatus === "done" && (
                   <p className="text-xs text-ink-500 mt-1 font-mono">
                     › le MP4 grave le texte et le style actuels. Régénérez après
