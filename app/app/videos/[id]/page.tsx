@@ -7,6 +7,7 @@ import { presignGet } from "@/lib/r2";
 import type { Video } from "@/lib/supabase/types";
 import { listLanguages, getAllSubtitles } from "@/lib/subtitles-store";
 import { VideoDetailClient } from "./video-detail-client";
+import { EditorClient } from "./editor/editor-client";
 
 export const metadata: Metadata = {
   title: "Vidéo",
@@ -15,10 +16,18 @@ export const metadata: Metadata = {
 
 export default async function VideoDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ classic?: string }>;
 }) {
   const { id } = await params;
+  // Filet de sécurité pendant la bascule vers l'éditeur timeline : ?classic=1
+  // rend l'ANCIEN éditeur (liste verticale). À retirer après 1-2 semaines de
+  // prod calme.
+  const { classic } = await searchParams;
+  const useClassic = classic === "1";
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -66,23 +75,35 @@ export default async function VideoDetailPage({
         ])
       : [[], {}];
 
-  return (
-    <div className="w-full">
-      <Link
-        href="/app/videos"
-        className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-8 group"
-      >
-        <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-        Mes vidéos
-      </Link>
+  if (useClassic) {
+    return (
+      <div className="w-full">
+        <Link
+          href="/app/videos"
+          className="inline-flex items-center gap-2 text-sm font-medium text-ink-700 hover:text-ink-900 mb-8 group"
+        >
+          <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
+          Mes vidéos
+        </Link>
 
-      <VideoDetailClient
-        initialVideo={v}
-        videoUrl={videoUrl}
-        canExportPro={canExportPro}
-        availableLangs={availableLangs}
-        initialSegments={allSegments}
-      />
-    </div>
+        <VideoDetailClient
+          initialVideo={v}
+          videoUrl={videoUrl}
+          canExportPro={canExportPro}
+          availableLangs={availableLangs}
+          initialSegments={allSegments}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <EditorClient
+      initialVideo={v}
+      videoUrl={videoUrl}
+      canExportPro={canExportPro}
+      availableLangs={availableLangs}
+      initialSegments={allSegments}
+    />
   );
 }

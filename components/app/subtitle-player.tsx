@@ -34,8 +34,11 @@ import { speakerColor } from "@/lib/speakers";
 import type { WordTiming } from "@/lib/video-types";
 
 export type SubtitlePlayerHandle = {
-  /** Place la lecture à `seconds` et démarre. */
-  seekTo: (seconds: number) => void;
+  /** Place la lecture à `seconds` et démarre (sauf `{ play: false }` :
+   * simple déplacement, utilisé par le scrub de la timeline). */
+  seekTo: (seconds: number, opts?: { play?: boolean }) => void;
+  /** Lecture/pause (raccourci clavier de l'éditeur). */
+  togglePlay: () => void;
 };
 
 /** secondes → "m:ss". */
@@ -72,6 +75,10 @@ export const SubtitlePlayer = forwardRef<
     /** true si la langue des sous-titres s'écrit de droite à gauche (arabe…). */
     rtl?: boolean;
     subtitleStyle?: SubtitleStyle;
+    /** true = onTimeUpdate est aussi appelé à chaque frame (rAF) pendant la
+     * lecture — nécessaire pour une tête de lecture fluide dans la timeline
+     * (l'événement natif `timeupdate` n'est émis que ~4 fois/s). */
+    smoothTime?: boolean;
     onTimeUpdate?: (seconds: number) => void;
     onPlayingChange?: (playing: boolean) => void;
     /** Menu « Sous-titres » dans le lecteur : les 10 langues + leur état. */
@@ -91,6 +98,7 @@ export const SubtitlePlayer = forwardRef<
     multiSpeaker,
     rtl,
     subtitleStyle,
+    smoothTime,
     onTimeUpdate,
     onPlayingChange,
     langs,
@@ -121,12 +129,18 @@ export const SubtitlePlayer = forwardRef<
   useImperativeHandle(
     ref,
     () => ({
-      seekTo: (seconds: number) => {
+      seekTo: (seconds: number, opts?: { play?: boolean }) => {
         const v = videoRef.current;
         if (v) {
           v.currentTime = seconds;
-          v.play().catch(() => {});
+          if (opts?.play !== false) v.play().catch(() => {});
         }
+      },
+      togglePlay: () => {
+        const v = videoRef.current;
+        if (!v) return;
+        if (v.paused) v.play().catch(() => {});
+        else v.pause();
       },
     }),
     [],
@@ -146,20 +160,28 @@ export const SubtitlePlayer = forwardRef<
     [],
   );
 
-  // Karaoké : suivi du temps à la fréquence d'affichage (rAF) pendant la lecture,
-  // pour un surlignage fluide (l'événement natif `timeupdate` n'est émis que
-  // ~4 fois/s → mot-à-mot saccadé). Actif uniquement si une animation est demandée.
+  // Karaoké + tête de lecture : suivi du temps à la fréquence d'affichage (rAF)
+  // pendant la lecture (l'événement natif `timeupdate` n'est émis que ~4 fois/s
+  // → mot-à-mot et playhead saccadés). Actif si une animation est demandée OU
+  // si l'hôte demande un temps fluide (`smoothTime`, éditeur timeline).
   useEffect(() => {
-    if (!isPlaying || (subtitleStyle?.animation ?? "none") === "none") return;
+    if (
+      !isPlaying ||
+      ((subtitleStyle?.animation ?? "none") === "none" && !smoothTime)
+    )
+      return;
     let raf = 0;
     const tick = () => {
       const v = videoRef.current;
-      if (v) setCurrent(v.currentTime);
+      if (v) {
+        setCurrent(v.currentTime);
+        if (smoothTime) onTimeUpdate?.(v.currentTime);
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [isPlaying, subtitleStyle?.animation]);
+  }, [isPlaying, subtitleStyle?.animation, smoothTime, onTimeUpdate]);
 
   const togglePlay = useCallback(() => {
     const v = videoRef.current;
