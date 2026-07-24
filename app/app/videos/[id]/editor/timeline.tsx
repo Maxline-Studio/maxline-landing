@@ -21,7 +21,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, GripHorizontal } from "lucide-react";
 import { cps, CPS_WARN, MIN_CUE_DURATION, formatClock, type Cue } from "./types";
 
 const TRACK_THUMBS_H = 26;
@@ -89,7 +89,8 @@ export function Timeline({
   /** Appelé UNE fois au premier mouvement d'un rognage/déplacement (snapshot historique). */
   onEditStart: () => void;
   onTiming: (idx: number, start: number, end: number) => void;
-  onEditEnd: () => void;
+  /** Relâcher d'un glissement/rognage : le parent recale le karaoké + réordonne. */
+  onEditEnd: (idx: number) => void;
   /** Largeur visible au montage (le parent calcule le zoom initial). */
   onReady?: (viewportWidth: number) => void;
 }) {
@@ -270,23 +271,16 @@ export function Timeline({
   const dragRef = useRef<Drag | null>(null);
   const suppressClickRef = useRef(false);
 
-  const neighborBounds = useCallback(
-    (idx: number): { min: number; max: number } => ({
-      min: idx > 0 ? cues[idx - 1]!.end : 0,
-      max: idx < cues.length - 1 ? cues[idx + 1]!.start : duration,
-    }),
-    [cues, duration],
-  );
-
   const startDrag = (
     e: React.PointerEvent,
     idx: number,
     mode: Drag["mode"],
+    allowTouch = false,
   ) => {
-    // Déplacement du bloc entier : souris uniquement (au doigt, le geste
-    // entrerait en conflit avec le scroll de la timeline ; le timing s'ajuste
-    // aux poignées ou aux steppers de la feuille).
-    if (mode === "move" && e.pointerType !== "mouse") return;
+    // Déplacement du bloc entier au DOIGT : réservé à la poignée centrale du bloc
+    // actif (allowTouch), sinon un glissement sur le corps entrerait en conflit
+    // avec le scroll de la timeline. À la souris, tout le corps déplace.
+    if (mode === "move" && e.pointerType !== "mouse" && !allowTouch) return;
     e.preventDefault();
     e.stopPropagation();
     const c = cues[idx];
@@ -313,13 +307,15 @@ export function Timeline({
       suppressClickRef.current = true;
       onEditStart();
     }
+    // Bornes SOUPLES : on ne bloque plus aux voisins → un cue peut GLISSER
+    // devant/derrière un autre (réordonné au relâcher). Seule limite : [0, durée].
+    // L'aimantation reste active (accroche aux bords voisins + tête de lecture)
+    // mais n'empêche jamais de passer.
     const threshold = (snap ? 8 : 0) / pxPerSec;
-    const { min, max } = neighborBounds(d.idx);
     if (d.mode === "move") {
       const dt = (e.clientX - d.startX) / pxPerSec;
       const len = d.origEnd - d.origStart;
       let ns = d.origStart + dt;
-      // Aimante le bord le plus proche d'une cible.
       const rs = snapTime(ns, d.idx, cues, currentTime, threshold);
       const re = snapTime(ns + len, d.idx, cues, currentTime, threshold);
       let guide: number | null = null;
@@ -330,7 +326,7 @@ export function Timeline({
         ns = re.t - len;
         guide = re.snapped;
       }
-      ns = Math.max(min, Math.min(max - len, ns));
+      ns = Math.max(0, Math.min(duration - len, ns));
       setSnapGuide(guide);
       onTiming(d.idx, ns, ns + len);
     } else {
@@ -340,10 +336,10 @@ export function Timeline({
       setSnapGuide(r.snapped);
       const c = cues[d.idx]!;
       if (d.mode === "trim-l") {
-        const ns = Math.max(min, Math.min(c.end - MIN_CUE_DURATION, t));
+        const ns = Math.max(0, Math.min(c.end - MIN_CUE_DURATION, t));
         onTiming(d.idx, ns, c.end);
       } else {
-        const ne = Math.min(max, Math.max(c.start + MIN_CUE_DURATION, t));
+        const ne = Math.min(duration, Math.max(c.start + MIN_CUE_DURATION, t));
         onTiming(d.idx, c.start, ne);
       }
     }
@@ -354,7 +350,7 @@ export function Timeline({
     if (!d || e.pointerId !== d.pointerId) return;
     dragRef.current = null;
     setSnapGuide(null);
-    if (d.moved) onEditEnd();
+    if (d.moved) onEditEnd(d.idx);
     // Le clic qui suit un drag ne doit pas re-sélectionner/ouvrir la feuille.
     setTimeout(() => {
       suppressClickRef.current = false;
@@ -454,6 +450,7 @@ export function Timeline({
                 onSelect(i, true);
               }}
               onBodyDown={(e) => startDrag(e, i, "move")}
+              onGripDown={(e) => startDrag(e, i, "move", true)}
               onHandleDown={(e, side) =>
                 startDrag(e, i, side === "l" ? "trim-l" : "trim-r")
               }
@@ -501,6 +498,7 @@ const CueBlock = memo(function CueBlock({
   rtl,
   onTap,
   onBodyDown,
+  onGripDown,
   onHandleDown,
 }: {
   cue: Cue;
@@ -511,6 +509,7 @@ const CueBlock = memo(function CueBlock({
   rtl?: boolean;
   onTap: () => void;
   onBodyDown: (e: React.PointerEvent) => void;
+  onGripDown: (e: React.PointerEvent) => void;
   onHandleDown: (e: React.PointerEvent, side: "l" | "r") => void;
 }) {
   const speed = cps(cue);
@@ -551,6 +550,23 @@ const CueBlock = memo(function CueBlock({
       >
         {cue.text || "…"}
       </div>
+      {/* Poignée de DÉPLACEMENT (bloc actif) : permet de glisser le sous-titre au
+          doigt (le corps du bloc, lui, laisse défiler la timeline au toucher). */}
+      {active && (
+        <button
+          type="button"
+          aria-label="Déplacer ce sous-titre"
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            onGripDown(e);
+          }}
+          onClick={(e) => e.stopPropagation()}
+          style={{ touchAction: "none" }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[3] inline-flex items-center justify-center h-6 w-8 rounded-full bg-rouge-500/90 text-ivory-50 shadow-sm cursor-grab active:cursor-grabbing"
+        >
+          <GripHorizontal className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      )}
       {fast && (
         <span
           className="absolute top-0.5 right-4 inline-flex items-center gap-0.5 font-mono text-[8px] text-[#A87B00]"

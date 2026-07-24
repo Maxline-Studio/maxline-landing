@@ -76,6 +76,7 @@ import {
   normalizeSubtitleStyle,
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
+import { prorateWordTimings } from "@/lib/karaoke";
 import {
   withIds,
   stripIds,
@@ -423,32 +424,63 @@ export function EditorClient({
 
   const clampTiming = useCallback(
     (idx: number, field: "start" | "end", value: number): number => {
-      const list = segmentsRef.current;
-      const c = list[idx];
+      const c = segmentsRef.current[idx];
       if (!c) return value;
+      // Bornes SOUPLES (éditeur libre) : un cue peut passer devant/derrière ses
+      // voisins. Seules contraintes : rester dans [0, durée] et garder start<end.
       if (field === "start") {
-        const min = idx > 0 ? list[idx - 1]!.end : 0;
-        return Math.max(min, Math.min(c.end - MIN_CUE_DURATION, value));
+        return Math.max(0, Math.min(c.end - MIN_CUE_DURATION, value));
       }
-      const max = idx < list.length - 1 ? list[idx + 1]!.start : duration;
-      return Math.min(max, Math.max(c.start + MIN_CUE_DURATION, value));
+      return Math.min(duration, Math.max(c.start + MIN_CUE_DURATION, value));
     },
     [duration],
   );
+
+  /** Recalcule les timings karaoké (par mot) d'un cue au prorata de sa NOUVELLE
+   * fenêtre. Sans ça, déplacer/redimensionner un cue laisse des timings de mots
+   * périmés (karaoké désynchronisé + gravé faux dans le MP4). N'affecte que les
+   * cues qui portent des `words` (animation karaoké active). */
+  const reproWords = useCallback(
+    (seg: Cue): Cue => {
+      if (!seg.words || seg.words.length === 0) return seg;
+      const w = prorateWordTimings(seg.text, seg.start, seg.end, targetLang);
+      return w && w.length ? { ...seg, words: w } : seg;
+    },
+    [targetLang],
+  );
+
+  /** Réordonne les cues par temps de début (après un déplacement qui a fait
+   * passer un cue devant/derrière un autre) et fait suivre la sélection au cue
+   * qu'on manipulait (repérage par id stable). No-op si l'ordre est déjà bon. */
+  const resortAndRemap = useCallback(() => {
+    const list = segmentsRef.current;
+    const disordered = list.some((c, i) => i > 0 && list[i - 1]!.start > c.start);
+    if (!disordered) return;
+    const selId = list[selectedIdx]?.id;
+    const sorted = [...list].sort((a, b) => a.start - b.start || a.end - b.end);
+    segmentsRef.current = sorted;
+    setSegmentsByLang((prev) => ({ ...prev, [targetLang]: sorted }));
+    if (selId) {
+      const ni = sorted.findIndex((c) => c.id === selId);
+      if (ni >= 0) setSelectedIdx(ni);
+    }
+  }, [selectedIdx, targetLang]);
 
   const updateTiming = useCallback(
     (idx: number, field: "start" | "end", value: number) => {
       const v = clampTiming(idx, field, value);
       commitHistory();
       applyEdit((prev) =>
-        prev.map((s, i) => (i === idx ? { ...s, [field]: v } : s)),
+        prev.map((s, i) => (i === idx ? reproWords({ ...s, [field]: v }) : s)),
       );
+      resortAndRemap();
     },
-    [applyEdit, clampTiming, commitHistory],
+    [applyEdit, clampTiming, commitHistory, reproWords, resortAndRemap],
   );
 
   /** Rognage/déplacement depuis la timeline (l'historique est pris au 1er
-   * mouvement via onEditStart — pas à chaque pixel). */
+   * mouvement via onEditStart — pas à chaque pixel). Pas de reprorata ici :
+   * c'est fait une seule fois au relâcher (finalizeTiming). */
   const setTimingLive = useCallback(
     (idx: number, start: number, end: number) => {
       applyEdit((prev) =>
@@ -456,6 +488,16 @@ export function EditorClient({
       );
     },
     [applyEdit],
+  );
+
+  /** Fin d'un glissement/rognage timeline : recale le karaoké du cue déplacé
+   * puis réordonne si besoin. */
+  const finalizeTiming = useCallback(
+    (idx: number) => {
+      applyEdit((prev) => prev.map((s, i) => (i === idx ? reproWords(s) : s)));
+      resortAndRemap();
+    },
+    [applyEdit, reproWords, resortAndRemap],
   );
 
   const addLineAfter = useCallback(
@@ -1104,6 +1146,13 @@ export function EditorClient({
           onSelect={(idx, fromTap) => {
             setSelectedIdx(idx);
             if (fromTap) {
+              // Aligne l'aperçu sur le cue sélectionné (sauf en pleine lecture,
+              // pour ne pas interrompre le visionnage).
+              const c = segments[idx];
+              if (c && !isPlaying) {
+                playerRef.current?.seekTo(c.start, { play: false });
+                setCurrentTime(c.start);
+              }
               if (!isDesktop()) openSheet("selection");
               else setTab("selection");
             }
@@ -1114,9 +1163,7 @@ export function EditorClient({
           }}
           onEditStart={commitHistory}
           onTiming={setTimingLive}
-          onEditEnd={() => {
-            /* le dirty/l'autosave sont déjà posés par applyEdit */
-          }}
+          onEditEnd={finalizeTiming}
           onReady={(width) => {
             if (zoomInitRef.current) return;
             zoomInitRef.current = true;
