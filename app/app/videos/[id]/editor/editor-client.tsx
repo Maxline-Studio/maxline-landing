@@ -65,6 +65,7 @@ import {
   type Lang,
 } from "@/lib/langs";
 import { VideoStatusBadge, stageLabel } from "@/components/app/video-status";
+import { QueueStatus } from "@/components/app/queue-status";
 import { countSpeakers } from "@/lib/speakers";
 import {
   SubtitlePlayer,
@@ -123,6 +124,8 @@ export function EditorClient({
   const [errorMessage, setErrorMessage] = useState<string | null>(
     initialVideo.error_message ?? null,
   );
+  // Position dans la file globale (null tant qu'inconnue / hors attente).
+  const [queueAhead, setQueueAhead] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const isProcessing = PROCESSING_STATES.includes(status);
@@ -135,6 +138,7 @@ export function EditorClient({
     setProgress(
       STAGE_PROGRESS[result.status as keyof typeof STAGE_PROGRESS] ?? 0,
     );
+    setQueueAhead(result.queueAhead);
     if (result.errorMessage) setErrorMessage(result.errorMessage);
     if (result.status === "done") router.refresh();
   }, [initialVideo.id, router]);
@@ -885,6 +889,11 @@ export function EditorClient({
             <p className="font-mono text-[10px] uppercase tracking-widest text-ink-300">
               {progress}% · traitement en cours
             </p>
+
+            {/* File d'attente : tant que le worker n'a pas pris la vidéo, on
+                montre sa position réelle (+ animation multilingue) plutôt qu'une
+                barre qui semble figée. */}
+            {status === "queued" && <QueueStatus ahead={queueAhead} />}
           </div>
         )}
 

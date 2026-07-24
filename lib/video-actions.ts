@@ -312,12 +312,20 @@ export async function markVideoUploaded(videoId: string): Promise<void> {
 export type VideoStatusResult = {
   status: VideoStatus;
   errorMessage: string | null;
+  /** Vidéos en file DEVANT celle-ci (tous utilisateurs). 0 = c'est la suivante.
+   * null si la vidéo n'est plus en attente (traitement déjà commencé). */
+  queueAhead: number | null;
 };
 
 /**
  * Lit le statut RÉEL de la vidéo (mis à jour par le worker sur la VM). Appelée
  * en polling par la page détail. Lecture seule : c'est le worker qui fait
  * avancer le pipeline et écrit la transcription.
+ *
+ * Renvoie aussi la POSITION DANS LA FILE tant que la vidéo attend : le comptage
+ * porte sur les vidéos de TOUS les utilisateurs (la file est globale) → il passe
+ * par le client admin, car la RLS ne montre à chacun que ses propres vidéos.
+ * Seul un NOMBRE est exposé, jamais le contenu des autres vidéos.
  */
 export async function getVideoStatus(
   videoId: string,
@@ -330,16 +338,37 @@ export async function getVideoStatus(
 
   const { data: video } = await supabase
     .from("videos")
-    .select("status, error_message")
+    .select("status, error_message, uploaded_at")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
   if (!video) return null;
 
+  const status = video.status as VideoStatus;
+
+  // Position dans la file (uniquement pertinente en attente). Best-effort : une
+  // erreur de comptage ne doit jamais casser le polling de statut.
+  let queueAhead: number | null = null;
+  if (status === "queued") {
+    try {
+      const admin = createAdminClient();
+      const { count } = await admin
+        .from("videos")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "queued")
+        .not("storage_key_source", "is", null) // upload réellement terminé
+        .lt("uploaded_at", video.uploaded_at);
+      queueAhead = typeof count === "number" ? count : null;
+    } catch {
+      queueAhead = null;
+    }
+  }
+
   return {
-    status: video.status as VideoStatus,
+    status,
     errorMessage: video.error_message ?? null,
+    queueAhead,
   };
 }
 
