@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Upload, Video as VideoIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Video } from "@/lib/supabase/types";
 import { VideoStatusBadge } from "@/components/app/video-status";
 import { DeleteVideoButton } from "@/components/app/delete-video-button";
 import { formatDuration } from "@/lib/storage";
+import { VIDEO_LIST_COLUMNS, type VideoListItem } from "@/lib/video-types";
 
 export const metadata: Metadata = {
   title: "Mes vidéos",
@@ -26,11 +26,14 @@ export default async function VideosPage({
   } = await supabase.auth.getUser();
   if (!user) return null;
 
+  // Colonnes explicites : un `select("*")` embarquait les transcriptions jsonb de
+  // CHAQUE vidéo (plusieurs Mo) pour afficher un nom et un badge.
   let query = supabase
     .from("videos")
-    .select("*")
+    .select(VIDEO_LIST_COLUMNS)
     .eq("user_id", user.id)
-    .order("uploaded_at", { ascending: false });
+    .order("uploaded_at", { ascending: false })
+    .limit(200);
 
   if (filter === "processing") {
     query = query.not("status", "in", "(done,failed,cancelled,queued)");
@@ -41,7 +44,7 @@ export default async function VideosPage({
   }
 
   const { data: videos } = await query;
-  const list = (videos as Video[]) || [];
+  const list = (videos as unknown as VideoListItem[]) || [];
 
   const filters = [
     { key: "all", label: "Toutes" },

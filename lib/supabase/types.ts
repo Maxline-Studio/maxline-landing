@@ -80,14 +80,17 @@ export type Database = {
           original_filename: string;
           processing_completed_at: string | null;
           processing_started_at: string | null;
-          processing_steps: Json;
-          resolution: string | null;
+          /** Dernier signe de vie du worker (migration 026) — base du stale-reaper. */
+          last_heartbeat_at: string | null;
+          /** Horodatage d'échec (migration 026) — alimente la sonde de santé. */
+          failed_at: string | null;
           retry_count: number;
           size_bytes: number | null;
           status: string;
-          storage_key_audio: string | null;
           storage_key_burned: string | null;
           storage_key_source: string | null;
+          /** Proxy MP4 léger pour l'aperçu de l'éditeur (migration 026). */
+          storage_key_preview: string | null;
           storage_key_srt: string | null;
           storage_key_vtt: string | null;
           subtitle_style: Json | null;
@@ -105,7 +108,6 @@ export type Database = {
           burn_error: string | null;
           burn_requested_at: string | null;
           burn_progress: number;
-          retranslations_used: number;
         };
         Insert: {
           delete_at?: string | null;
@@ -116,14 +118,14 @@ export type Database = {
           original_filename: string;
           processing_completed_at?: string | null;
           processing_started_at?: string | null;
-          processing_steps?: Json;
-          resolution?: string | null;
+          last_heartbeat_at?: string | null;
+          failed_at?: string | null;
           retry_count?: number;
           size_bytes?: number | null;
           status?: string;
-          storage_key_audio?: string | null;
           storage_key_burned?: string | null;
           storage_key_source?: string | null;
+          storage_key_preview?: string | null;
           storage_key_srt?: string | null;
           storage_key_vtt?: string | null;
           subtitle_style?: Json | null;
@@ -141,7 +143,6 @@ export type Database = {
           burn_error?: string | null;
           burn_requested_at?: string | null;
           burn_progress?: number;
-          retranslations_used?: number;
         };
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];
@@ -164,6 +165,26 @@ export type Database = {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["video_subtitles"]["Insert"]>;
+        Relationships: [];
+      };
+      worker_health: {
+        Row: {
+          id: string;
+          last_seen_at: string;
+          in_flight: number;
+          burns_in_flight: number;
+          queued: number;
+          version: string | null;
+        };
+        Insert: {
+          id: string;
+          last_seen_at?: string;
+          in_flight?: number;
+          burns_in_flight?: number;
+          queued?: number;
+          version?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["worker_health"]["Insert"]>;
         Relationships: [];
       };
       rewards_ledger: {
@@ -283,9 +304,14 @@ export type Database = {
         Args: { minutes_to_use: number; p_user_id: string };
         Returns: boolean;
       };
-      get_user_minutes_available: {
-        Args: { p_user_id: string };
-        Returns: number;
+      /**
+       * Débit ATOMIQUE des minutes (quota puis crédits), migration 026.
+       * Renvoie false si le solde est insuffisant — aucun débit n'est alors fait.
+       * EXECUTE réservé à service_role → à appeler avec le client admin.
+       */
+      consume_minutes: {
+        Args: { p_user_id: string; p_minutes: number };
+        Returns: boolean;
       };
       claim_referral: {
         Args: { p_code: string };

@@ -29,6 +29,16 @@ export function audioKey(userId: string, videoId: string): string {
   return `${userId}/${videoId}/audio.mp3`;
 }
 
+/**
+ * Audio temporaire déposé sur R2 le temps de la transcription : Gladia va le
+ * chercher lui-même au lieu que le worker le lui envoie (ce qui chargeait le MP3
+ * entier en mémoire sur une VM à 1 Go). Le worker le supprime dès l'ASR terminé ;
+ * cette clé sert de filet en cas d'interruption.
+ */
+export function asrAudioKey(userId: string, videoId: string): string {
+  return `${userId}/${videoId}/audio-asr.mp3`;
+}
+
 export function srtKey(userId: string, videoId: string): string {
   return `${userId}/${videoId}/subtitles.srt`;
 }
@@ -39,6 +49,16 @@ export function vttKey(userId: string, videoId: string): string {
 
 export function burnedKey(userId: string, videoId: string): string {
   return `${userId}/${videoId}/burned.mp4`;
+}
+
+/**
+ * Proxy d'aperçu : MP4 H.264 léger produit par le worker, servi au lecteur de
+ * l'éditeur. Charge quasi instantanément, se scrube sans à-coups, et reste
+ * lisible par le navigateur même quand la source est un .mkv ou un .avi (que
+ * Chrome/Safari ne savent pas décoder).
+ */
+export function previewKey(userId: string, videoId: string): string {
+  return `${userId}/${videoId}/preview.mp4`;
 }
 
 /** Préfixe du dossier de la vidéo (pour suppression récursive). */

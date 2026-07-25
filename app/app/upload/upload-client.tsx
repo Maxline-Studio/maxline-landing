@@ -1,6 +1,23 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+/**
+ * Dépôt d'une vidéo — envoi EN ARRIÈRE-PLAN dès le dépôt.
+ *
+ * Avant : dépôt → choix de la langue → clic « Générer » → *et seulement là*
+ * l'upload démarrait. Le choix de la langue prend 5 à 20 secondes : autant de
+ * bande passante offerte, puis une longue barre de progression.
+ *
+ * Maintenant : l'envoi part à la seconde où le fichier est déposé, pendant que
+ * l'utilisateur choisit sa langue (comme Loom, Dropbox ou WeTransfer). Sur un
+ * fichier de 200 Mo en fibre, l'envoi est souvent DÉJÀ TERMINÉ au moment du clic
+ * — la vidéo part alors en traitement instantanément.
+ *
+ * Aucune minute n'est consommée tant que « Générer » n'a pas été cliqué : tant
+ * que `storage_key_source` est vide, la vidéo est invisible pour le worker. Un
+ * fichier déposé puis abandonné est nettoyé (cancelVideoUpload).
+ */
+
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   UploadCloud,
@@ -21,19 +38,20 @@ import {
   MAX_DURATION_SECONDS,
 } from "@/lib/storage";
 import {
-  createVideoUpload,
-  createSourceUploadUrl,
-  markVideoUploaded,
+  startVideoUpload,
+  finalizeVideoUpload,
+  cancelVideoUpload,
 } from "@/lib/video-actions";
 import { LANG_OPTIONS, langLabel, type Lang } from "@/lib/langs";
 
-type Phase =
-  | "idle"
-  | "validating"
-  | "configure"
-  | "uploading"
-  | "finalizing"
-  | "done";
+type Phase = "idle" | "validating" | "configure" | "finalizing" | "done";
+
+/** État de l'envoi de fichier, mené en tâche de fond. */
+type Transfer =
+  | { state: "idle" }
+  | { state: "uploading"; videoId: string; pct: number }
+  | { state: "uploaded"; videoId: string }
+  | { state: "error"; videoId: string | null; message: string };
 
 export function UploadClient({
   minutesAvailable,
@@ -52,9 +70,8 @@ export function UploadClient({
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [submitting, setSubmitting] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [transfer, setTransfer] = useState<Transfer>({ state: "idle" });
   const [fileInfo, setFileInfo] = useState<{
     name: string;
     duration: number;
@@ -62,10 +79,44 @@ export function UploadClient({
     audio: boolean;
   } | null>(null);
 
-  // ── 1. Sélection du fichier (validation + durée), AVANT tout choix de langue ──
+  // Miroir synchrone de `transfer` : `handleGenerate` doit pouvoir consulter
+  // l'état d'envoi en cours sans dépendre d'un rendu React.
+  const transferRef = useRef<Transfer>({ state: "idle" });
+  const setTransferBoth = useCallback((t: Transfer) => {
+    transferRef.current = t;
+    setTransfer(t);
+  }, []);
+
+  // Requête d'envoi en cours (pour l'annuler si l'utilisateur change de fichier).
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  // Id de la vidéo en brouillon, pour le nettoyage.
+  const draftIdRef = useRef<string | null>(null);
+  // Empêche le nettoyage après un départ en traitement réussi.
+  const committedRef = useRef(false);
+
+  /** Abandonne le brouillon en cours (changement de fichier, départ de la page). */
+  const discardDraft = useCallback(() => {
+    xhrRef.current?.abort();
+    xhrRef.current = null;
+    const id = draftIdRef.current;
+    draftIdRef.current = null;
+    if (id && !committedRef.current) void cancelVideoUpload(id);
+  }, []);
+
+  // Nettoyage si l'utilisateur quitte la page avec un brouillon non validé.
+  useEffect(() => {
+    return () => {
+      if (!committedRef.current) discardDraft();
+    };
+  }, [discardDraft]);
+
+  // ── 1. Sélection du fichier : validation, PUIS envoi immédiat en tâche de fond ──
   const handleSelect = useCallback(
     async (f: File) => {
+      discardDraft();
+      committedRef.current = false;
       setError(null);
+      setTransferBoth({ state: "idle" });
       setPhase("validating");
 
       const validationError = validateVideoFile(f);
@@ -101,67 +152,106 @@ export function UploadClient({
         return;
       }
 
-      setFile(f);
       setFileInfo({ name: f.name, duration, size: f.size, audio });
       setPhase("configure");
+
+      // ── L'envoi part MAINTENANT, pendant que l'utilisateur choisit sa langue ──
+      const started = await startVideoUpload({
+        filename: f.name,
+        durationSeconds: duration,
+        sizeBytes: f.size,
+        format: fileExtension(f.name),
+      });
+      if (!started.ok) {
+        setTransferBoth({
+          state: "error",
+          videoId: null,
+          message: started.error,
+        });
+        return;
+      }
+
+      draftIdRef.current = started.videoId;
+      setTransferBoth({ state: "uploading", videoId: started.videoId, pct: 0 });
+
+      try {
+        await uploadWithProgress(f, started.uploadUrl, xhrRef, (pct) => {
+          const cur = transferRef.current;
+          if (cur.state === "uploading" && cur.videoId === started.videoId) {
+            setTransferBoth({ ...cur, pct });
+          }
+        });
+        setTransferBoth({ state: "uploaded", videoId: started.videoId });
+      } catch (e) {
+        if (e instanceof Error && e.message === "aborted") return; // changement de fichier
+        setTransferBoth({
+          state: "error",
+          videoId: started.videoId,
+          message:
+            e instanceof Error ? e.message : "Échec de l'envoi du fichier.",
+        });
+      }
     },
-    [minutesAvailable],
+    [minutesAvailable, discardDraft, setTransferBoth],
   );
 
-  // ── 2. Lancement : création de la ligne + upload R2 + déclenchement worker ──
+  // ── 2. Lancement : on attend la fin de l'envoi si besoin, puis on finalise ──
   const handleGenerate = useCallback(async () => {
-    if (!file || !fileInfo || submitting) return; // garde anti double-soumission
+    if (!fileInfo || submitting) return;
+    if (transfer.state === "error") {
+      setError(transfer.message);
+      return;
+    }
     setSubmitting(true);
     setError(null);
+    setPhase("finalizing");
 
-    const ext = fileExtension(file.name);
-    const result = await createVideoUpload({
-      filename: file.name,
-      durationSeconds: fileInfo.duration,
-      sizeBytes: file.size,
-      format: ext,
+    // L'envoi tourne peut-être encore : on patiente ici (la barre reste visible).
+    const videoId = await waitForUpload();
+    if (!videoId) {
+      setError("L'envoi du fichier n'a pas abouti. Réessayez.");
+      setPhase("configure");
+      setSubmitting(false);
+      return;
+    }
+
+    const res = await finalizeVideoUpload(videoId, {
       sourceLang,
       targetLang,
       importantTerms,
     });
-    if (!result.ok) {
-      setError(result.error);
-      setSubmitting(false);
-      return; // reste en "configure" pour réessayer
-    }
-
-    setPhase("uploading");
-    setProgress(0);
-
-    const urlResult = await createSourceUploadUrl(result.videoId);
-    if (!urlResult.ok) {
-      setError(`Préparation de l'upload échouée : ${urlResult.error}`);
+    if (!res.ok) {
+      setError(res.error);
       setPhase("configure");
       setSubmitting(false);
       return;
     }
 
-    try {
-      await uploadWithProgress(file, urlResult.url, (pct) => setProgress(pct));
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? `Échec de l'upload : ${e.message}`
-          : "Échec de l'upload.",
-      );
-      setPhase("configure");
-      setSubmitting(false);
-      return;
-    }
-
-    setPhase("finalizing");
-    await markVideoUploaded(result.videoId);
-
+    committedRef.current = true;
     setPhase("done");
-    setTimeout(() => {
-      router.push(`/app/videos/${result.videoId}`);
-    }, 900);
-  }, [file, fileInfo, sourceLang, targetLang, importantTerms, submitting, router]);
+    router.push(`/app/videos/${videoId}`);
+
+    /** Résout dès que l'envoi est terminé (ou null en cas d'échec). */
+    function waitForUpload(): Promise<string | null> {
+      return new Promise((resolve) => {
+        const check = () => {
+          const t = transferRef.current;
+          if (t.state === "uploaded") resolve(t.videoId);
+          else if (t.state === "error") resolve(null);
+          else setTimeout(check, 150);
+        };
+        check();
+      });
+    }
+  }, [
+    fileInfo,
+    submitting,
+    transfer,
+    sourceLang,
+    targetLang,
+    importantTerms,
+    router,
+  ]);
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -171,16 +261,14 @@ export function UploadClient({
   };
 
   const reset = () => {
+    discardDraft();
     setPhase("idle");
-    setProgress(0);
     setError(null);
-    setFile(null);
     setFileInfo(null);
+    setTransferBoth({ state: "idle" });
     setAdvancedOpen(false);
     setSubmitting(false);
   };
-
-  const busy = phase === "uploading" || phase === "finalizing";
 
   // Phrase explicative selon les choix.
   const helperText =
@@ -252,7 +340,8 @@ export function UploadClient({
                   M4A, AAC, OGG, FLAC) · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
                 </p>
                 <p className="mt-1 text-xs text-ink-400">
-                  Vous choisirez la langue des sous-titres juste après.
+                  L&apos;envoi démarre tout de suite — vous choisissez la langue
+                  pendant ce temps.
                 </p>
               </>
             )}
@@ -280,190 +369,26 @@ export function UploadClient({
         </div>
       )}
 
-      {/* Étape 2 — Configuration (après dépôt) : une seule décision visible. */}
-      {phase === "configure" && fileInfo && (
-        <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
-          {/* Fichier déposé */}
-          <div className="flex items-start gap-4 mb-7">
-            <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
-              {fileInfo.audio ? (
-                <FileAudio className="h-6 w-6 text-rouge-400" strokeWidth={1.75} aria-hidden />
-              ) : (
-                <FileVideo className="h-6 w-6 text-rouge-400" strokeWidth={1.75} aria-hidden />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-display font-semibold text-ink-900 truncate">
-                {fileInfo.name}
-              </p>
-              <p className="text-xs text-ink-500 font-mono tabular-nums mt-0.5">
-                {formatDuration(fileInfo.duration)} ·{" "}
-                {(fileInfo.size / (1024 * 1024)).toFixed(1)} Mo
-              </p>
-            </div>
-            <button
-              onClick={reset}
-              className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-ink-500 hover:text-ink-900"
-            >
-              <X className="h-3.5 w-3.5" aria-hidden />
-              Changer
-            </button>
-          </div>
-
-          {/* Langue des sous-titres (l'unique vraie décision) */}
-          <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
-            Sous-titres en
-          </span>
-          <div className="flex flex-wrap gap-1.5">
-            <button
-              type="button"
-              onClick={() => setTargetLang("same")}
-              className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                targetLang === "same"
-                  ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                  : "border-ivory-300 text-ink-600 hover:border-ink-400"
-              }`}
-            >
-              Dans la langue parlée
-            </button>
-            {LANG_OPTIONS.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                onClick={() => setTargetLang(o.id)}
-                className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                  targetLang === o.id
-                    ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                    : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                }`}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-xs text-ink-500 mt-3">{helperText}</p>
-
-          {/* Noms propres à respecter (optionnel) — corrige l'orthographe des
-              marques/prénoms/noms que le modèle ne connaît pas. */}
-          <div className="mt-5">
-            <label
-              htmlFor="important-terms"
-              className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2"
-            >
-              Noms propres à respecter{" "}
-              <span className="text-ink-400 normal-case tracking-normal">
-                (optionnel)
-              </span>
-            </label>
-            <input
-              id="important-terms"
-              type="text"
-              value={importantTerms}
-              onChange={(e) => setImportantTerms(e.target.value)}
-              placeholder="ex. Maxline Studio, maxlinestudio.fr, Maxence"
-              className="w-full px-3 py-2 rounded-sm border border-ivory-300 bg-ivory-50 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none"
-            />
-            <p className="text-xs text-ink-500 mt-1.5">
-              Marques, prénoms, noms, pseudos, sites… On les écrit exactement —
-              et on ne les traduit pas.
-            </p>
-          </div>
-
-          {/* Avancé — préciser la langue parlée (rare, replié par défaut) */}
-          <div className="mt-5 pt-5 border-t border-ivory-300">
-            <button
-              type="button"
-              onClick={() => setAdvancedOpen((o) => !o)}
-              className="inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-900 transition-colors"
-            >
-              <ChevronDown
-                className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
-                aria-hidden
-              />
-              Avancé · préciser la langue parlée
-            </button>
-
-            {advancedOpen && (
-              <div className="mt-3">
-                <p className="text-xs text-ink-500 mb-2">
-                  Par défaut, la langue parlée est détectée automatiquement.
-                  Précisez-la seulement si la détection se trompe (clip très
-                  court, fort accent…).
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setSourceLang("auto")}
-                    className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                      sourceLang === "auto"
-                        ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                        : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                    }`}
-                  >
-                    Détection automatique
-                  </button>
-                  {LANG_OPTIONS.map((o) => (
-                    <button
-                      key={o.id}
-                      type="button"
-                      onClick={() => setSourceLang(o.id)}
-                      className={`px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
-                        sourceLang === o.id
-                          ? "border-rouge-500 bg-rouge-50 text-ink-900"
-                          : "border-ivory-300 text-ink-600 hover:border-ink-400"
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {error && (
-            <div
-              role="alert"
-              className="mt-5 flex items-start gap-2 p-3 bg-rouge-50 border border-rouge-200 rounded-sm text-sm text-rouge-700"
-            >
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" aria-hidden />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {/* Action */}
-          <div className="mt-7 flex items-center gap-4">
-            <button
-              onClick={handleGenerate}
-              disabled={submitting}
-              className="inline-flex items-center gap-2 bg-ink-900 text-ivory-50 px-5 py-2.5 rounded-sm font-medium hover:bg-ink-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <UploadCloud className="h-4 w-4" aria-hidden />
-              )}
-              Générer les sous-titres
-            </button>
-            <span className="text-xs text-ink-400 font-mono tabular-nums">
-              {Math.ceil(fileInfo.duration / 60)} min
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Étape 3 — Envoi / finalisation. */}
-      {(busy || phase === "done") && (
-        <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
-          {fileInfo && (
-            <div className="flex items-start gap-4 mb-6">
+      {/* Étape 2 — Configuration (l'envoi tourne en fond). */}
+      {(phase === "configure" || phase === "finalizing" || phase === "done") &&
+        fileInfo && (
+          <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
+            {/* Fichier déposé + état de l'envoi */}
+            <div className="flex items-start gap-4 mb-5">
               <div className="flex-shrink-0 h-12 w-12 rounded-sm bg-ink-900 flex items-center justify-center">
-                <FileVideo
-                  className="h-6 w-6 text-rouge-400"
-                  strokeWidth={1.75}
-                  aria-hidden
-                />
+                {fileInfo.audio ? (
+                  <FileAudio
+                    className="h-6 w-6 text-rouge-400"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                ) : (
+                  <FileVideo
+                    className="h-6 w-6 text-rouge-400"
+                    strokeWidth={1.75}
+                    aria-hidden
+                  />
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="font-display font-semibold text-ink-900 truncate">
@@ -474,65 +399,236 @@ export function UploadClient({
                   {(fileInfo.size / (1024 * 1024)).toFixed(1)} Mo
                 </p>
               </div>
-              {phase === "done" && (
-                <CheckCircle2
-                  className="h-6 w-6 text-rouge-500 flex-shrink-0"
-                  aria-hidden
-                />
+              {phase === "configure" && (
+                <button
+                  onClick={reset}
+                  className="flex-shrink-0 inline-flex items-center gap-1 text-xs text-ink-500 hover:text-ink-900"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                  Changer
+                </button>
               )}
             </div>
-          )}
 
-          {busy && (
-            <>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-                  {phase === "uploading" && "Envoi en cours…"}
-                  {phase === "finalizing" && "Finalisation…"}
+            <TransferStatus transfer={transfer} />
+
+            {phase === "configure" && (
+              <>
+                {/* Langue des sous-titres (l'unique vraie décision) */}
+                <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2 mt-6">
+                  Sous-titres en
                 </span>
-                <span className="font-mono text-xs tabular-nums text-ink-900">
-                  {phase === "uploading" ? `${progress}%` : ""}
-                </span>
-              </div>
-              <div className="h-2 bg-ivory-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-rouge-500 transition-all duration-200"
-                  style={{
-                    width:
-                      phase === "uploading"
-                        ? `${progress}%`
-                        : phase === "finalizing"
-                          ? "100%"
-                          : "8%",
-                  }}
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setTargetLang("same")}
+                    className={chipCls(targetLang === "same")}
+                  >
+                    Dans la langue parlée
+                  </button>
+                  {LANG_OPTIONS.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      onClick={() => setTargetLang(o.id)}
+                      className={chipCls(targetLang === o.id)}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-xs text-ink-500 mt-3">{helperText}</p>
+
+                {/* Noms propres à respecter (optionnel) */}
+                <div className="mt-5">
+                  <label
+                    htmlFor="important-terms"
+                    className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2"
+                  >
+                    Noms propres à respecter{" "}
+                    <span className="text-ink-400 normal-case tracking-normal">
+                      (optionnel)
+                    </span>
+                  </label>
+                  <input
+                    id="important-terms"
+                    type="text"
+                    value={importantTerms}
+                    onChange={(e) => setImportantTerms(e.target.value)}
+                    placeholder="ex. Maxline Studio, maxlinestudio.fr, Maxence"
+                    className="w-full px-3 py-2 rounded-sm border border-ivory-300 bg-ivory-50 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none"
+                  />
+                  <p className="text-xs text-ink-500 mt-1.5">
+                    Marques, prénoms, noms, pseudos, sites… On les écrit
+                    exactement — et on ne les traduit pas.
+                  </p>
+                </div>
+
+                {/* Avancé — préciser la langue parlée */}
+                <div className="mt-5 pt-5 border-t border-ivory-300">
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedOpen((o) => !o)}
+                    className="inline-flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-900 transition-colors"
+                  >
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`}
+                      aria-hidden
+                    />
+                    Avancé · préciser la langue parlée
+                  </button>
+
+                  {advancedOpen && (
+                    <div className="mt-3">
+                      <p className="text-xs text-ink-500 mb-2">
+                        Par défaut, la langue parlée est détectée
+                        automatiquement. Précisez-la seulement si la détection se
+                        trompe (clip très court, fort accent…).
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setSourceLang("auto")}
+                          className={chipCls(sourceLang === "auto")}
+                        >
+                          Détection automatique
+                        </button>
+                        {LANG_OPTIONS.map((o) => (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => setSourceLang(o.id)}
+                            className={chipCls(sourceLang === o.id)}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-5 flex items-start gap-2 p-3 bg-rouge-50 border border-rouge-200 rounded-sm text-sm text-rouge-700"
+              >
+                <AlertCircle
+                  className="h-4 w-4 mt-0.5 flex-shrink-0"
+                  aria-hidden
                 />
+                <span>{error}</span>
               </div>
-            </>
-          )}
+            )}
 
-          {phase === "done" && (
-            <div className="flex items-center gap-2 text-sm text-rouge-700 font-medium">
-              <CheckCircle2 className="h-4 w-4" aria-hidden />
-              Vidéo envoyée. Traitement en cours — redirection…
-            </div>
-          )}
-        </div>
-      )}
+            {/* Action */}
+            {phase !== "done" ? (
+              <div className="mt-7 flex items-center gap-4">
+                <button
+                  onClick={handleGenerate}
+                  disabled={submitting || transfer.state === "error"}
+                  className="inline-flex items-center gap-2 bg-ink-900 text-ivory-50 px-5 py-2.5 rounded-sm font-medium hover:bg-ink-800 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <UploadCloud className="h-4 w-4" aria-hidden />
+                  )}
+                  {submitting ? "Envoi en cours…" : "Générer les sous-titres"}
+                </button>
+                <span className="text-xs text-ink-400 font-mono tabular-nums">
+                  {Math.ceil(fileInfo.duration / 60)} min
+                </span>
+              </div>
+            ) : (
+              <div className="mt-7 flex items-center gap-2 text-sm text-rouge-700 font-medium">
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+                Vidéo envoyée. Traitement en cours — redirection…
+              </div>
+            )}
+          </div>
+        )}
     </div>
   );
 }
 
+/** Bandeau d'état de l'envoi (barre, « fichier prêt », erreur). */
+function TransferStatus({ transfer }: { transfer: Transfer }) {
+  if (transfer.state === "idle") {
+    return (
+      <p className="font-mono text-[10px] uppercase tracking-widest text-ink-400">
+        Préparation de l&apos;envoi…
+      </p>
+    );
+  }
+
+  if (transfer.state === "uploading") {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
+            Envoi en cours — vous pouvez choisir votre langue
+          </span>
+          <span className="font-mono text-xs tabular-nums text-ink-900">
+            {transfer.pct}%
+          </span>
+        </div>
+        <div className="h-2 bg-ivory-200 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-rouge-500 transition-all duration-200"
+            style={{ width: `${transfer.pct}%` }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (transfer.state === "uploaded") {
+    return (
+      <p className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink-600">
+        <CheckCircle2 className="h-3.5 w-3.5 text-rouge-500" aria-hidden />
+        Fichier prêt — le traitement démarrera dès validation
+      </p>
+    );
+  }
+
+  return (
+    <p
+      role="alert"
+      className="inline-flex items-start gap-1.5 text-xs text-rouge-700"
+    >
+      <AlertCircle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" aria-hidden />
+      Envoi interrompu : {transfer.message}. Cliquez « Changer » pour redéposer
+      le fichier.
+    </p>
+  );
+}
+
+const chipCls = (active: boolean) =>
+  `px-2.5 py-1 rounded-sm border text-xs font-medium transition-colors ${
+    active
+      ? "border-rouge-500 bg-rouge-50 text-ink-900"
+      : "border-ivory-300 text-ink-600 hover:border-ink-400"
+  }`;
+
 /**
  * Upload direct navigateur → Cloudflare R2 via XHR (pour la progression), sur une
  * URL PUT présignée (la signature est dans l'URL, aucun en-tête d'auth à fournir).
+ * La requête est exposée via `ref` pour pouvoir être annulée si l'utilisateur
+ * change de fichier en cours de route.
  */
-async function uploadWithProgress(
+function uploadWithProgress(
   file: File,
   presignedUrl: string,
+  ref: React.MutableRefObject<XMLHttpRequest | null>,
   onProgress: (pct: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
+    ref.current = xhr;
     xhr.open("PUT", presignedUrl, true);
     if (file.type) {
       xhr.setRequestHeader("Content-Type", file.type);
@@ -545,13 +641,21 @@ async function uploadWithProgress(
     };
 
     xhr.onload = () => {
+      ref.current = null;
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
         reject(new Error(`HTTP ${xhr.status} — ${xhr.responseText.slice(0, 120)}`));
       }
     };
-    xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+    xhr.onerror = () => {
+      ref.current = null;
+      reject(new Error("erreur réseau pendant l'envoi"));
+    };
+    xhr.onabort = () => {
+      ref.current = null;
+      reject(new Error("aborted"));
+    };
 
     xhr.send(file);
   });

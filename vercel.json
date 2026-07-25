@@ -1,4 +1,9 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": "regions — les fonctions s'exécutaient à iad1 (Washington) par défaut, alors que les utilisateurs sont en France, la base Supabase en Irlande et le bucket R2 en Europe Ouest. Chaque requête faisait donc Paris → Washington → Irlande → Washington → Paris : ~260 ms de plancher mesuré, même sur une route qui ne fait rien. cdg1 (Paris) est à ~10 ms des utilisateurs et ~25 ms de l'Irlande.",
+  "regions": ["cdg1"],
+
   "crons": [
     {
       "path": "/api/cron/cleanup-videos",

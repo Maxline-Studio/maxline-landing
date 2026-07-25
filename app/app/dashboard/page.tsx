@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Upload, Video, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import type { Profile, Video as VideoRow } from "@/lib/supabase/types";
+import type { Profile } from "@/lib/supabase/types";
 import { RANK_LABELS, rankProgress, type Rank } from "@/lib/atelier";
 import { OnboardingBanner } from "@/components/app/onboarding-banner";
+import { VIDEO_LIST_COLUMNS, type VideoListItem } from "@/lib/video-types";
 
 export const metadata: Metadata = {
   title: "Tableau de bord",
@@ -19,18 +20,21 @@ export default async function DashboardPage() {
 
   if (!user) return null;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single<Profile>();
+  // Les deux lectures sont indépendantes → en parallèle (un aller-retour au lieu
+  // de deux). Colonnes explicites côté vidéos : jamais les transcriptions jsonb.
+  const [profileRes, videosRes] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user.id).single<Profile>(),
+    supabase
+      .from("videos")
+      .select(VIDEO_LIST_COLUMNS, { count: "exact" })
+      .eq("user_id", user.id)
+      .order("uploaded_at", { ascending: false })
+      .limit(3),
+  ]);
 
-  const { data: recentVideos, count: totalVideos } = await supabase
-    .from("videos")
-    .select("*", { count: "exact" })
-    .eq("user_id", user.id)
-    .order("uploaded_at", { ascending: false })
-    .limit(3);
+  const profile = profileRes.data;
+  const recentVideos = videosRes.data as unknown as VideoListItem[] | null;
+  const totalVideos = videosRes.count;
 
   if (!profile) return null;
 
@@ -159,7 +163,7 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentVideos.map((video) => (
-              <VideoCard key={video.id} video={video as VideoRow} />
+              <VideoCard key={video.id} video={video} />
             ))}
           </div>
         )}
@@ -197,7 +201,7 @@ function EmptyState() {
   );
 }
 
-function VideoCard({ video }: { video: VideoRow }) {
+function VideoCard({ video }: { video: VideoListItem }) {
   return (
     <Link
       href={`/app/videos/${video.id}`}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 import { welcomeEmail, adminNotificationEmail } from "@/lib/email-templates";
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
 
   // Stockage Supabase
   try {
-    const supabase = getSupabaseServerClient();
+    const supabase = createAdminClient();
     const { error } = await supabase.from("waitlist").insert({
       email: payload.email,
       source: payload.source,

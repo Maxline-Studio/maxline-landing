@@ -39,7 +39,6 @@ import {
   Check,
   Save,
 } from "lucide-react";
-import type { Video } from "@/lib/supabase/types";
 import {
   getVideoStatus,
   deleteVideo,
@@ -48,7 +47,8 @@ import {
   saveSubtitleStyle,
   regenerateLine,
   setSubtitleLanguage,
-  loadSubtitles,
+  listSubtitleLanguages,
+  getLanguageSegments,
   requestBurn,
   getBurnStatus,
   getBurnedUrl,
@@ -72,7 +72,11 @@ import {
   type SubtitlePlayerHandle,
 } from "@/components/app/subtitle-player";
 import { formatDuration, isAudioExtension, fileExtension } from "@/lib/storage";
-import { STAGE_PROGRESS, type Segment } from "@/lib/video-types";
+import {
+  STAGE_PROGRESS,
+  type Segment,
+  type VideoDetail,
+} from "@/lib/video-types";
 import {
   normalizeSubtitleStyle,
   type SubtitleStyle,
@@ -110,7 +114,7 @@ export function EditorClient({
   availableLangs,
   initialSegments,
 }: {
-  initialVideo: Video;
+  initialVideo: VideoDetail;
   videoUrl: string | null;
   canExportPro: boolean;
   availableLangs: SubtitleLang[];
@@ -131,6 +135,11 @@ export function EditorClient({
   const isProcessing = PROCESSING_STATES.includes(status);
 
   // ─── Polling du statut (worker) ───
+  // Deux garde-fous par rapport à la version précédente :
+  //  - onglet caché → on suspend (inutile de taper la base pendant des heures
+  //    pour un onglet oublié en arrière-plan ; on relance au retour) ;
+  //  - le rythme s'espace avec le temps d'attente (2 s au début, jusqu'à 10 s
+  //    après quelques minutes) : le suivi reste vif quand ça compte.
   const poll = useCallback(async () => {
     const result = await getVideoStatus(initialVideo.id);
     if (!result) return;
@@ -145,9 +154,36 @@ export function EditorClient({
 
   useEffect(() => {
     if (!isProcessing) return;
-    poll();
-    const interval = setInterval(poll, 2000);
-    return () => clearInterval(interval);
+    let stopped = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const delay = () => {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < 60_000) return 2000;
+      if (elapsed < 240_000) return 5000;
+      return 10_000;
+    };
+
+    const loop = async () => {
+      if (stopped) return;
+      if (document.visibilityState === "visible") await poll();
+      if (stopped) return;
+      timer = setTimeout(loop, delay());
+    };
+
+    // Au retour sur l'onglet, on rafraîchit tout de suite.
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    void loop();
+    return () => {
+      stopped = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [isProcessing, poll]);
 
   // ─── Lecture / temps ───
@@ -172,17 +208,14 @@ export function EditorClient({
   );
 
   // ─── Cache des sous-titres par langue (bascule instantanée) ───
+  // Le serveur ne monte QUE la langue active ; les autres arrivent à la demande
+  // (handleLanguageChange) et restent en cache pour le reste de la session.
   const [segmentsByLang, setSegmentsByLang] = useState<Record<string, Cue[]>>(
     () => {
       const init: Record<string, Cue[]> = {};
       for (const [lang, segs] of Object.entries(initialSegments)) {
         init[lang] = withIds(segs);
       }
-      // Repli legacy UNIQUEMENT si contenu (jamais de tableau vide : il
-      // écraserait la vraie langue à l'arrivée des données).
-      const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
-      const tt = initialVideo.transcription_target as Segment[] | null;
-      if (!init[tl] && Array.isArray(tt) && tt.length > 0) init[tl] = withIds(tt);
       return init;
     },
   );
@@ -204,14 +237,12 @@ export function EditorClient({
   const translationMode = isTranslation(sourceLang, targetLang);
   const targetRtl = isRtl(targetLang);
   const sourceRtl = isRtl(sourceLang);
+  // Texte source affiché en référence sous la traduction. Chargé à la demande
+  // (voir l'effet plus bas) : inutile de le transporter au montage si
+  // l'utilisateur ne regarde jamais l'inspecteur.
   const segmentsSource = useMemo<Segment[]>(
-    () =>
-      translationMode
-        ? segmentsByLang[sourceLang] ??
-          (initialVideo.transcription_source as Segment[]) ??
-          []
-        : [],
-    [translationMode, segmentsByLang, sourceLang, initialVideo.transcription_source],
+    () => (translationMode ? segmentsByLang[sourceLang] ?? [] : []),
+    [translationMode, segmentsByLang, sourceLang],
   );
 
   // ─── Style ───
@@ -265,39 +296,67 @@ export function EditorClient({
       }
     }
     mergeServer(initialSegments);
-    const tl = isLang(initialVideo.target_lang) ? initialVideo.target_lang : "en";
-    const legacy = initialVideo.transcription_target as Segment[] | null;
-    if (Array.isArray(legacy) && legacy.length > 0) mergeServer({ [tl]: legacy });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, initialSegments, initialVideo.transcription_target]);
+  }, [status, initialSegments]);
 
-  const pollAttemptsRef = useRef(0);
+  // ─── Quelles langues sont prêtes ? (sonde LÉGÈRE) ───
+  // On ne demande plus que la liste des langues et leur statut — quelques
+  // centaines d'octets — au lieu de retélécharger TOUS les segments de TOUTES
+  // les langues toutes les 4 s (jusqu'à ~40 Mo par session d'édition avant).
+  // Les segments d'une langue ne descendent qu'au moment où on l'ouvre.
+  const probeAttemptsRef = useRef(0);
   useEffect(() => {
     if (status !== "done") return;
-    if (readyLangs.size >= 10) return;
-    if (pollAttemptsRef.current >= 30) return;
+    if (readyLangs.size >= LANG_OPTIONS.length) return;
+    if (probeAttemptsRef.current >= 40) return;
     let stop = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const tick = async () => {
-      pollAttemptsRef.current += 1;
-      const res = await loadSubtitles(initialVideo.id);
-      if (stop || !res.ok) return;
-      if (res.segments) mergeServer(res.segments);
-      if (res.langs) {
-        const ready = res.langs;
-        setReadyLangs((prev) => {
-          const n = new Set(prev);
-          for (const l of ready) if (l.status === "ready") n.add(l.lang);
-          return n;
-        });
+      if (stop) return;
+      if (document.visibilityState === "visible") {
+        probeAttemptsRef.current += 1;
+        const res = await listSubtitleLanguages(initialVideo.id);
+        if (stop) return;
+        if (res.ok && res.langs) {
+          const ready = res.langs;
+          setReadyLangs((prev) => {
+            const n = new Set(prev);
+            for (const l of ready) if (l.status === "ready") n.add(l.lang);
+            return n.size === prev.size ? prev : n;
+          });
+        }
       }
+      if (!stop) timer = setTimeout(tick, 5000);
     };
-    tick();
-    const interval = setInterval(tick, 4000);
+
+    void tick();
     return () => {
       stop = true;
-      clearInterval(interval);
+      if (timer) clearTimeout(timer);
     };
-  }, [status, readyLangs.size, initialVideo.id, mergeServer]);
+    // `readyLangs.size` volontairement absent des dépendances : l'inclure
+    // relançait un tick immédiat à CHAQUE langue qui s'allumait (le polling
+    // tournait bien plus vite que l'intervalle annoncé).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, initialVideo.id]);
+
+  // Texte source (référence sous la traduction) : chargé une seule fois, à la
+  // demande, quand on est réellement en mode traduction.
+  useEffect(() => {
+    if (status !== "done" || !translationMode) return;
+    if (segmentsByLang[sourceLang]?.length) return;
+    let stop = false;
+    void (async () => {
+      const res = await getLanguageSegments(initialVideo.id, sourceLang);
+      if (stop || !res.ok || !res.segments) return;
+      mergeServer({ [sourceLang]: res.segments });
+    })();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, translationMode, sourceLang, initialVideo.id]);
 
   // ─── Édition (mutations + dirty + historique) ───
   const history = useHistory();

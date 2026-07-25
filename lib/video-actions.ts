@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sourceKey, burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
+import {
+  sourceKey,
+  burnedKey,
+  previewKey,
+  videoFolder,
+  STORAGE_BUCKET,
+} from "@/lib/storage";
 import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
 import { isLang, langLabel, type Lang } from "@/lib/langs";
 import type { VideoStatus, Segment } from "@/lib/video-types";
@@ -15,7 +21,6 @@ import { wrapLines } from "@/lib/wrap-lines";
 import { withProratedWords } from "@/lib/karaoke";
 import {
   getSubtitle,
-  getAllSubtitles,
   listLanguages,
   upsertSubtitle,
   type SubtitleLang,
@@ -23,28 +28,33 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
-export type CreateUploadResult =
-  | { ok: true; videoId: string; storageKey: string }
+export type StartUploadResult =
+  | { ok: true; videoId: string; uploadUrl: string }
   | { ok: false; error: string };
 
 /**
- * Crée une ligne `videos` en statut 'queued' après vérification du quota.
- * Ne consomme PAS les minutes ici (consommation au démarrage du traitement,
- * cf. spec F08). Retourne l'id et la clé de stockage où le client doit
- * uploader le fichier directement.
+ * ÉTAPE 1 — appelée DÈS LE DÉPÔT du fichier, avant même que l'utilisateur ait
+ * choisi sa langue.
+ *
+ * Crée la ligne `videos` (statut 'queued', configuration par défaut) ET renvoie
+ * l'URL PUT présignée : le navigateur peut donc commencer à envoyer le fichier
+ * pendant que l'utilisateur réfléchit. Sur une vidéo de 200 Mo en fibre, l'envoi
+ * est souvent DÉJÀ TERMINÉ au moment où il clique sur « Générer ».
+ *
+ * Une seule action (avant : createVideoUpload puis createSourceUploadUrl, deux
+ * allers-retours, chacun refaisant getUser + une lecture).
+ *
+ * Ne consomme PAS les minutes : c'est finalizeVideoUpload qui le fait, de façon
+ * atomique, une fois l'envoi terminé. Une vidéo dont l'upload est abandonné n'est
+ * donc jamais facturée ni traitée (storage_key_source reste NULL = invisible pour
+ * le worker).
  */
-export async function createVideoUpload(params: {
+export async function startVideoUpload(params: {
   filename: string;
   durationSeconds: number;
   sizeBytes: number;
   format: string;
-  /** Langue parlée, ou "auto" pour laisser le worker la détecter. */
-  sourceLang?: Lang | "auto";
-  /** Langue des sous-titres, ou "same" = dans la langue parlée (transcription). */
-  targetLang?: Lang | "same";
-  /** Noms propres à respecter (marques/prénoms/noms/URLs), séparés par virgules. */
-  importantTerms?: string;
-}): Promise<CreateUploadResult> {
+}): Promise<StartUploadResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -56,89 +66,44 @@ export async function createVideoUpload(params: {
 
   // Garde durée (30 min max)
   if (params.durationSeconds > 30 * 60) {
-    return {
-      ok: false,
-      error: "Vidéo trop longue (max 30 minutes en MVP).",
-    };
+    return { ok: false, error: "Vidéo trop longue (max 30 minutes)." };
   }
   if (params.durationSeconds <= 0) {
     return { ok: false, error: "Durée de vidéo invalide." };
   }
 
-  // Garde quota : minutes disponibles >= durée de la vidéo
-  const { data: minutesAvailable, error: rpcError } = await supabase.rpc(
-    "get_user_minutes_available",
-    { p_user_id: user.id },
-  );
-
-  if (rpcError) {
-    // get_user_minutes_available a son EXECUTE révoqué pour authenticated.
-    // On lit donc directement le profil (couvert par RLS).
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("quota_minutes_total, quota_minutes_used, credits_minutes")
-      .eq("id", user.id)
-      .single();
-
-    if (!profile) {
-      return { ok: false, error: "Profil introuvable." };
-    }
-    const available =
-      Math.max(profile.quota_minutes_total - profile.quota_minutes_used, 0) +
-      profile.credits_minutes;
-    const needed = params.durationSeconds / 60;
-    if (available < needed) {
-      return {
-        ok: false,
-        error: `Quota insuffisant. Il vous reste ${available.toFixed(1)} min, cette vidéo en demande ${needed.toFixed(1)}.`,
-      };
-    }
-  } else {
-    const needed = params.durationSeconds / 60;
-    if ((minutesAvailable as number) < needed) {
-      return {
-        ok: false,
-        error: `Quota insuffisant. Il vous reste ${(minutesAvailable as number).toFixed(1)} min, cette vidéo en demande ${needed.toFixed(1)}.`,
-      };
-    }
-  }
-
-  // Récupérer la durée de rétention du profil pour delete_at
-  const { data: prefs } = await supabase
+  // UNE seule lecture du profil : quota disponible ET durée de rétention.
+  // (Avant : un RPC `get_user_minutes_available` dont l'EXECUTE est révoqué —
+  // donc en échec systématique — suivi de DEUX lectures du profil.)
+  const { data: profile } = await supabase
     .from("profiles")
-    .select("delete_after_days")
+    .select(
+      "quota_minutes_total, quota_minutes_used, credits_minutes, delete_after_days",
+    )
     .eq("id", user.id)
     .single();
-  const deleteAfterDays = prefs?.delete_after_days ?? 30;
+
+  if (!profile) return { ok: false, error: "Profil introuvable." };
+
+  const available =
+    Math.max(profile.quota_minutes_total - profile.quota_minutes_used, 0) +
+    profile.credits_minutes;
+  const needed = params.durationSeconds / 60;
+  if (available < needed) {
+    return {
+      ok: false,
+      error: `Quota insuffisant. Il vous reste ${available.toFixed(1)} min, cette vidéo en demande ${needed.toFixed(1)}.`,
+    };
+  }
+
   const deleteAt = new Date(
-    Date.now() + deleteAfterDays * 24 * 60 * 60 * 1000,
+    Date.now() + (profile.delete_after_days ?? 30) * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   const ext = params.format;
-  // Langue parlée. Mode "auto" = détection par le worker : on pose un placeholder
-  // valide (écrasé par la langue détectée) + source_lang_auto. Sinon on valide
-  // pour ne jamais insérer une langue hors liste (défaut FR).
-  const autoDetect = params.sourceLang === "auto";
-  const sourceLang: Lang =
-    !autoDetect && isLang(params.sourceLang) ? params.sourceLang : "fr";
-  // Cible. "same" = sous-titres dans la langue parlée (transcription). Si la
-  // source est imposée, on résout tout de suite (cible = source) ; si elle est
-  // auto-détectée, le worker résout après détection (flag + placeholder).
-  const wantSameTarget = params.targetLang === "same";
-  let targetLang: Lang;
-  let targetSameAsSource = false;
-  if (wantSameTarget) {
-    if (autoDetect) {
-      targetSameAsSource = true;
-      targetLang = "fr"; // placeholder écrasé par le worker (= source détectée)
-    } else {
-      targetLang = sourceLang;
-    }
-  } else {
-    targetLang = isLang(params.targetLang) ? params.targetLang : "en";
-  }
 
-  // Insert la ligne video
+  // Configuration par défaut, écrasée par finalizeVideoUpload : détection auto de
+  // la langue parlée + sous-titres dans cette même langue.
   const { data: video, error: insertError } = await supabase
     .from("videos")
     .insert({
@@ -147,11 +112,10 @@ export async function createVideoUpload(params: {
       duration_seconds: params.durationSeconds,
       size_bytes: params.sizeBytes,
       format: ext,
-      source_lang: sourceLang,
-      target_lang: targetLang,
-      source_lang_auto: autoDetect,
-      target_same_as_source: targetSameAsSource,
-      important_terms: (params.importantTerms || "").trim().slice(0, 600) || null,
+      source_lang: "fr", // placeholder, écrasé par la langue détectée
+      target_lang: "fr",
+      source_lang_auto: true,
+      target_same_as_source: true,
       status: "queued",
       delete_at: deleteAt,
     })
@@ -165,52 +129,14 @@ export async function createVideoUpload(params: {
     };
   }
 
-  const key = sourceKey(user.id, video.id, ext);
-
-  // NB (Sprint 3) : on ne persiste PAS storage_key_source ici. Cette colonne est
-  // le "signal de prise en charge" du worker : il ne traite que les vidéos dont
-  // storage_key_source est renseigné — ce que fait markVideoUploaded UNE FOIS
-  // l'upload terminé et les minutes consommées. Cela évite qu'une vidéo dont
-  // l'upload a été abandonné (ou les minutes non décomptées) soit traitée.
-  return { ok: true, videoId: video.id, storageKey: key };
-}
-
-export type UploadUrlResult =
-  | { ok: true; url: string }
-  | { ok: false; error: string };
-
-/**
- * Génère une URL PUT présignée (Cloudflare R2) pour que le navigateur uploade la
- * vidéo source directement, sans transiter par Vercel (limite de corps ~4,5 Mo) et
- * sans le plafond Supabase Free (50 Mo). La clé est imposée par le serveur depuis
- * la session → un utilisateur ne peut écrire que dans son propre dossier.
- */
-export async function createSourceUploadUrl(
-  videoId: string,
-): Promise<UploadUrlResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Session expirée. Reconnectez-vous." };
-
-  // La vidéo doit appartenir à l'utilisateur et être en attente d'upload.
-  const { data: video } = await supabase
-    .from("videos")
-    .select("id, format, status")
-    .eq("id", videoId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!video || video.status !== "queued") {
-    return { ok: false, error: "Vidéo introuvable ou déjà traitée." };
-  }
-
   try {
-    const key = sourceKey(user.id, videoId, video.format || "mp4");
-    const url = await presignPut(key);
-    return { ok: true, url };
+    const key = sourceKey(user.id, video.id, ext);
+    const uploadUrl = await presignPut(key);
+    return { ok: true, videoId: video.id, uploadUrl };
   } catch (e) {
+    // La ligne existe mais l'upload est impossible : on la nettoie pour ne pas
+    // laisser de vidéo fantôme dans « Mes vidéos ».
+    await supabase.from("videos").delete().eq("id", video.id);
     return {
       ok: false,
       error: e instanceof Error ? e.message : "Préparation de l'upload impossible.",
@@ -218,17 +144,126 @@ export async function createSourceUploadUrl(
   }
 }
 
+export type FinalizeUploadResult = { ok: true } | { ok: false; error: string };
+
 /**
- * Appelé par le client une fois l'upload terminé.
- *  - consomme les minutes (quota d'abord, puis crédits)
- *  - renseigne storage_key_source : c'est LE signal qui met la vidéo à
- *    disposition du worker (qui poll les 'queued' avec storage_key_source).
+ * ÉTAPE 2 — appelée quand l'utilisateur clique « Générer » ET que l'envoi du
+ * fichier est terminé.
  *
- * Le statut reste 'queued' : le worker (VM) le fera réellement avancer
- * (extracting_audio → … → done) et écrira la transcription. Aucune transcription
- * factice ici. Le worker ne touche jamais aux minutes (déjà décomptées ici).
+ *  - enregistre la configuration de langues choisie ;
+ *  - consomme les minutes de façon ATOMIQUE (RPC `consume_minutes`, migration
+ *    026) : deux uploads simultanés ne peuvent plus dépenser les mêmes minutes ;
+ *  - renseigne storage_key_source, LE signal qui met la vidéo à disposition du
+ *    worker.
+ *
+ * Le statut reste 'queued' : c'est le worker qui fait avancer le pipeline.
  */
-export async function markVideoUploaded(videoId: string): Promise<void> {
+export async function finalizeVideoUpload(
+  videoId: string,
+  config: {
+    /** Langue parlée, ou "auto" pour laisser le worker la détecter. */
+    sourceLang?: Lang | "auto";
+    /** Langue des sous-titres, ou "same" = dans la langue parlée. */
+    targetLang?: Lang | "same";
+    /** Noms propres à respecter (marques/prénoms/noms/URLs). */
+    importantTerms?: string;
+  },
+): Promise<FinalizeUploadResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée. Reconnectez-vous." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("id, status, duration_seconds, format, storage_key_source")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  if (video.status !== "queued") {
+    return { ok: false, error: "Cette vidéo est déjà prise en charge." };
+  }
+  if (video.storage_key_source) {
+    return { ok: true }; // déjà finalisée (double clic) — idempotent
+  }
+
+  // ── Résolution des langues ──
+  const autoDetect = config.sourceLang === "auto" || !config.sourceLang;
+  const sourceLang: Lang =
+    !autoDetect && isLang(config.sourceLang) ? config.sourceLang : "fr";
+  const wantSameTarget = config.targetLang === "same" || !config.targetLang;
+  let targetLang: Lang;
+  let targetSameAsSource = false;
+  if (wantSameTarget) {
+    if (autoDetect) {
+      targetSameAsSource = true;
+      targetLang = "fr"; // placeholder écrasé par le worker (= source détectée)
+    } else {
+      targetLang = sourceLang;
+    }
+  } else {
+    targetLang = isLang(config.targetLang) ? config.targetLang : "en";
+  }
+
+  // ── Débit ATOMIQUE des minutes ──
+  // `consume_minutes` verrouille la ligne du profil (for update) : deux uploads
+  // terminés au même instant se sérialisent au lieu de se marcher dessus.
+  // EXECUTE réservé à service_role (modèle migration 015) → client admin.
+  const minutesNeeded = (Number(video.duration_seconds) || 0) / 60;
+  const admin = createAdminClient();
+  const { data: consumed, error: consumeError } = await admin.rpc(
+    "consume_minutes",
+    { p_user_id: user.id, p_minutes: minutesNeeded },
+  );
+
+  if (consumeError) {
+    return {
+      ok: false,
+      error: "Impossible de décompter les minutes. Réessayez dans un instant.",
+    };
+  }
+  if (consumed === false) {
+    return {
+      ok: false,
+      error:
+        "Quota insuffisant : vos minutes ont été consommées entre-temps par un autre traitement.",
+    };
+  }
+
+  // ── Mise à disposition du worker ──
+  const key = sourceKey(user.id, videoId, video.format || "mp4");
+  const { error: updateError } = await supabase
+    .from("videos")
+    .update({
+      source_lang: sourceLang,
+      target_lang: targetLang,
+      source_lang_auto: autoDetect,
+      target_same_as_source: targetSameAsSource,
+      important_terms:
+        (config.importantTerms || "").trim().slice(0, 600) || null,
+      storage_key_source: key,
+    })
+    .eq("id", videoId)
+    .eq("status", "queued");
+
+  if (updateError) {
+    return { ok: false, error: "Erreur d'enregistrement. Réessayez." };
+  }
+
+  revalidatePath("/app/videos");
+  revalidatePath("/app/dashboard");
+  return { ok: true };
+}
+
+/**
+ * Annule un upload abandonné (l'utilisateur change de fichier ou quitte la page
+ * avant d'avoir cliqué « Générer »). Supprime la ligne et l'objet R2 partiel.
+ * Aucune minute n'a été consommée à ce stade.
+ */
+export async function cancelVideoUpload(videoId: string): Promise<void> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -237,76 +272,16 @@ export async function markVideoUploaded(videoId: string): Promise<void> {
 
   const { data: video } = await supabase
     .from("videos")
-    .select("id, status, duration_seconds, format")
+    .select("id, format, status, storage_key_source")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
-  if (!video || video.status !== "queued") return;
+  // On ne supprime QUE les brouillons : jamais une vidéo déjà prise en charge.
+  if (!video || video.status !== "queued" || video.storage_key_source) return;
 
-  const durationSeconds = Number(video.duration_seconds) || 0;
-  const minutesNeeded = durationSeconds / 60;
-
-  // Consommation des minutes (quota d'abord, puis crédits) via user client.
-  // get_user_minutes_available/consume_user_minutes ont leur EXECUTE révoqué
-  // pour authenticated, donc on fait la logique ici sous RLS.
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("quota_minutes_total, quota_minutes_used, credits_minutes")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) return;
-
-  const quotaAvail = Math.max(
-    profile.quota_minutes_total - profile.quota_minutes_used,
-    0,
-  );
-  if (quotaAvail + profile.credits_minutes < minutesNeeded) {
-    // Quota devenu insuffisant entre l'upload et le start (race rare)
-    await supabase
-      .from("videos")
-      .update({
-        status: "failed",
-        error_message: "Quota insuffisant au démarrage du traitement.",
-      })
-      .eq("id", videoId);
-    return;
-  }
-
-  let newQuotaUsed = profile.quota_minutes_used;
-  let newCredits = profile.credits_minutes;
-  if (quotaAvail >= minutesNeeded) {
-    newQuotaUsed += minutesNeeded;
-  } else {
-    newQuotaUsed = profile.quota_minutes_total;
-    newCredits -= minutesNeeded - quotaAvail;
-  }
-
-  // Colonnes sensibles (quota/crédits) : écriture via le client admin
-  // (service_role). Le rôle `authenticated` n'a PAS le droit de modifier ces
-  // colonnes directement (privilèges au niveau colonne, migration 015) → un
-  // utilisateur ne peut pas se créditer des minutes via l'API.
-  const admin = createAdminClient();
-  await admin
-    .from("profiles")
-    .update({
-      quota_minutes_used: newQuotaUsed,
-      credits_minutes: newCredits,
-    })
-    .eq("id", user.id);
-
-  // Renseigne storage_key_source → met la vidéo à disposition du worker.
-  // Le statut reste 'queued' ; le worker prend le relais.
-  const key = sourceKey(user.id, videoId, video.format || "mp4");
-  await supabase
-    .from("videos")
-    .update({ storage_key_source: key })
-    .eq("id", videoId)
-    .eq("status", "queued");
-
-  revalidatePath("/app/videos");
-  revalidatePath("/app/dashboard");
+  await deleteObjects([sourceKey(user.id, videoId, video.format || "mp4")]);
+  await supabase.from("videos").delete().eq("id", videoId).eq("user_id", user.id);
 }
 
 export type VideoStatusResult = {
@@ -734,8 +709,6 @@ type VideoForGen = {
   id: string;
   source_lang: string | null;
   target_lang: string | null;
-  transcription_source: Segment[] | null;
-  transcription_target: Segment[] | null;
 };
 
 /**
@@ -765,13 +738,19 @@ async function ensureLanguageSegments(
   }
 
   const srcLang: Lang = isLang(video.source_lang) ? video.source_lang : "fr";
-  // Base = transcription source (table → repli colonnes legacy pour les vidéos
-  // d'avant la migration / traitées avant le déploiement du worker).
+  // Base = transcription source, depuis `video_subtitles`. Les colonnes jsonb
+  // legacy ne sont lues QU'EN DERNIER RECOURS (vidéos antérieures à la migration
+  // 024) : les charger d'office coûtait ~220 Ko à chaque bascule de langue.
   let base = await getSubtitle(supabase, video.id, srcLang);
   if (!base || base.length === 0) {
+    const { data: legacy } = await supabase
+      .from("videos")
+      .select("transcription_source, transcription_target")
+      .eq("id", video.id)
+      .maybeSingle();
     base =
-      (video.transcription_source as Segment[] | null) ??
-      (video.transcription_target as Segment[] | null) ??
+      (legacy?.transcription_source as Segment[] | null) ??
+      (legacy?.transcription_target as Segment[] | null) ??
       [];
   }
   if (base.length === 0) {
@@ -823,20 +802,25 @@ async function ensureLanguageSegments(
   return { segments, generated: true, userEdited: false };
 }
 
-const GEN_SELECT =
-  "id, source_lang, target_lang, transcription_source, transcription_target, status";
+// Colonnes nécessaires pour générer une langue. Les colonnes jsonb legacy
+// (transcription_source/target, ~110 Ko chacune) ne sont PLUS chargées d'office :
+// la base de traduction vient de `video_subtitles`, et le repli legacy n'est lu
+// que si cette table est vide (vidéos d'avant la migration 024).
+const GEN_SELECT = "id, source_lang, target_lang, status";
 
 /**
- * Charge l'état multi-langue d'une vidéo : langues présentes (+ statut) et leurs
- * segments prêts, indexés par langue. Le lecteur l'appelle au montage puis en
- * polling court tant que les 10 langues ne sont pas encore générées (le worker
- * les pré-génère en arrière-plan après 'done') → les langues « s'allument » au
- * fur et à mesure et la bascule reste instantanée (cache client).
+ * SONDE LÉGÈRE — quelles langues sont prêtes ? Rien d'autre.
+ *
+ * Avant, cette fonction renvoyait TOUS les segments de TOUTES les langues, et
+ * l'éditeur l'appelait toutes les 4 secondes : jusqu'à ~1,1 Mo par appel, et
+ * jusqu'à ~40 Mo retéléchargés pour une seule session d'édition. Elle ne renvoie
+ * plus que la liste des langues et leur statut (quelques centaines d'octets).
+ *
+ * Les segments d'une langue se chargent à la demande, via getLanguageSegments.
  */
-export async function loadSubtitles(videoId: string): Promise<{
+export async function listSubtitleLanguages(videoId: string): Promise<{
   ok: boolean;
   langs?: SubtitleLang[];
-  segments?: Record<string, Segment[]>;
   error?: string;
 }> {
   const supabase = await createClient();
@@ -845,20 +829,32 @@ export async function loadSubtitles(videoId: string): Promise<{
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Session expirée." };
 
-  // RLS : la lecture ne renvoie que les sous-titres des vidéos de l'utilisateur.
-  const { data: video } = await supabase
-    .from("videos")
-    .select("id")
-    .eq("id", videoId)
-    .eq("user_id", user.id)
-    .single();
-  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  // RLS : la lecture ne renvoie que les sous-titres des vidéos de l'utilisateur,
+  // inutile de vérifier la propriété par une requête supplémentaire.
+  const langs = await listLanguages(supabase, videoId);
+  return { ok: true, langs };
+}
 
-  const [langs, segments] = await Promise.all([
-    listLanguages(supabase, videoId),
-    getAllSubtitles(supabase, videoId),
-  ]);
-  return { ok: true, langs, segments };
+/**
+ * Segments d'UNE langue déjà générée (cache éditeur). Ne génère rien : si la
+ * langue n'existe pas encore, l'appelant passe par setSubtitleLanguage /
+ * generateLanguage.
+ */
+export async function getLanguageSegments(
+  videoId: string,
+  lang: string,
+): Promise<{ ok: boolean; segments?: Segment[]; error?: string }> {
+  if (!isLang(lang)) return { ok: false, error: "Langue invalide." };
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const segments = await getSubtitle(supabase, videoId, lang);
+  if (!segments) return { ok: false, error: "Langue non générée." };
+  return { ok: true, segments };
 }
 
 /**
@@ -1011,18 +1007,19 @@ export async function deleteVideo(videoId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) return;
 
-  // Récupère la clé source réelle (R2) avant suppression de la ligne.
+  // Récupère les clés réelles (R2) avant suppression de la ligne.
   const { data: video } = await supabase
     .from("videos")
-    .select("storage_key_source")
+    .select("storage_key_source, storage_key_burned, storage_key_preview")
     .eq("id", videoId)
     .eq("user_id", user.id)
     .single();
 
-  // 1. Vidéo source + MP4 incrusté → R2.
+  // 1. Vidéo source + MP4 incrusté + proxy d'aperçu → R2.
   await deleteObjects([
     video?.storage_key_source ?? null,
-    burnedKey(user.id, videoId),
+    video?.storage_key_burned ?? burnedKey(user.id, videoId),
+    video?.storage_key_preview ?? previewKey(user.id, videoId),
   ]);
 
   // 2. Sous-titres (.srt/.vtt) → Supabase Storage.
