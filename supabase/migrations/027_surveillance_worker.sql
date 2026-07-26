@@ -16,14 +16,20 @@
 -- Le secret d'appel est lu dans le Vault Supabase — jamais écrit en clair ici.
 --
 -- ⚠️ PRÉREQUIS : le secret `cron_secret` doit exister dans le Vault. Il est créé
--- par le second fichier, `027b-secret-vault.sql` (volontairement gardé HORS du
--- dépôt Git, puisqu'il contient la valeur du secret).
+-- par un fichier séparé, volontairement gardé HORS du dépôt Git puisqu'il
+-- contient la valeur du secret.
+--
+-- NB (correctif du 2026-07-26) : la première version appelait
+-- `extensions.http_get` en dur. Selon la façon dont pg_net a été activé, ses
+-- fonctions vivent dans `extensions`, dans `net` ou ailleurs — l'appel échouait
+-- silencieusement dans le job planifié. Le schéma est désormais RÉSOLU À
+-- L'EXÉCUTION, ce qui rend la sonde insensible à ce détail d'installation.
 
 -- ─────────────────────────────────────────────────────────────────
 -- 1. Extensions
 -- ─────────────────────────────────────────────────────────────────
-create extension if not exists pg_cron with schema pg_catalog;
-create extension if not exists pg_net with schema extensions;
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
 
 -- ─────────────────────────────────────────────────────────────────
 -- 2. La sonde
@@ -31,13 +37,14 @@ create extension if not exists pg_net with schema extensions;
 -- Appel non bloquant (pg_net poste la requête dans une file interne et rend la
 -- main immédiatement). On ne lit pas la réponse : c'est l'endpoint qui alerte.
 create or replace function public.ping_worker_health()
-returns void
+returns text
 language plpgsql
 security definer
-set search_path to 'public', 'extensions', 'vault'
+set search_path to 'public'
 as $$
 declare
   v_secret text;
+  v_schema text;
   v_url    text := 'https://www.maxlinestudio.fr/api/cron/health';
 begin
   select decrypted_secret into v_secret
@@ -46,15 +53,27 @@ begin
    limit 1;
 
   if v_secret is null then
-    raise warning 'ping_worker_health : secret « cron_secret » absent du Vault — surveillance inactive.';
-    return;
+    return 'ERREUR : secret « cron_secret » absent du Vault — surveillance inactive.';
   end if;
 
-  perform extensions.http_get(
-    url     := v_url,
-    headers := jsonb_build_object('Authorization', 'Bearer ' || v_secret),
-    timeout_milliseconds := 20000
-  );
+  -- Où vivent les fonctions de pg_net ? (`extensions`, `net`… selon l'activation)
+  select n.nspname into v_schema
+    from pg_proc p
+    join pg_namespace n on n.oid = p.pronamespace
+   where p.proname = 'http_get'
+   order by case n.nspname when 'net' then 1 when 'extensions' then 2 else 3 end
+   limit 1;
+
+  if v_schema is null then
+    return 'ERREUR : pg_net introuvable (fonction http_get absente).';
+  end if;
+
+  execute format(
+    'select %I.http_get(url := $1, headers := $2, timeout_milliseconds := 20000)',
+    v_schema
+  ) using v_url, jsonb_build_object('Authorization', 'Bearer ' || v_secret);
+
+  return 'OK — appel posté via ' || v_schema || '.http_get';
 end;
 $$;
 
@@ -79,11 +98,9 @@ select cron.schedule(
 -- ─────────────────────────────────────────────────────────────────
 -- Vérification (à lancer après coup)
 -- ─────────────────────────────────────────────────────────────────
+--   select public.ping_worker_health();            -- doit renvoyer « OK — … »
 --   select jobname, schedule, active from cron.job;
 --   select status, return_message, start_time
 --     from cron.job_run_details
 --    where jobname = 'maxline-health'
 --    order by start_time desc limit 5;
---
--- Et pour voir les appels HTTP réellement partis :
---   select id, created from net._http_response order by created desc limit 5;
