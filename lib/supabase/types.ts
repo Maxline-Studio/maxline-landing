@@ -324,6 +324,11 @@ export type Database = {
         Args: { p_user_id: string; p_minutes: number };
         Returns: boolean;
       };
+      /** Recalcule delete_at de toutes les vidéos de l utilisateur (migration 030). */
+      reset_video_retention: {
+        Args: { p_days: number };
+        Returns: number;
+      };
       claim_referral: {
         Args: { p_code: string };
         Returns: Json;

@@ -5,7 +5,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getStripe } from "@/lib/stripe";
 import { deleteObjects } from "@/lib/r2";
-import { burnedKey, videoFolder, STORAGE_BUCKET } from "@/lib/storage";
+import {
+  burnedKey,
+  previewKey,
+  asrAudioKey,
+  videoFolder,
+  STORAGE_BUCKET,
+} from "@/lib/storage";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -33,7 +39,23 @@ export async function updateProfile(patch: {
     update.display_name = name || null;
   }
   if (patch.avatarUrl !== undefined) {
-    update.avatar_url = patch.avatarUrl;
+    // L'URL vient du client (upload dans le bucket `avatars`). On refuse toute
+    // adresse qui ne pointe pas vers notre propre stockage : sans ce contrôle,
+    // n'importe quelle URL externe pouvait être enregistrée puis servie comme
+    // photo de profil (pixel de traçage, contenu tiers…).
+    if (patch.avatarUrl !== null) {
+      const url = patch.avatarUrl.trim();
+      const allowed =
+        /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\/avatars\//i.test(
+          url,
+        ) || /^https:\/\/lh[0-9]\.googleusercontent\.com\//i.test(url);
+      if (!allowed) {
+        return { ok: false, error: "Image de profil invalide." };
+      }
+      update.avatar_url = url;
+    } else {
+      update.avatar_url = null;
+    }
   }
   if (Object.keys(update).length === 0) return { ok: true };
 
@@ -71,18 +93,19 @@ export async function updateRetention(days: number): Promise<ActionResult> {
     .eq("id", user.id);
   if (profErr) return { ok: false, error: profErr.message };
 
-  // Recalcule delete_at pour les vidéos existantes encore soumises à rétention.
-  const { data: videos } = await supabase
-    .from("videos")
-    .select("id, uploaded_at")
-    .eq("user_id", user.id)
-    .not("delete_at", "is", null);
-
-  for (const v of videos ?? []) {
-    const newDeleteAt = new Date(
-      new Date(v.uploaded_at).getTime() + days * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    await supabase.from("videos").update({ delete_at: newDeleteAt }).eq("id", v.id);
+  // Recalcule delete_at pour les vidéos existantes, EN UNE SEULE requête
+  // (migration 030). Avant : une lecture puis un UPDATE par vidéo, en boucle.
+  // Sur un compte chargé, c'était des dizaines d'allers-retours enchaînés, avec
+  // le risque que l'action soit coupée en cours de route et laisse la rétention
+  // incohérente d'une vidéo à l'autre.
+  const { error: retErr } = await supabase.rpc("reset_video_retention", {
+    p_days: days,
+  });
+  if (retErr) {
+    return {
+      ok: false,
+      error: "Préférence enregistrée, mais le recalcul des dates a échoué.",
+    };
   }
 
   revalidatePath("/app/settings");
@@ -132,13 +155,26 @@ export async function deleteAccount(): Promise<ActionResult> {
   // 1) Récupère les vidéos pour connaître les objets à supprimer.
   const { data: videos } = await admin
     .from("videos")
-    .select("id, storage_key_source")
+    .select("id, storage_key_source, storage_key_burned, storage_key_preview")
     .eq("user_id", userId);
 
-  // 1a) Objets R2 (source + MP4 incrusté) + 1b) sous-titres Supabase.
-  for (const v of videos ?? []) {
+  /** Efface tous les fichiers d'UNE vidéo (R2 + Supabase Storage). */
+  const purgeFiles = async (v: {
+    id: string;
+    storage_key_source: string | null;
+    storage_key_burned: string | null;
+    storage_key_preview: string | null;
+  }) => {
     try {
-      await deleteObjects([v.storage_key_source ?? null, burnedKey(userId, v.id)]);
+      // Les quatre objets possibles sur R2. Le proxy d'aperçu et l'audio
+      // temporaire de transcription manquaient à l'appel : sur un droit à
+      // l'effacement, laisser des fichiers derrière soi n'est pas une option.
+      await deleteObjects([
+        v.storage_key_source,
+        v.storage_key_burned ?? burnedKey(userId, v.id),
+        v.storage_key_preview ?? previewKey(userId, v.id),
+        asrAudioKey(userId, v.id),
+      ]);
     } catch {
       /* best-effort : on continue la suppression du compte */
     }
@@ -153,6 +189,13 @@ export async function deleteAccount(): Promise<ActionResult> {
     } catch {
       /* best-effort */
     }
+  };
+
+  // Par vagues de 10 : une boucle séquentielle sur un compte chargé dépassait
+  // le temps imparti à l'action, et la suppression s'arrêtait au milieu.
+  const list = videos ?? [];
+  for (let i = 0; i < list.length; i += 10) {
+    await Promise.all(list.slice(i, i + 10).map(purgeFiles));
   }
 
   // 2) Annule l'abonnement Stripe s'il existe.

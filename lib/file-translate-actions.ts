@@ -106,21 +106,29 @@ export async function translateSubtitleFile(params: {
     };
   }
 
-  // ─── Consommation des minutes (quota d'abord, puis crédits) via client admin ───
-  let newQuotaUsed = profile.quota_minutes_used;
-  let newCredits = profile.credits_minutes;
-  if (quotaAvail >= needed) {
-    newQuotaUsed += needed;
-  } else {
-    newQuotaUsed = profile.quota_minutes_total;
-    newCredits -= needed - quotaAvail;
-  }
-  const { error: updErr } = await createAdminClient()
-    .from("profiles")
-    .update({ quota_minutes_used: newQuotaUsed, credits_minutes: newCredits })
-    .eq("id", user.id);
+  // ─── Consommation ATOMIQUE des minutes (quota d'abord, puis crédits) ───
+  //
+  // Corrigé le 2026-07-27. L'ancienne version lisait le profil, calculait en
+  // JavaScript, puis réécrivait quota ET crédits. Deux défauts :
+  //   1. deux traductions simultanées se perdaient l'une l'autre ;
+  //   2. bien pire, l'écriture portait sur `credits_minutes` avec une valeur
+  //      LUE AVANT la traduction. Si l'utilisateur achetait un pack pendant que
+  //      sa traduction tournait, cette écriture périmée EFFAÇAIT l'achat.
+  // `consume_minutes` (migration 026) verrouille la ligne et fait le calcul en
+  // base : plus aucune fenêtre entre la lecture et l'écriture.
+  const { data: consumed, error: updErr } = await createAdminClient().rpc(
+    "consume_minutes",
+    { p_user_id: user.id, p_minutes: needed },
+  );
   if (updErr) {
     return { ok: false, error: "Erreur de décompte des minutes, réessayez." };
+  }
+  if (consumed === false) {
+    return {
+      ok: false,
+      error:
+        "Quota insuffisant : vos minutes ont été consommées entre-temps par un autre traitement.",
+    };
   }
 
   // ─── Régénère le fichier traduit (même format, timecodes préservés) ───
