@@ -71,20 +71,20 @@ export default function Confidentialite() {
             Fournir le service (compte, import, transcription, traduction, exports), <strong>exécution du contrat</strong>.
           </li>
           <li>
-            Gérer l&apos;abonnement, la facturation et la comptabilité:{" "}
+            Gérer l&apos;abonnement, la facturation et la comptabilité&nbsp;:{" "}
             <strong>exécution du contrat</strong> et{" "}
             <strong>obligation légale</strong>.
           </li>
           <li>
-            Emails de service (confirmation, état des vidéos, bonus):{" "}
-            <strong>exécution du contrat</strong>. Emails de liste d&apos;attente:{" "}
+            Emails de service (confirmation, état des vidéos, bonus)&nbsp;:{" "}
+            <strong>exécution du contrat</strong>. Emails de liste d&apos;attente&nbsp;:{" "}
             <strong>consentement</strong>.
           </li>
           <li>
             Programme de parrainage et bonus, <strong>exécution du contrat</strong>.
           </li>
           <li>
-            Sécurité, prévention de la fraude et des abus:{" "}
+            Sécurité, prévention de la fraude et des abus&nbsp;:{" "}
             <strong>intérêt légitime</strong>.
           </li>
         </ul>

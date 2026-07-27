@@ -42,7 +42,7 @@ export default function MentionsLegales() {
         <ul>
           <li>
             <strong>Vercel Inc.</strong>, hébergement du site et des fonctions
-            serveur. 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis:{" "}
+            serveur. 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis&nbsp;:{" "}
             <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">
               vercel.com
             </a>
@@ -50,7 +50,7 @@ export default function MentionsLegales() {
           <li>
             <strong>Supabase, Inc.</strong>, base de données, authentification et
             fichiers de sous-titres. Données hébergées dans l&apos;Union
-            européenne (région AWS Europe, Irlande):{" "}
+            européenne (région AWS Europe, Irlande)&nbsp;:{" "}
             <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">
               supabase.com
             </a>
@@ -58,7 +58,7 @@ export default function MentionsLegales() {
           <li>
             <strong>Cloudflare, Inc.</strong>, réseau de diffusion (CDN) et
             stockage des vidéos (Cloudflare R2). 101 Townsend St, San Francisco,
-            CA 94107, États-Unis:{" "}
+            CA 94107, États-Unis&nbsp;:{" "}
             <a href="https://cloudflare.com" target="_blank" rel="noopener noreferrer">
               cloudflare.com
             </a>

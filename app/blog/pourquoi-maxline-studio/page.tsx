@@ -426,7 +426,7 @@ export default function PourquoiMaxlineStudio() {
             </h2>
             <p className="text-ink-700 mb-6 leading-relaxed">
               Maxline est en ligne. Crée ton atelier et sous-titre ta première
-              vidéo gratuitement, sans carte, 12 €/mois ensuite, sans engagement.
+              vidéo gratuitement, sans carte. 12 €/mois ensuite, sans engagement.
             </p>
             <Link href="/signup" className="btn-pen text-base">
               Créer mon atelier
