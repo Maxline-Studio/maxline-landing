@@ -36,7 +36,13 @@ create extension if not exists pg_net;
 -- ─────────────────────────────────────────────────────────────────
 -- Appel non bloquant (pg_net poste la requête dans une file interne et rend la
 -- main immédiatement). On ne lit pas la réponse : c'est l'endpoint qui alerte.
-create or replace function public.ping_worker_health()
+--
+-- `drop` préalable obligatoire : la 1re version renvoyait `void`, celle-ci
+-- renvoie `text` (pour pouvoir la tester à la main), et `create or replace`
+-- refuse tout changement de type de retour (erreur 42P13).
+drop function if exists public.ping_worker_health();
+
+create function public.ping_worker_health()
 returns text
 language plpgsql
 security definer
