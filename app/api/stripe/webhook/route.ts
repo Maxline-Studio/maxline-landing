@@ -23,6 +23,13 @@ import {
  *  - customer.subscription.created/updated → plan + quota
  *  - customer.subscription.deleted → retour au plan free, reset streak
  *  - invoice.paid (renouvellement) → reset du quota mensuel consommé
+ *
+ * IDEMPOTENCE (audit 2026-07-27) — Stripe documente que le MÊME événement peut
+ * être livré plusieurs fois. L'achat d'un pack créditait alors les minutes une
+ * seconde fois, et la route provoquait elle-même la retentative en renvoyant 500.
+ * On « réclame » désormais chaque `event.id` dans `stripe_events` AVANT de
+ * traiter : une seconde livraison est ignorée. Si le traitement échoue, la
+ * réclamation est relâchée pour que Stripe puisse réessayer utilement.
  */
 
 // Stripe a besoin du corps brut pour vérifier la signature.
@@ -71,6 +78,26 @@ export async function POST(req: NextRequest) {
     return data?.id ?? null;
   }
 
+  // ── Réclamation de l'événement (idempotence) ──
+  // L'insertion sert de verrou : la clé primaire rejette toute seconde livraison
+  // du même `event.id`. On réclame AVANT de traiter, jamais après — sinon un
+  // incident entre le traitement et l'enregistrement rouvrirait la porte au
+  // double-crédit.
+  const claim = await admin
+    .from("stripe_events")
+    .insert({ id: event.id, type: event.type });
+
+  if (claim.error) {
+    // 23505 = violation d'unicité → déjà traité, on acquitte sans rien refaire.
+    if (claim.error.code === "23505") {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
+    // Autre erreur (base indisponible…) : on ne traite pas à l'aveugle, on
+    // laisse Stripe réessayer plus tard.
+    console.error("[stripe webhook] réclamation impossible", event.id, claim.error);
+    return NextResponse.json({ error: "Journal indisponible" }, { status: 500 });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -81,21 +108,33 @@ export async function POST(req: NextRequest) {
           null;
 
         if (session.mode === "payment") {
-          // Achat d'un pack crédits → ajout des minutes (pas un bonus : pas de ledger)
+          // Achat d'un pack crédits → ajout des minutes (pas un bonus : pas de ledger).
+          //
+          // On exige `payment_status === 'paid'` : avec un moyen de paiement
+          // asynchrone (prélèvement SEPA…), `checkout.session.completed` peut
+          // arriver AVANT l'encaissement. Sans ce garde-fou, on créditerait un
+          // paiement qui peut encore échouer.
+          if (session.payment_status !== "paid") {
+            console.warn(
+              "[stripe webhook] session non payée, crédits différés",
+              session.id,
+              session.payment_status,
+            );
+            break;
+          }
           const kind = session.metadata?.kind as string | undefined;
           const pack = kind?.replace("credits_", "") as CreditPack | undefined;
           const minutes = pack ? CREDIT_PACK_MINUTES[pack] : null;
           if (userId && minutes) {
-            const { data: p } = await admin
-              .from("profiles")
-              .select("credits_minutes")
-              .eq("id", userId)
-              .single();
-            if (p) {
-              await admin
-                .from("profiles")
-                .update({ credits_minutes: Number(p.credits_minutes) + minutes })
-                .eq("id", userId);
+            // Ajout ATOMIQUE (migration 029) : l'ancienne lecture-modification-
+            // écriture faisait perdre un pack quand deux achats se croisaient.
+            const { data: ok, error } = await admin.rpc("add_credit_minutes", {
+              p_user_id: userId,
+              p_minutes: minutes,
+            });
+            if (error) throw error; // → 500 + réclamation relâchée → Stripe réessaie
+            if (!ok) {
+              console.error("[stripe webhook] profil introuvable au crédit", userId);
             }
           }
         } else if (session.mode === "subscription" && userId) {
@@ -180,8 +219,11 @@ export async function POST(req: NextRequest) {
         break;
     }
   } catch (e) {
-    // On loggue mais on renvoie 200 pour les erreurs non critiques afin
-    // d'éviter les retries en boucle ; les 500 sont réservés aux échecs durs.
+    // Le traitement a échoué : on RELÂCHE la réclamation pour que la
+    // retentative de Stripe puisse réellement rejouer l'événement. Sans ça,
+    // l'événement resterait marqué « traité » alors que rien ne l'a été — un
+    // pack de crédits payé et jamais livré.
+    await admin.from("stripe_events").delete().eq("id", event.id);
     console.error("[stripe webhook]", event.type, e);
     return NextResponse.json(
       { error: "Erreur de traitement", handled: false },

@@ -167,6 +167,12 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["video_subtitles"]["Insert"]>;
         Relationships: [];
       };
+      stripe_events: {
+        Row: { id: string; type: string; received_at: string };
+        Insert: { id: string; type: string; received_at?: string };
+        Update: Partial<Database["public"]["Tables"]["stripe_events"]["Insert"]>;
+        Relationships: [];
+      };
       worker_health: {
         Row: {
           id: string;
@@ -310,6 +316,11 @@ export type Database = {
        * EXECUTE réservé à service_role → à appeler avec le client admin.
        */
       consume_minutes: {
+        Args: { p_user_id: string; p_minutes: number };
+        Returns: boolean;
+      };
+      /** Ajout ATOMIQUE de minutes de crédit (migration 029). service_role uniquement. */
+      add_credit_minutes: {
         Args: { p_user_id: string; p_minutes: number };
         Returns: boolean;
       };
