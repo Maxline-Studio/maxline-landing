@@ -162,7 +162,7 @@ export function SubtitleConverter() {
               Déposer ou choisir un fichier
             </button>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-ink-400">
-              .srt · .vtt · .txt — ou collez le texte ci-dessous
+              .srt · .vtt · .txt, ou collez le texte ci-dessous
             </p>
             <input
               ref={fileRef}

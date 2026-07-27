@@ -61,7 +61,7 @@ export default async function BillingPage({
         >
           <CheckCircle2 className="h-5 w-5 text-success-600 flex-shrink-0 mt-0.5" aria-hidden />
           <p className="text-sm text-ink-700">
-            Paiement confirmé. Votre compte est mis à jour en quelques secondes —
+            Paiement confirmé. Votre compte est mis à jour en quelques secondes,
             actualisez si besoin.
           </p>
         </div>

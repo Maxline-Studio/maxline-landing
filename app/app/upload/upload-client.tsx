@@ -273,9 +273,9 @@ export function UploadClient({
   // Phrase explicative selon les choix.
   const helperText =
     targetLang === "same"
-      ? "Sous-titres dans la langue parlée — parfait pour rendre votre contenu accessible."
+      ? "Sous-titres dans la langue parlée, parfait pour rendre votre contenu accessible."
       : sourceLang === "auto"
-        ? `Traduction vers ${langLabel(targetLang)} — la langue parlée est détectée automatiquement.`
+        ? `Traduction vers ${langLabel(targetLang)} : la langue parlée est détectée automatiquement.`
         : sourceLang === targetLang
           ? `Transcription en ${langLabel(targetLang)}.`
           : `Traduction ${langLabel(sourceLang)} → ${langLabel(targetLang)}.`;
@@ -283,7 +283,7 @@ export function UploadClient({
   // ─── Rendu ───
   return (
     <div>
-      {/* Étape 1 — Dépôt (le premier geste). */}
+      {/* Étape 1, Dépôt (le premier geste). */}
       {(phase === "idle" || phase === "validating") && (
         <div>
           <div
@@ -340,7 +340,7 @@ export function UploadClient({
                   M4A, AAC, OGG, FLAC) · jusqu&apos;à 1&nbsp;Go et 30&nbsp;min
                 </p>
                 <p className="mt-1 text-xs text-ink-400">
-                  L&apos;envoi démarre tout de suite — vous choisissez la langue
+                  L&apos;envoi démarre tout de suite, vous choisissez la langue
                   pendant ce temps.
                 </p>
               </>
@@ -369,7 +369,7 @@ export function UploadClient({
         </div>
       )}
 
-      {/* Étape 2 — Configuration (l'envoi tourne en fond). */}
+      {/* Étape 2, Configuration (l'envoi tourne en fond). */}
       {(phase === "configure" || phase === "finalizing" || phase === "done") &&
         fileInfo && (
           <div className="bg-ivory-50 border-2 border-ink-900 rounded-sm p-6 md:p-8">
@@ -461,11 +461,11 @@ export function UploadClient({
                   />
                   <p className="text-xs text-ink-500 mt-1.5">
                     Marques, prénoms, noms, pseudos, sites… On les écrit
-                    exactement — et on ne les traduit pas.
+                    exactement, et on ne les traduit pas.
                   </p>
                 </div>
 
-                {/* Avancé — préciser la langue parlée */}
+                {/* Avancé, préciser la langue parlée */}
                 <div className="mt-5 pt-5 border-t border-ivory-300">
                   <button
                     type="button"
@@ -546,7 +546,7 @@ export function UploadClient({
             ) : (
               <div className="mt-7 flex items-center gap-2 text-sm text-rouge-700 font-medium">
                 <CheckCircle2 className="h-4 w-4" aria-hidden />
-                Vidéo envoyée. Traitement en cours — redirection…
+                Vidéo envoyée. Traitement en cours, redirection…
               </div>
             )}
           </div>
@@ -570,7 +570,7 @@ function TransferStatus({ transfer }: { transfer: Transfer }) {
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
-            Envoi en cours — vous pouvez choisir votre langue
+            Envoi en cours, vous pouvez choisir votre langue
           </span>
           <span className="font-mono text-xs tabular-nums text-ink-900">
             {transfer.pct}%
@@ -590,7 +590,7 @@ function TransferStatus({ transfer }: { transfer: Transfer }) {
     return (
       <p className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink-600">
         <CheckCircle2 className="h-3.5 w-3.5 text-rouge-500" aria-hidden />
-        Fichier prêt — le traitement démarrera dès validation
+        Fichier prêt, le traitement démarrera dès validation
       </p>
     );
   }
@@ -645,7 +645,7 @@ function uploadWithProgress(
       if (xhr.status >= 200 && xhr.status < 300) {
         resolve();
       } else {
-        reject(new Error(`HTTP ${xhr.status} — ${xhr.responseText.slice(0, 120)}`));
+        reject(new Error(`HTTP ${xhr.status}, ${xhr.responseText.slice(0, 120)}`));
       }
     };
     xhr.onerror = () => {

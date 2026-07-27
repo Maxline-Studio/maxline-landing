@@ -1,11 +1,11 @@
 "use client";
 
 /**
- * File d'attente — bandeau affiché pendant qu'une vidéo attend son tour.
+ * File d'attente, bandeau affiché pendant qu'une vidéo attend son tour.
  *
  * Objectif : lever l'angoisse du « ça charge en boucle ». On montre (1) que
  * l'attente est NORMALE et partagée, (2) la POSITION réelle dans la file, (3)
- * un mot qui défile dans les 10 langues en écriture native — compréhensible
+ * un mot qui défile dans les 10 langues en écriture native, compréhensible
  * sans traduction, et cohérent avec l'animation multilingue de la landing.
  *
  * Le défilement est purement décoratif (aria-hidden) : les lecteurs d'écran
@@ -68,7 +68,7 @@ export function QueueStatus({ ahead }: { ahead: number | null }) {
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-300">
           File d&apos;attente
         </span>
-        {/* Mot multilingue défilant — décoratif, compris de tous. */}
+        {/* Mot multilingue défilant, décoratif, compris de tous. */}
         <span
           aria-hidden
           dir={current.rtl ? "rtl" : undefined}
@@ -121,7 +121,7 @@ export function QueueStatus({ ahead }: { ahead: number | null }) {
             <strong className="font-semibold text-ivory-50 tabular-nums">
               {ahead} vidéo{ahead > 1 ? "s" : ""}
             </strong>{" "}
-            avant la vôtre. Plusieurs vidéos sont traitées en parallèle —
+            avant la vôtre. Plusieurs vidéos sont traitées en parallèle,
             inutile de rafraîchir, la page se met à jour toute seule.
           </>
         )}

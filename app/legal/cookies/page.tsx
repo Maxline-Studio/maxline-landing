@@ -23,12 +23,12 @@ export default function Cookies() {
         </p>
         <ul>
           <li>
-            <strong>Authentification / session</strong> — déposés par notre
+            <strong>Authentification / session</strong>, déposés par notre
             prestataire d&apos;authentification (Supabase) pour vous garder connecté
             et sécuriser votre session une fois sur votre espace.
           </li>
           <li>
-            <strong>Paiement</strong> — lors d&apos;un paiement, Stripe dépose des
+            <strong>Paiement</strong>, lors d&apos;un paiement, Stripe dépose des
             cookies techniques de sécurité et de prévention de la fraude sur sa
             page de paiement.
           </li>

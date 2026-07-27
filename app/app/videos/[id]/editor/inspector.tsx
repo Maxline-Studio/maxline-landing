@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Inspecteur contextuel — UNE seule instance, deux habits :
+ * Inspecteur contextuel, UNE seule instance, deux habits :
  *  - desktop (lg+) : volet statique docké à droite de l'aperçu ;
  *  - mobile/tablette : feuille du bas (bottom sheet) avec poignée + fond
  *    assombri, ouverte par la barre d'actions ou un tap sur un bloc.
@@ -209,7 +209,7 @@ function SelectionTab({ s }: { s: SelectionApi }) {
               ? "bg-amber-100 text-amber-800"
               : "bg-ivory-200 text-ink-600"
           }`}
-          title="Vitesse de lecture (caractères/seconde) — au-delà de 17, difficile à lire"
+          title="Vitesse de lecture (caractères/seconde), au-delà de 17, difficile à lire"
         >
           {speed.toFixed(0)} car/s{fast ? " · rapide" : ""}
         </span>
@@ -418,7 +418,7 @@ function ExportTab({ x }: { x: ExportApi }) {
             className="min-h-[48px] rounded-sm border-2 border-encre-500 bg-encre-500 font-mono text-sm font-semibold text-ivory-50 hover:bg-encre-600 transition-colors inline-flex items-center justify-center gap-1.5"
           >
             <Download className="h-3.5 w-3.5" aria-hidden />
-            .fcpxml — montage
+            .fcpxml, montage
           </button>
         )}
         <button
@@ -481,7 +481,7 @@ function ExportTab({ x }: { x: ExportApi }) {
                 />
               </div>
               <p className="text-xs text-ink-500 mt-1.5 font-mono">
-                Réencodage complet de la vidéo — cela peut prendre quelques
+                Réencodage complet de la vidéo, cela peut prendre quelques
                 minutes.
               </p>
             </div>
@@ -516,7 +516,7 @@ function ExportTab({ x }: { x: ExportApi }) {
         </p>
         <p className="text-xs text-ink-500 font-mono">
           › le téléchargement ne démarre pas ? Une extension (bloqueur de
-          pub/cookies) peut le bloquer — désactivez-la sur cette page, ou
+          pub/cookies) peut le bloquer, désactivez-la sur cette page, ou
           faites un clic droit → «&nbsp;Enregistrer sous&nbsp;».
         </p>
       </div>

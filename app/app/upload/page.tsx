@@ -44,7 +44,7 @@ export default async function UploadPage() {
         </span>
       </h1>
       <p className="text-ink-600 leading-relaxed mb-8 max-w-xl">
-        Déposez votre vidéo — la langue parlée est détectée automatiquement.
+        Déposez votre vidéo, la langue parlée est détectée automatiquement.
         Vous choisissez seulement la langue des sous-titres. 10 langues, dans
         les deux sens.
       </p>

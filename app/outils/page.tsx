@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "outil vtt",
   ],
   openGraph: {
-    title: `${TITLE} — Maxline Studio`,
+    title: `${TITLE} · Maxline Studio`,
     description: DESCRIPTION,
     url: absoluteUrl(PATH),
     type: "website",
@@ -103,7 +103,7 @@ export default function OutilsIndex() {
 
             <p className="text-lg text-ink-600 leading-relaxed max-w-2xl mb-14">
               Des outils simples pour manipuler vos sous-titres, sans créer de
-              compte et sans rien téléverser. Pratiques au quotidien — et
+              compte et sans rien téléverser. Pratiques au quotidien, et
               entièrement gratuits.
             </p>
 

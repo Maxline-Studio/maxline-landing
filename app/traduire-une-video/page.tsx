@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     "traducteur de vidéo",
   ],
   openGraph: {
-    title: `${TITLE} — Maxline Studio`,
+    title: `${TITLE} · Maxline Studio`,
     description: DESCRIPTION,
     url: absoluteUrl(PATH),
     type: "website",

@@ -103,8 +103,8 @@ export default function TraduireVideoFrancaisAnglais() {
               compris l&apos;enjeu : votre contenu pourrait toucher dix fois plus
               de monde, mais la barrière de la langue le retient. Ce guide
               passe en revue les trois grandes manières de traduire une vidéo du
-              français vers l&apos;anglais — manuelle, semi-automatique,
-              automatique — et explique laquelle choisir selon votre situation.
+              français vers l&apos;anglais, manuelle, semi-automatique,
+              automatique, et explique laquelle choisir selon votre situation.
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
@@ -143,7 +143,7 @@ export default function TraduireVideoFrancaisAnglais() {
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
-              Méthode 1 — À la main (la plus précise, la plus lente)
+              Méthode 1, À la main (la plus précise, la plus lente)
             </h2>
 
             <p>
@@ -180,7 +180,7 @@ export default function TraduireVideoFrancaisAnglais() {
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
-              Méthode 2 — Bricolage Whisper + DeepL
+              Méthode 2, Bricolage Whisper + DeepL
             </h2>
 
             <p>
@@ -193,7 +193,7 @@ export default function TraduireVideoFrancaisAnglais() {
             <p>
               C&apos;est gratuit et la qualité de transcription est bonne. Mais
               il y a trois pièges. D&apos;abord, il faut savoir installer
-              Whisper en ligne de commande — rédhibitoire pour beaucoup.
+              Whisper en ligne de commande, rédhibitoire pour beaucoup.
               Ensuite, DeepL traduit <em>ligne par ligne</em>, sans voir le
               contexte global : il perd le fil d&apos;une phrase coupée sur deux
               sous-titres et il massacre les expressions idiomatiques. Enfin, il
@@ -208,7 +208,7 @@ export default function TraduireVideoFrancaisAnglais() {
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
-              Méthode 3 — Un outil de sous-titrage automatique
+              Méthode 3, Un outil de sous-titrage automatique
             </h2>
 
             <p>
@@ -223,7 +223,7 @@ export default function TraduireVideoFrancaisAnglais() {
               qui <strong>traduit en tenant compte du contexte</strong> (et pas
               ligne par ligne) et qui vous laisse{" "}
               <strong>corriger le texte avant l&apos;export</strong>. La machine
-              propose, vous validez — parce qu&apos;une IA mal lunée traduira
+              propose, vous validez, parce qu&apos;une IA mal lunée traduira
               toujours mal au moins une expression.
             </p>
 
@@ -287,7 +287,7 @@ export default function TraduireVideoFrancaisAnglais() {
 
             <p>
               Quelle que soit la méthode, voici les fautes qui font passer une
-              vidéo traduite pour de l&apos;amateur — et comment les éviter.
+              vidéo traduite pour de l&apos;amateur, et comment les éviter.
             </p>
 
             <ul className="space-y-3 pl-6 list-disc marker:text-rouge-500">
@@ -309,7 +309,7 @@ export default function TraduireVideoFrancaisAnglais() {
               <li>
                 <strong>La voix lissée.</strong> Si vous parlez cash en
                 français, votre anglais doit rester cash. Une traduction
-                corporate efface votre personnalité — et c&apos;est elle qui
+                corporate efface votre personnalité, et c&apos;est elle qui
                 fidélise votre audience.
               </li>
             </ul>
@@ -347,7 +347,7 @@ export default function TraduireVideoFrancaisAnglais() {
               Et si vous voulez seulement rendre votre vidéo accessible dans sa
               langue d&apos;origine, le sous-titrage de transcription
               (français → français, ou anglais → anglais) fonctionne sur le même
-              principe — pratique pour l&apos;accessibilité et le visionnage sans
+              principe, pratique pour l&apos;accessibilité et le visionnage sans
               son.
             </p>
 
@@ -357,7 +357,7 @@ export default function TraduireVideoFrancaisAnglais() {
               C&apos;est tout l&apos;objet de Maxline.
             </p>
 
-            <p className="text-base text-neutral-500 mt-4">— Maxence</p>
+            <p className="text-base text-neutral-500 mt-4">Maxence</p>
           </div>
 
           {/* CTA bas d'article */}

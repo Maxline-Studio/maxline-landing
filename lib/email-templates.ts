@@ -143,7 +143,7 @@ export function welcomeEmail({
     </p>
 
     <p style="margin:0 0 28px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">
-      Vous serez parmi les <strong style="color:${COLORS.ink};">premiers prévenus</strong> quand la bêta privée s'ouvrira — d'ici quelques semaines. Et comme vous êtes dans les tout premiers inscrits, vous aurez un <strong style="color:${COLORS.ink};">accès gratuit prolongé</strong> au lancement, et le tarif d'origine à vie.
+      Vous serez parmi les <strong style="color:${COLORS.ink};">premiers prévenus</strong> quand la bêta privée s'ouvrira, d'ici quelques semaines. Et comme vous êtes dans les tout premiers inscrits, vous aurez un <strong style="color:${COLORS.ink};">accès gratuit prolongé</strong> au lancement, et le tarif d'origine à vie.
     </p>
 
     <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 28px 0;">
@@ -169,11 +169,11 @@ export function welcomeEmail({
     </div>
 
     <p style="margin:0 0 8px 0;font-size:14px;line-height:1.65;color:${COLORS.inkSoft};">
-      Une question, une suggestion, un retour ? <strong style="color:${COLORS.ink};">Répondez à cet email</strong> — je lis tout, je réponds à tout, personnellement.
+      Une question, une suggestion, un retour ? <strong style="color:${COLORS.ink};">Répondez à cet email</strong>, je lis tout, je réponds à tout, personnellement.
     </p>
 
     <p style="margin:28px 0 0 0;font-family:Georgia,serif;font-style:italic;font-size:15px;color:${COLORS.ink};">
-      — Maxence,<br />
+      Maxence,<br />
       <span style="font-family:-apple-system,sans-serif;font-style:normal;font-size:13px;color:${COLORS.inkSoft};">fondateur de Maxline Studio</span>
     </p>
   `);
@@ -188,9 +188,9 @@ En attendant, suivez l'aventure :
 - Le journal de construction : ${APP_URL}/blog
 - Twitter / X : https://twitter.com/maxlinestudio
 
-Une question, une suggestion, un retour ? Répondez à cet email — je lis tout, je réponds à tout, personnellement.
+Une question, une suggestion, un retour ? Répondez à cet email, je lis tout, je réponds à tout, personnellement.
 
-— Maxence, fondateur de Maxline Studio
+Maxence, fondateur de Maxline Studio
 
 ---
 Vous recevez cet email parce que vous êtes inscrit à la liste d'attente de Maxline Studio.
@@ -260,7 +260,7 @@ export function accountWelcomeEmail({
     </p>
 
     <p style="margin:28px 0 0 0;font-family:Georgia,serif;font-style:italic;font-size:15px;color:${COLORS.ink};">
-      — Maxence,<br />
+      Maxence,<br />
       <span style="font-family:-apple-system,sans-serif;font-style:normal;font-size:13px;color:${COLORS.inkSoft};">fondateur de Maxline Studio</span>
     </p>
   `,
@@ -275,7 +275,7 @@ Traduire ma première vidéo : ${APP_URL}/app/upload
 ${referralBlockText}
 Plus vous traduisez, plus votre atelier s'agrandit : chaque minute vous fait progresser dans les rangs. Détails : ${APP_URL}/atelier
 
-— Maxence, fondateur de Maxline Studio
+Maxence, fondateur de Maxline Studio
 
 ---
 Vous recevez cet email parce que vous venez de créer un compte sur Maxline Studio.
@@ -345,35 +345,35 @@ export function atelierBonusEmail({
       break;
     case "anniversary":
       annotation = "Anniversaire";
-      subject = `Joyeux anniversaire d'inscription — +${m} minutes`;
+      subject = `Joyeux anniversaire d'inscription : +${m} minutes`;
       heading = "Un an de plus dans l'atelier.";
       body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}merci d'être là. Pour célébrer, <strong style="color:${COLORS.ink};">${m} minutes offertes</strong>.</p>`;
       bodyText = `${hi}merci d'être là. Pour votre anniversaire d'inscription : +${m} minutes offertes.`;
       break;
     case "referral_inviter":
       annotation = "Parrainage";
-      subject = `Votre filleul a rejoint l'Atelier — +${m} minutes`;
+      subject = `Votre filleul a rejoint l'Atelier : +${m} minutes`;
       heading = "Merci pour le parrainage.";
-      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}la personne que vous avez invitée est passée à un plan payant. <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour vous — merci de faire grandir l'atelier.</p>`;
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}la personne que vous avez invitée est passée à un plan payant. <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour vous, merci de faire grandir l'atelier.</p>`;
       bodyText = `${hi}votre filleul est passé à un plan payant. +${m} minutes offertes pour vous.`;
       break;
     case "referral_invitee":
       annotation = "Bienvenue";
-      subject = `Bienvenue dans l'Atelier — +${m} minutes offertes`;
+      subject = `Bienvenue dans l'Atelier : +${m} minutes offertes`;
       heading = "Bienvenue grâce à votre parrain.";
       body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}vous arrivez sur invitation : <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour bien démarrer.</p>`;
       bodyText = `${hi}bienvenue. +${m} minutes offertes grâce à votre parrain.`;
       break;
     case "gift_random":
       annotation = "Cadeau";
-      subject = `Un petit cadeau — +${m} minutes`;
+      subject = `Un petit cadeau : +${m} minutes`;
       heading = "Sans occasion particulière.";
-      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}voilà <strong style="color:${COLORS.ink};">${m} minutes</strong> en cadeau. Juste pour le plaisir. — Maxence</p>`;
-      bodyText = `${hi}voilà ${m} minutes en cadeau, sans occasion particulière. — Maxence`;
+      body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}voilà <strong style="color:${COLORS.ink};">${m} minutes</strong> en cadeau. Juste pour le plaisir. Maxence</p>`;
+      bodyText = `${hi}voilà ${m} minutes en cadeau, sans occasion particulière. Maxence`;
       break;
     case "compensation":
       annotation = "Un geste";
-      subject = `Un geste de notre part — +${m} minutes`;
+      subject = `Un geste de notre part : +${m} minutes`;
       heading = "Toutes nos excuses.";
       body = `<p style="margin:0 0 16px 0;font-size:16px;line-height:1.65;color:${COLORS.inkSoft};">${hi}quelque chose n'a pas fonctionné comme prévu. <strong style="color:${COLORS.ink};">${m} minutes offertes</strong> pour la gêne occasionnée.</p>`;
       bodyText = `${hi}toutes nos excuses pour la gêne. +${m} minutes offertes.`;
@@ -412,7 +412,7 @@ ${bodyText}
 Voir mon Atelier : ${APP_URL}/app/atelier
 Vos minutes offertes n'expirent jamais.
 
-— Maxline Studio · ${APP_URL.replace("https://", "")}`;
+Maxline Studio · ${APP_URL.replace("https://", "")}`;
 
   return { subject, html, text };
 }
@@ -474,7 +474,7 @@ export function adminNotificationEmail(params: {
     </table>
 
     <p style="margin:0;font-size:14px;line-height:1.65;color:${COLORS.inkSoft};">
-      Tu peux répondre directement à cet email pour écrire à <strong style="color:${COLORS.ink};">${params.email}</strong> — replyTo pré-configuré.
+      Tu peux répondre directement à cet email pour écrire à <strong style="color:${COLORS.ink};">${params.email}</strong>, replyTo pré-configuré.
     </p>
   `);
 

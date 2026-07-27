@@ -2,7 +2,7 @@
 
 /**
  * Onglet « Style » de l'inspecteur : presets un-tap + tous les réglages du
- * style des sous-titres (miroir de lib/subtitle-style.ts — NE PAS diverger du
+ * style des sous-titres (miroir de lib/subtitle-style.ts, NE PAS diverger du
  * worker). Repris du panneau de l'ancien éditeur, réorganisé pour l'inspecteur.
  */
 import {
@@ -136,7 +136,7 @@ export function StylePanel({
     <div className="space-y-5">
       {/* Presets */}
       <div>
-        <FieldLabel>Presets — un tap, tout est réglé</FieldLabel>
+        <FieldLabel>Presets, un tap, tout est réglé</FieldLabel>
         <div className="grid grid-cols-2 gap-2">
           {STYLE_PRESETS.map((p) => (
             <button

@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { Resend } from "resend";
 
 /**
- * Surveillance du traitement — refonte 2026-07-25.
+ * Surveillance du traitement, refonte 2026-07-25.
  *
  * La version précédente prétendait couvrir « le worker est complètement down »…
  * sans pouvoir le détecter :
@@ -13,16 +13,16 @@ import { Resend } from "resend";
  *     que la branche d'erreur du worker n'écrivait jamais → toujours zéro.
  *
  * Cette version regarde les trois vrais signaux :
- *   1. BACKLOG — des vidéos prêtes à traiter (storage_key_source renseigné) qui
+ *   1. BACKLOG, des vidéos prêtes à traiter (storage_key_source renseigné) qui
  *      attendent depuis trop longtemps. C'est LE symptôme d'un worker à l'arrêt.
- *   2. BATTEMENT DE CŒUR — la table worker_health, écrite à chaque tick du
+ *   2. BATTEMENT DE CŒUR, la table worker_health, écrite à chaque tick du
  *      worker. Silence prolongé = worker mort, même sans backlog.
- *   3. ANOMALIES — échecs récents (via `failed_at`), jobs sans signe de vie,
+ *   3. ANOMALIES, échecs récents (via `failed_at`), jobs sans signe de vie,
  *      incrustations bloquées.
  *
  * Protégé par CRON_SECRET. Peut être appelé aussi souvent qu'on veut (par Vercel
  * Cron une fois par jour sur le palier Hobby, et/ou par une surveillance externe
- * toutes les 10 min — cf. .github/workflows/health-check.yml).
+ * toutes les 10 min, cf. .github/workflows/health-check.yml).
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
           ? `🚨 Le worker ne donne plus signe de vie depuis ${Math.round((lastSeenMs ?? 0) / 60_000)} min.`
           : null,
         backlog > 0
-          ? `🚨 ${backlog} vidéo(s) prête(s) à traiter attendent depuis plus de ${BACKLOG_MINUTES} min — le worker tourne-t-il ?`
+          ? `🚨 ${backlog} vidéo(s) prête(s) à traiter attendent depuis plus de ${BACKLOG_MINUTES} min, le worker tourne-t-il ?`
           : null,
         stuck > 0
           ? `⚠️ ${stuck} vidéo(s) sans signe de vie depuis > ${NO_HEARTBEAT_MINUTES} min.`
@@ -155,7 +155,7 @@ export async function GET(req: NextRequest) {
         to: adminEmail,
         subject: down
           ? `[Maxline] 🚨 PANNE probable du worker`
-          : `[Maxline] Alerte traitement — ${anomalies} anomalie(s)`,
+          : `[Maxline] Alerte traitement, ${anomalies} anomalie(s)`,
         text:
           `Surveillance Maxline Studio.\n\n${lines.join("\n")}\n\n` +
           `Détail : ${JSON.stringify(summary, null, 2)}\n\n` +

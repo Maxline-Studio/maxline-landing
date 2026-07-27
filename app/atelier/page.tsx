@@ -12,12 +12,12 @@ import {
 } from "@/lib/atelier";
 
 export const metadata: Metadata = {
-  title: "L'Atelier — le système de fidélité de Maxline Studio",
+  title: "L'Atelier, le système de fidélité de Maxline Studio",
   description:
-    "Plus vous traduisez, plus votre atelier s'agrandit. Quatre rangs, des minutes offertes, un parrainage symétrique — tout est transparent, sans dark pattern.",
+    "Plus vous traduisez, plus votre atelier s'agrandit. Quatre rangs, des minutes offertes, un parrainage symétrique, tout est transparent, sans dark pattern.",
   alternates: { canonical: "https://www.maxlinestudio.fr/atelier" },
   openGraph: {
-    title: "L'Atelier — le système de fidélité de Maxline Studio",
+    title: "L'Atelier, le système de fidélité de Maxline Studio",
     description:
       "Quatre rangs, des minutes offertes, un parrainage symétrique. Tout est transparent.",
     url: "https://www.maxlinestudio.fr/atelier",
@@ -34,7 +34,7 @@ const MECHANICS: { title: string; detail: string }[] = [
   {
     title: "Continuité (streak)",
     detail:
-      "Tous les 3 mois d'abonnement consécutifs, vous recevez des minutes offertes selon votre rang : +5 (Correcteur), +15 (Éditeur en chef), +50 (Maître d'œuvre). Si vous mettez en pause, le compteur attend — il ne vous punit pas.",
+      "Tous les 3 mois d'abonnement consécutifs, vous recevez des minutes offertes selon votre rang : +5 (Correcteur), +15 (Éditeur en chef), +50 (Maître d'œuvre). Si vous mettez en pause, le compteur attend, il ne vous punit pas.",
   },
   {
     title: "Anniversaire d'inscription",

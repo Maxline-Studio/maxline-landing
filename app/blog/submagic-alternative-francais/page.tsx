@@ -9,7 +9,7 @@ import { articleLd, breadcrumbLd } from "@/lib/seo";
 
 const TITLE = "Submagic en français : l'alternative pour les créateurs FR";
 const DESCRIPTION =
-  "Submagic excelle sur les captions virales. Pour des sous-titres FR↔EN propres, en français et en euros, voici l'alternative française — comparatif honnête.";
+  "Submagic excelle sur les captions virales. Pour des sous-titres FR↔EN propres, en français et en euros, voici l'alternative française, comparatif honnête.";
 const PATH = "/blog/submagic-alternative-francais";
 const PUBLISHED = "2026-06-02T09:00:00+02:00";
 
@@ -93,7 +93,7 @@ export default function SubmagicAlternativeFrancais() {
             <p className="font-display italic font-light text-2xl md:text-3xl text-ink-900 leading-snug border-l-[3px] border-rouge-500 pl-6 my-12">
               Submagic est un excellent outil. Mais il n&apos;a pas été pensé
               pour un créateur français qui veut des sous-titres FR↔EN propres,
-              dans sa langue, et payés en euros. Voici un comparatif honnête —
+              dans sa langue, et payés en euros. Voici un comparatif honnête,
               et où chacun gagne vraiment.
             </p>
 
@@ -102,14 +102,14 @@ export default function SubmagicAlternativeFrancais() {
               <strong>Submagic</strong> : c&apos;est l&apos;un des outils les plus
               populaires pour ajouter des sous-titres animés « qui retiennent
               l&apos;attention ». Et sur ce terrain, il est très bon. Je ne vais
-              pas prétendre le contraire — ce serait malhonnête, et ce n&apos;est
+              pas prétendre le contraire, ce serait malhonnête, et ce n&apos;est
               pas la maison.
             </p>
 
             <p>
               Mais beaucoup de créateurs francophones m&apos;écrivent avec la
               même question : « je veux surtout des sous-titres corrects, et
-              traduire mes vidéos en anglais — est-ce que Submagic est fait pour
+              traduire mes vidéos en anglais, est-ce que Submagic est fait pour
               ça ? » La réponse honnête est : <em>en partie</em>. Et c&apos;est
               précisément le vide que{" "}
               <Link href="/" className="link-pen">
@@ -119,7 +119,7 @@ export default function SubmagicAlternativeFrancais() {
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
-              Ce que Submagic fait — et fait bien
+              Ce que Submagic fait, et fait bien
             </h2>
 
             <p>
@@ -147,7 +147,7 @@ export default function SubmagicAlternativeFrancais() {
             <p>
               Si votre objectif numéro un, c&apos;est l&apos;esthétique virale du
               short-form, Submagic fait le travail. Maxline ne joue pas dans cette
-              catégorie — et ne prétend pas le faire.
+              catégorie, et ne prétend pas le faire.
             </p>
 
             <h2 className="font-serif text-3xl md:text-4xl text-neutral-900 mt-16 mb-4">
@@ -190,7 +190,7 @@ export default function SubmagicAlternativeFrancais() {
 
             <p>
               Les chiffres Submagic ci-dessous datent de la rédaction (2026) et
-              peuvent évoluer — vérifiez toujours sur leur site. L&apos;idée
+              peuvent évoluer, vérifiez toujours sur leur site. L&apos;idée
               n&apos;est pas de dénigrer, mais de poser les critères qui comptent
               pour <em>vous</em>.
             </p>
@@ -258,7 +258,7 @@ export default function SubmagicAlternativeFrancais() {
               <li>
                 <strong>Choisissez Maxline</strong> si vous voulez des{" "}
                 <strong>sous-titres FR↔EN propres</strong>, corrigés ligne à
-                ligne, exportables dans DaVinci ou Premiere — le tout en
+                ligne, exportables dans DaVinci ou Premiere, le tout en
                 français, en euros, et sans payer au nombre de vidéos. Notamment
                 pour{" "}
                 <Link href="/blog/traduire-video-francais-anglais" className="link-pen">
@@ -307,12 +307,12 @@ export default function SubmagicAlternativeFrancais() {
 
             <p className="font-serif text-xl text-neutral-900 italic border-t border-neutral-200 pt-8 mt-12">
               Le meilleur outil, c&apos;est celui qui correspond à votre besoin
-              réel — pas le plus bruyant.
+              réel, pas le plus bruyant.
               <br />
               Pour la traduction FR↔EN propre, en français, c&apos;est Maxline.
             </p>
 
-            <p className="text-base text-neutral-500 mt-4">— Maxence</p>
+            <p className="text-base text-neutral-500 mt-4">Maxence</p>
           </div>
 
           {/* CTA bas d'article */}

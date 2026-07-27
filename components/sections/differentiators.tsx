@@ -7,7 +7,7 @@ const items = [
     icon: Globe2,
     title: "Français natif",
     description:
-      "Interface, support et ton 100 % en français. Pas une app US traduite — pensée pour vous dès le départ.",
+      "Interface, support et ton 100 % en français. Pas une app US traduite, mais pensée pour vous dès le départ.",
     tag: "FR",
   },
   {

@@ -125,7 +125,7 @@ export default async function VideosPage({
                   <p className="text-xs text-ink-500 font-mono tabular-nums mt-0.5">
                     {video.duration_minutes
                       ? formatDuration(Number(video.duration_seconds))
-                      : "—"}{" "}
+                      : "-"}{" "}
                     ·{" "}
                     {new Date(video.uploaded_at).toLocaleDateString("fr-FR", {
                       day: "2-digit",

@@ -39,7 +39,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "Submagic",
     title: "Alternative à Submagic : la française pour traduire et sous-titrer",
     description:
-      "Submagic excelle sur les captions virales. Pour traduire et sous-titrer proprement, en français et au forfait clair, voici l'alternative — comparatif honnête, où chacun gagne.",
+      "Submagic excelle sur les captions virales. Pour traduire et sous-titrer proprement, en français et au forfait clair, voici l'alternative, comparatif honnête, où chacun gagne.",
     keywords: [
       "alternative à submagic",
       "submagic français",
@@ -49,7 +49,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "Submagic est la référence des captions virales pour TikTok, Reels et Shorts : styles animés mot par mot, emojis, B-roll automatique.",
     priceNote:
-      "À partir d'environ 12 à 23 $/mois (facturation annuelle), avec un nombre d'exports limité par palier — au moment de l'écriture.",
+      "À partir d'environ 12 à 23 $/mois (facturation annuelle), avec un nombre d'exports limité par palier, au moment de l'écriture.",
     brief:
       "Captions virales short-form (animations mot par mot, emojis, B-roll), marque mondiale, en dollars.",
     theirStrengths: [
@@ -63,13 +63,13 @@ export const ALTERNATIVES: Alternative[] = [
       "Le nombre d'exports est plafonné par palier, et la facturation est en dollars.",
     ],
     maxlineWins: [
-      "Une traduction qui respecte le ton, le registre et l'argot, dans 10 langues — pas seulement des sous-titres dans la langue d'origine.",
+      "Une traduction qui respecte le ton, le registre et l'argot, dans 10 langues, pas seulement des sous-titres dans la langue d'origine.",
       "Un forfait clair en euros (12 €/mois, 120 minutes) sans plafond d'exports surprise.",
       "Un soin particulier sur le français, l'arabe (droite à gauche) et le chinois/japonais (découpe au caractère).",
       "Un .srt / .vtt / .fcpxml propre, prêt pour le montage.",
     ],
     whenThem:
-      "Si votre besoin, c'est avant tout des Shorts et Reels viraux avec des captions animées et des emojis ultra-tendance, Submagic reste excellent — c'est leur cœur de métier.",
+      "Si votre besoin, c'est avant tout des Shorts et Reels viraux avec des captions animées et des emojis ultra-tendance, Submagic reste excellent, c'est leur cœur de métier.",
     verdict:
       "Submagic pour le viral court ; Maxline pour traduire et sous-titrer proprement, en français, sans piège tarifaire.",
     faq: [
@@ -81,7 +81,7 @@ export const ALTERNATIVES: Alternative[] = [
       {
         question: "Lequel choisir pour traduire mes vidéos ?",
         answer:
-          "Maxline : la traduction dans 10 langues, fidèle au registre et corrigeable ligne par ligne, est son cœur de métier — là où Submagic vise surtout les captions virales.",
+          "Maxline : la traduction dans 10 langues, fidèle au registre et corrigeable ligne par ligne, est son cœur de métier, là où Submagic vise surtout les captions virales.",
       },
     ],
     blogPath: "/blog/submagic-alternative-francais",
@@ -91,7 +91,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "VEED",
     title: "Alternative à VEED : sous-titrage et traduction sans piège",
     description:
-      "VEED est un éditeur vidéo complet, mais sa traduction est très limitée. Pour traduire généreusement et au forfait clair, voici l'alternative — comparatif honnête.",
+      "VEED est un éditeur vidéo complet, mais sa traduction est très limitée. Pour traduire généreusement et au forfait clair, voici l'alternative, comparatif honnête.",
     keywords: [
       "alternative à veed",
       "veed alternative",
@@ -101,7 +101,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "VEED est un éditeur vidéo tout-en-un en ligne, avec sous-titres et traduction parmi de nombreuses fonctions.",
     priceNote:
-      "Plan gratuit avec filigrane ; offres payantes à partir d'environ 24 à 55 $/mois — au moment de l'écriture.",
+      "Plan gratuit avec filigrane ; offres payantes à partir d'environ 24 à 55 $/mois, au moment de l'écriture.",
     brief:
       "Éditeur vidéo tout-en-un, 100+ langues, mais traduction très plafonnée ; en dollars.",
     theirStrengths: [
@@ -136,7 +136,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "HappyScribe",
     title: "Alternative à HappyScribe : pensée pour les créateurs",
     description:
-      "HappyScribe est solide pour les pros et les entreprises. Pour un créateur, voici une alternative plus simple et plus chaleureuse — comparatif honnête.",
+      "HappyScribe est solide pour les pros et les entreprises. Pour un créateur, voici une alternative plus simple et plus chaleureuse, comparatif honnête.",
     keywords: [
       "alternative à happyscribe",
       "happyscribe alternative",
@@ -145,7 +145,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "HappyScribe est une plateforme européenne de transcription et de sous-titrage, IA et service humain, orientée professionnels, entreprises et médias.",
     priceNote:
-      "Offres IA à partir d'environ 6 €/mois ; services humains autour de 2 $ la minute — au moment de l'écriture.",
+      "Offres IA à partir d'environ 6 €/mois ; services humains autour de 2 $ la minute, au moment de l'écriture.",
     brief:
       "Transcription/sous-titres pro et humains, 150+ langues, orienté entreprise/médias.",
     theirStrengths: [
@@ -180,7 +180,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "Kapwing",
     title: "Alternative à Kapwing : focus sous-titrage et traduction",
     description:
-      "Kapwing est un éditeur collaboratif tout-en-un. Pour un outil concentré sur le sous-titrage et la traduction de qualité, voici l'alternative — comparatif honnête.",
+      "Kapwing est un éditeur collaboratif tout-en-un. Pour un outil concentré sur le sous-titrage et la traduction de qualité, voici l'alternative, comparatif honnête.",
     keywords: [
       "alternative à kapwing",
       "kapwing alternative",
@@ -189,7 +189,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "Kapwing est un éditeur vidéo collaboratif en ligne, avec sous-titres, traduction et doublage parmi ses fonctions.",
     priceNote:
-      "Offres payantes à partir d'environ 16 $/mois — au moment de l'écriture.",
+      "Offres payantes à partir d'environ 16 $/mois, au moment de l'écriture.",
     brief:
       "Éditeur collaboratif tout-en-un, 100+ langues, doublage limité.",
     theirStrengths: [
@@ -233,7 +233,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "Maestra réunit transcription, traduction de sous-titres et doublage IA, avec une large couverture de langues.",
     priceNote:
-      "Offres payantes à partir d'environ 16 $/mois — au moment de l'écriture.",
+      "Offres payantes à partir d'environ 16 $/mois, au moment de l'écriture.",
     brief:
       "Transcription + traduction + doublage IA, 125+ langues, plusieurs moteurs de traduction.",
     theirStrengths: [
@@ -268,7 +268,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "ElevenLabs",
     title: "Alternative à ElevenLabs : sous-titres plutôt que voix clonée",
     description:
-      "ElevenLabs est la référence du doublage par voix clonée. Si vous voulez sous-titrer et traduire sans toucher à votre voix, voici l'alternative — comparatif honnête.",
+      "ElevenLabs est la référence du doublage par voix clonée. Si vous voulez sous-titrer et traduire sans toucher à votre voix, voici l'alternative, comparatif honnête.",
     keywords: [
       "alternative à elevenlabs",
       "elevenlabs alternative",
@@ -278,7 +278,7 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "ElevenLabs est spécialiste du doublage IA et du clonage de voix : il remplace l'audio par une version dans une autre langue.",
     priceNote:
-      "À partir d'environ 22 $/mois, avec une facturation par langue (chaque langue cible compte séparément) — au moment de l'écriture.",
+      "À partir d'environ 22 $/mois, avec une facturation par langue (chaque langue cible compte séparément), au moment de l'écriture.",
     brief:
       "Doublage IA / voix clonée multilingue ; facturé par langue. Ce n'est pas un outil de sous-titres.",
     theirStrengths: [
@@ -304,7 +304,7 @@ export const ALTERNATIVES: Alternative[] = [
       {
         question: "Sous-titrer ou doubler : que choisir ?",
         answer:
-          "Le sous-titrage préserve votre voix, coûte moins cher et reste neutre éthiquement — c'est ce que veulent la plupart des créateurs. Le doublage remplace votre voix : plus immersif, mais plus lourd et plus délicat.",
+          "Le sous-titrage préserve votre voix, coûte moins cher et reste neutre éthiquement, c'est ce que veulent la plupart des créateurs. Le doublage remplace votre voix : plus immersif, mais plus lourd et plus délicat.",
       },
     ],
   },
@@ -313,7 +313,7 @@ export const ALTERNATIVES: Alternative[] = [
     name: "Checksub",
     title: "Alternative à Checksub : forfait clair et identité d'atelier",
     description:
-      "Checksub est un outil français solide. Voici une alternative au forfait mensuel clair, avec une identité d'atelier et un soin particulier sur le registre — comparatif honnête.",
+      "Checksub est un outil français solide. Voici une alternative au forfait mensuel clair, avec une identité d'atelier et un soin particulier sur le registre, comparatif honnête.",
     keywords: [
       "alternative à checksub",
       "checksub alternative",
@@ -323,13 +323,13 @@ export const ALTERNATIVES: Alternative[] = [
     positioning:
       "Checksub est un outil français de sous-titrage et de traduction, avec plusieurs années d'expérience.",
     priceNote:
-      "Tarification autour de 18 € de l'heure de vidéo, avec des paliers — au moment de l'écriture.",
+      "Tarification autour de 18 € de l'heure de vidéo, avec des paliers, au moment de l'écriture.",
     brief:
       "Outil français de sous-titrage/traduction, expérimenté, tarif souvent à l'heure.",
     theirStrengths: [
       "Un outil français sérieux, avec de l'expérience et de bons designs de sous-titres.",
       "Une bonne couverture de langues et une qualité reconnue.",
-      "Un acteur honnête du marché français — on le dit volontiers.",
+      "Un acteur honnête du marché français, on le dit volontiers.",
     ],
     theirLimits: [
       "Une tarification à l'heure pas toujours lisible d'un coup d'œil.",
@@ -366,7 +366,7 @@ export const ALTERNATIVES: Alternative[] = [
     ],
     positioning:
       "CapCut est un éditeur vidéo gratuit et grand public (groupe ByteDance), avec sous-titres et traduction intégrés.",
-    priceNote: "Gratuit pour l'essentiel, avec des fonctions Pro payantes — au moment de l'écriture.",
+    priceNote: "Gratuit pour l'essentiel, avec des fonctions Pro payantes, au moment de l'écriture.",
     brief:
       "Éditeur gratuit grand public, très répandu ; qualité « grand public », éditeur appartenant à ByteDance.",
     theirStrengths: [

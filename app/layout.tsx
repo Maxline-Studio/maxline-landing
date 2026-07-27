@@ -43,7 +43,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default:
-      "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes",
+      "Maxline Studio · Vos vidéos françaises, sous-titrées en anglais en 10 minutes",
     template: "%s | Maxline Studio",
   },
   description:

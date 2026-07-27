@@ -47,7 +47,7 @@ export function Header() {
           <Link
             href="/"
             className="flex items-center gap-3 group"
-            aria-label="Maxline Studio — accueil"
+            aria-label="Maxline Studio, accueil"
           >
             <div className="relative flex items-center">
               <span className="font-display font-black text-2xl md:text-[1.7rem] tracking-tight text-ink-900 leading-none">

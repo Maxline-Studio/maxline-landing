@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: { title: TITLE, description: DESCRIPTION, url: absoluteUrl(PATH), type: "website" },
   twitter: {
     card: "summary_large_image",
-    title: "Extraire le texte d'un fichier de sous-titres — gratuit",
+    title: "Extraire le texte d'un fichier de sous-titres, gratuit",
     description: "SRT / VTT → texte sans timecodes, en lignes ou en paragraphe. Gratuit, sans inscription.",
   },
   alternates: { canonical: absoluteUrl(PATH) },
@@ -124,7 +124,7 @@ export default function ExtraireTexteSousTitres() {
             </h1>
             <p className="text-lg text-ink-600 leading-relaxed">
               Récupérez le texte d&apos;un fichier .srt ou .vtt, sans les
-              timecodes — prêt à relire, citer ou transformer en article. Gratuit,
+              timecodes, prêt à relire, citer ou transformer en article. Gratuit,
               sans inscription, <strong>sans rien envoyer</strong>.
             </p>
           </header>

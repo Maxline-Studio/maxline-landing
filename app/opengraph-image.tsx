@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const alt =
-  "Maxline Studio — Vos vidéos françaises, sous-titrées en anglais en 10 minutes";
+  "Maxline Studio · Vos vidéos françaises, sous-titrées en anglais en 10 minutes";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 

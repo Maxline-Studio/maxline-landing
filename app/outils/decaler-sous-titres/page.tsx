@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   openGraph: { title: TITLE, description: DESCRIPTION, url: absoluteUrl(PATH), type: "website" },
   twitter: {
     card: "summary_large_image",
-    title: "Décaler des sous-titres — gratuit, en ligne",
+    title: "Décaler des sous-titres, gratuit, en ligne",
     description: "Avancez ou retardez tous les timecodes d'un .srt / .vtt. Gratuit, sans inscription.",
   },
   alternates: { canonical: absoluteUrl(PATH) },

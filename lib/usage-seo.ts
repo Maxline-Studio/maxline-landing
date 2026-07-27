@@ -42,7 +42,7 @@ export const USAGES: Usage[] = [
     ],
     lede: "La majorité des vidéos sociales sont regardées sans le son. Sur TikTok, des sous-titres clairs ne sont pas une option : c'est ce qui retient le spectateur dans les deux premières secondes.",
     why: [
-      "Sur un fil qui défile vite, le texte capte l'œil avant la voix. Des sous-titres bien calés augmentent le temps de visionnage — et le temps de visionnage, c'est le carburant de l'algorithme.",
+      "Sur un fil qui défile vite, le texte capte l'œil avant la voix. Des sous-titres bien calés augmentent le temps de visionnage, et le temps de visionnage, c'est le carburant de l'algorithme.",
       "Des sous-titres rendent aussi votre vidéo accessible aux personnes sourdes et malentendantes, et compréhensible dans le métro, en cours ou au bureau, là où le son est coupé.",
       "Enfin, traduire vos sous-titres ouvre un public international sans retourner une seule prise : une même vidéo française peut toucher des spectateurs anglophones ou hispanophones.",
     ],
@@ -90,7 +90,7 @@ export const USAGES: Usage[] = [
     lede: "Sur YouTube, les sous-titres ne servent pas qu'à l'accessibilité : ils aident le référencement, retiennent le spectateur, et ouvrent votre chaîne à d'autres langues.",
     why: [
       "YouTube lit le texte de vos sous-titres : un fichier propre aide la plateforme à comprendre votre vidéo et à la proposer sur les bonnes recherches. C'est du référencement vidéo gratuit.",
-      "Une piste de sous-titres dans une autre langue, c'est une audience supplémentaire qui peut suivre votre contenu — sans doublage, sans retouche.",
+      "Une piste de sous-titres dans une autre langue, c'est une audience supplémentaire qui peut suivre votre contenu, sans doublage, sans retouche.",
       "Et pour le long format, des sous-titres téléversables (que le spectateur active ou non) sont préférables à des sous-titres gravés : ils restent optionnels et propres.",
     ],
     tips: [
@@ -137,7 +137,7 @@ export const USAGES: Usage[] = [
     lede: "Les Reels démarrent souvent en lecture automatique, son coupé. Sans sous-titres, votre message passe à la trappe avant même d'être entendu.",
     why: [
       "Des sous-titres retiennent le spectateur pendant ces premières secondes muettes décisives, et rendent votre Reel compréhensible partout.",
-      "Ils rendent votre contenu accessible aux personnes sourdes et malentendantes — une part non négligeable de votre audience.",
+      "Ils rendent votre contenu accessible aux personnes sourdes et malentendantes, une part non négligeable de votre audience.",
       "Traduits, ils transforment un Reel local en contenu compréhensible à l'international.",
     ],
     tips: [
@@ -183,7 +183,7 @@ export const USAGES: Usage[] = [
     ],
     lede: "Un podcast, c'est de l'audio. Mais le partage, lui, se fait en vidéo : des extraits sous-titrés sont le meilleur moyen de faire découvrir un épisode sur les réseaux.",
     why: [
-      "Un extrait vidéo sous-titré (audiogramme) se partage et se comprend sans le son — idéal pour donner envie d'écouter l'épisode complet.",
+      "Un extrait vidéo sous-titré (audiogramme) se partage et se comprend sans le son, idéal pour donner envie d'écouter l'épisode complet.",
       "Une transcription écrite enrichit vos notes d'épisode, devient un article de blog, et donne du texte à indexer pour les moteurs de recherche.",
       "Et elle rend votre podcast accessible aux personnes sourdes et malentendantes, trop souvent oubliées par l'audio.",
     ],
@@ -194,7 +194,7 @@ export const USAGES: Usage[] = [
       },
       {
         title: "Exportez le texte brut",
-        body: "Récupérez un .txt pour vos notes d'épisode ou un article — du contenu écrit que Google peut indexer.",
+        body: "Récupérez un .txt pour vos notes d'épisode ou un article, du contenu écrit que Google peut indexer.",
       },
       {
         title: "Découpez des moments forts",
@@ -228,11 +228,11 @@ export const USAGES: Usage[] = [
       "sous-titres SDH",
       "accessibilité vidéo RGAA",
     ],
-    lede: "En France, des millions de personnes sont sourdes ou malentendantes. Sans sous-titres, vos vidéos leur sont tout simplement fermées. C'est un enjeu d'inclusion — et, pour le secteur public, une obligation.",
+    lede: "En France, des millions de personnes sont sourdes ou malentendantes. Sans sous-titres, vos vidéos leur sont tout simplement fermées. C'est un enjeu d'inclusion, et, pour le secteur public, une obligation.",
     why: [
       "Sous-titrer une vidéo dans sa propre langue (transcription) la rend accessible à celles et ceux qui ne peuvent pas l'entendre. C'est la base de la vidéo inclusive.",
       "Pour les organismes publics et beaucoup d'entreprises, l'accessibilité numérique (référentiel RGAA) impose des contenus vidéo sous-titrés. Des sous-titres fidèles et exportables aident à répondre à cette exigence.",
-      "Au-delà de l'obligation, c'est aussi une audience que la plupart des créateurs négligent — et qui vous le rendra.",
+      "Au-delà de l'obligation, c'est aussi une audience que la plupart des créateurs négligent, et qui vous le rendra.",
     ],
     tips: [
       {
@@ -257,7 +257,7 @@ export const USAGES: Usage[] = [
       {
         question: "Cela aide-t-il à la conformité RGAA ?",
         answer:
-          "Le RGAA demande des vidéos sous-titrées. Des sous-titres fidèles, synchronisés et exportables sont un élément essentiel pour y répondre — la conformité complète dépendant ensuite de votre lecteur et de votre intégration.",
+          "Le RGAA demande des vidéos sous-titrées. Des sous-titres fidèles, synchronisés et exportables sont un élément essentiel pour y répondre, la conformité complète dépendant ensuite de votre lecteur et de votre intégration.",
       },
     ],
     ctaTitle: "Des vidéos accessibles à toutes et tous.",
@@ -326,7 +326,7 @@ export const USAGES: Usage[] = [
     why: [
       "Un .srt propre s'importe directement dans votre logiciel de montage : vous gardez la main sur la mise en forme, la position et l'animation des sous-titres.",
       "Le vrai gain de temps, c'est la transcription et la traduction automatiques : vous récupérez le texte calé, et vous l'habillez dans votre logiciel.",
-      "Encore faut-il pouvoir corriger le texte avant l'export — noms propres, ponctuation, coupures — pour ne pas retoucher cinquante lignes à la main ensuite.",
+      "Encore faut-il pouvoir corriger le texte avant l'export, noms propres, ponctuation, coupures, pour ne pas retoucher cinquante lignes à la main ensuite.",
     ],
     tips: [
       {

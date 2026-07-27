@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Convertir des sous-titres SRT, VTT, TXT — gratuit",
+    title: "Convertir des sous-titres SRT, VTT, TXT, gratuit",
     description:
       "SRT en VTT, VTT en SRT, SRT/VTT en TXT. Gratuit, sans inscription, dans votre navigateur.",
   },
@@ -182,12 +182,12 @@ export default function ConvertirSousTitres() {
             </h2>
             <ul className="space-y-3 pl-6 list-disc marker:text-rouge-500">
               <li>
-                <strong>SRT (SubRip)</strong> — le format le plus répandu. Lu par
+                <strong>SRT (SubRip)</strong>, le format le plus répandu. Lu par
                 DaVinci Resolve, Premiere Pro, VLC, YouTube… Le choix par défaut
                 pour le montage.
               </li>
               <li>
-                <strong>VTT (WebVTT)</strong> — le format des sous-titres sur le
+                <strong>VTT (WebVTT)</strong>, le format des sous-titres sur le
                 web, utilisé par la balise{" "}
                 <code className="text-base bg-neutral-100 px-1.5 py-0.5 rounded">
                   &lt;track&gt;
@@ -195,7 +195,7 @@ export default function ConvertirSousTitres() {
                 en HTML5. À privilégier pour un lecteur vidéo de site.
               </li>
               <li>
-                <strong>TXT</strong> — du texte brut, sans timecode. Pratique pour
+                <strong>TXT</strong>, du texte brut, sans timecode. Pratique pour
                 relire, réutiliser le contenu ou en faire un article.
               </li>
             </ul>

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description:
     "Le journal de bord de Maxline Studio. Décisions, doutes, choix techniques, chiffres. Construit en public, sans filtre.",
   openGraph: {
-    title: "Journal — Maxline Studio",
+    title: "Journal · Maxline Studio",
     description:
       "Le journal de bord de Maxline Studio. Décisions, doutes, choix techniques, chiffres. Construit en public, sans filtre.",
     url: "https://www.maxlinestudio.fr/blog",
@@ -28,7 +28,7 @@ const posts = [
     n: "03",
     title: "Submagic en français : l'alternative pour les créateurs FR",
     excerpt:
-      "Submagic excelle sur les captions virales. Pour des sous-titres FR↔EN propres, en français et en euros, voici l'alternative française — comparatif honnête, où chacun gagne vraiment.",
+      "Submagic excelle sur les captions virales. Pour des sous-titres FR↔EN propres, en français et en euros, voici l'alternative française, comparatif honnête, où chacun gagne vraiment.",
     date: "2026-06-02",
     dateLabel: "2 juin 2026",
     readingTime: "8 min de lecture",
@@ -93,7 +93,7 @@ export default function BlogIndex() {
 
             <p className="text-lg text-ink-600 leading-relaxed max-w-2xl">
               Les décisions, les doutes, les choix techniques, les chiffres
-              bruts. Tout est ici. Pas pour faire joli — pour être lisible par
+              bruts. Tout est ici. Pas pour faire joli, pour être lisible par
               celui qui voudra construire la même chose après.
             </p>
           </div>

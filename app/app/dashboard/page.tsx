@@ -190,7 +190,7 @@ function EmptyState() {
         Votre atelier est vide.
       </h3>
       <p className="text-sm text-ink-600 mb-6 max-w-md mx-auto">
-        Sous-titrez votre première vidéo — c&apos;est{" "}
+        Sous-titrez votre première vidéo, c&apos;est{" "}
         <span className="font-semibold">offert</span>, sans carte demandée.
       </p>
       <Link href="/app/upload" className="btn-pen inline-flex">
@@ -212,7 +212,7 @@ function VideoCard({ video }: { video: VideoListItem }) {
         <span className="font-mono text-[10px] uppercase tracking-widest text-ink-500">
           {video.duration_minutes
             ? `${video.duration_minutes.toFixed(1)} min`
-            : "—"}
+            : "-"}
         </span>
       </div>
       <h4 className="font-display font-semibold text-base text-ink-900 line-clamp-2 mb-1">

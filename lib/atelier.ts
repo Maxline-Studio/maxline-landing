@@ -38,9 +38,9 @@ export const RANK_LABELS: Record<Rank, string> = {
 
 /** Plage de minutes affichée (landing + page publique). */
 export const RANK_RANGE_LABEL: Record<Rank, string> = {
-  apprenti: "0 — 299 min",
-  correcteur: "300 — 1 199 min",
-  editeur_en_chef: "1 200 — 4 999 min",
+  apprenti: "0, 299 min",
+  correcteur: "300, 1 199 min",
+  editeur_en_chef: "1 200, 4 999 min",
   maitre_doeuvre: "5 000+ min",
 };
 
@@ -73,7 +73,7 @@ export const STREAK_BONUS_MINUTES: Record<Rank, number> = {
   maitre_doeuvre: 50,
 };
 
-/** Minutes offertes le jour anniversaire de l'inscription (chaque année) — base
+/** Minutes offertes le jour anniversaire de l'inscription (chaque année), base
  * du rang Apprenti. Le bonus réel croît avec le rang (cron SQL migration 018 :
  * apprenti 10 · correcteur 20 · éditeur en chef 50 · maître d'œuvre 200). */
 export const ANNIVERSARY_BONUS_MINUTES = 10;

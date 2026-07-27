@@ -82,7 +82,7 @@ export function Founder() {
                   Je m&apos;appelle Maxence, j&apos;ai 31 ans et je suis
                   développeur indépendant dans le Valenciennois. J&apos;ai
                   longtemps travaillé pour des entreprises où je devais ranger
-                  mes idées au placard. J&apos;ai fini par me lancer seul — pour
+                  mes idées au placard. J&apos;ai fini par me lancer seul, pour
                   faire les choses à ma façon&nbsp;: avec soin, et avec mes
                   valeurs.
                 </p>
@@ -96,7 +96,7 @@ export function Founder() {
                 </p>
                 <p>
                   Ça m&apos;a semblé injuste. Traduire, ce n&apos;est pas
-                  remplacer des mots un par un — c&apos;est transmettre une
+                  remplacer des mots un par un. C&apos;est transmettre une
                   intention. Et pour bien rendre le français, encore faut-il le
                   parler vraiment&nbsp;: son jargon, ses tournures, son humour.
                   C&apos;est pourquoi Maxline est pensé et opéré depuis la

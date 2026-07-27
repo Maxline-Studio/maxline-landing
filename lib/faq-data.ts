@@ -33,12 +33,12 @@ export const faqs: FaqItem[] = [
   {
     question: "Maxline est-il déjà disponible ?",
     answer:
-      "Oui, le studio est ouvert à tous, tout de suite — pas de liste d'attente. La première vidéo de moins de 5 minutes est offerte, sans carte bancaire.",
+      "Oui, le studio est ouvert à tous, tout de suite, sans liste d'attente. La première vidéo de moins de 5 minutes est offerte, sans carte bancaire.",
   },
   {
     question: "Quelles langues sont supportées ?",
     answer:
-      "Dix langues : français, anglais, espagnol, allemand, italien, portugais, russe, chinois (mandarin), japonais et arabe. Vous choisissez la langue parlée et celle des sous-titres — n'importe quelle combinaison, dans les deux sens. Même langue des deux côtés = simple transcription, idéale pour l'accessibilité.",
+      "Dix langues : français, anglais, espagnol, allemand, italien, portugais, russe, chinois (mandarin), japonais et arabe. Vous choisissez la langue parlée et celle des sous-titres : n'importe quelle combinaison, dans les deux sens. Même langue des deux côtés = simple transcription, idéale pour l'accessibilité.",
   },
   {
     question: "Y aura-t-il un doublage avec voix clonée ?",
@@ -48,6 +48,6 @@ export const faqs: FaqItem[] = [
   {
     question: "Comment fonctionne l'Atelier (système de fidélité) ?",
     answer:
-      "Vos minutes utilisées s'accumulent à vie. Vous progressez dans 4 rangs — Apprenti, Correcteur, Éditeur en chef, Maître d'œuvre — et à chaque palier votre outil s'enrichit de fonctions, priorités et bonus offerts (minutes supplémentaires tous les 3 mois, bonus anniversaire, exports débloqués, etc.). Inclus dans tous les plans, sans frais. Aucun reset, jamais. Le système complet est documenté en transparence : seuils, mécaniques et calculs accessibles à tous.",
+      "Vos minutes utilisées s'accumulent à vie. Vous progressez dans 4 rangs (Apprenti, Correcteur, Éditeur en chef, Maître d'œuvre) et à chaque palier votre outil s'enrichit de fonctions, priorités et bonus offerts (minutes supplémentaires tous les 3 mois, bonus anniversaire, exports débloqués, etc.). Inclus dans tous les plans, sans frais. Aucun reset, jamais. Le système complet est documenté en transparence : seuils, mécaniques et calculs accessibles à tous.",
   },
 ];

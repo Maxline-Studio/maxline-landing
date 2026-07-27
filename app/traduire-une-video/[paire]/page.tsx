@@ -149,7 +149,7 @@ export default async function TraduirePairPage({
             <p className="text-lg text-ink-600 leading-relaxed">
               Déposez votre vidéo {S.slug === "francais" ? "française" : `en ${src}`}, récupérez
               des sous-titres {tgt} propres et exportables. Une traduction qui
-              respecte votre ton — en français, à 12 €/mois, sans engagement.
+              respecte votre ton, en français, à 12 €/mois, sans engagement.
             </p>
           </header>
 
@@ -169,7 +169,7 @@ export default async function TraduirePairPage({
             <p>
               {cap(tgt)}, c&apos;est {T.speakers}, surtout en {T.where}. Pour un
               créateur {S.slug === "francais" ? "francophone" : `qui publie en ${src}`}, c&apos;est
-              une audience supplémentaire à portée de sous-titres — sans
+              une audience supplémentaire à portée de sous-titres, sans
               retourner une seule prise.
             </p>
 

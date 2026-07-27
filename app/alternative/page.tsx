@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "alternative traduction vidéo",
   ],
   openGraph: {
-    title: `${TITLE} — Maxline Studio`,
+    title: `${TITLE} · Maxline Studio`,
     description: DESCRIPTION,
     url: absoluteUrl(PATH),
     type: "website",
@@ -74,7 +74,7 @@ export default function AlternativesHub() {
             <p className="text-lg text-ink-600 leading-relaxed max-w-2xl mb-14">
               Des comparatifs honnêtes : ce que chaque outil fait très bien, ses
               limites, et quand Maxline est le meilleur choix. On dit aussi quand
-              ça n&apos;est pas nous — c&apos;est ça, être franc.
+              ça n&apos;est pas nous, c&apos;est ça, être franc.
             </p>
 
             <ul className="grid sm:grid-cols-2 gap-6">

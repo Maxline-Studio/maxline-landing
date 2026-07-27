@@ -17,7 +17,7 @@ export default function MentionsLegales() {
         </p>
         <ul>
           <li>
-            <strong>Maxence Chopin</strong> — entrepreneur individuel
+            <strong>Maxence Chopin</strong>, entrepreneur individuel
           </li>
           <li>Siège social : 41 rue Vaillant Couturier, 59233 Maing, France</li>
           <li>
@@ -27,7 +27,7 @@ export default function MentionsLegales() {
           <li>SIRET : en cours d&apos;immatriculation</li>
           <li>Code APE/NAF : en cours d&apos;attribution</li>
           <li>
-            TVA intracommunautaire : non applicable — TVA non applicable, article
+            TVA intracommunautaire : non applicable, TVA non applicable, article
             293 B du CGI (franchise en base)
           </li>
         </ul>
@@ -41,24 +41,24 @@ export default function MentionsLegales() {
         <p>Le site, l&apos;application et les données sont hébergés par :</p>
         <ul>
           <li>
-            <strong>Vercel Inc.</strong> — hébergement du site et des fonctions
-            serveur. 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis —{" "}
+            <strong>Vercel Inc.</strong>, hébergement du site et des fonctions
+            serveur. 340 S Lemon Ave #4133, Walnut, CA 91789, États-Unis:{" "}
             <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">
               vercel.com
             </a>
           </li>
           <li>
-            <strong>Supabase, Inc.</strong> — base de données, authentification et
+            <strong>Supabase, Inc.</strong>, base de données, authentification et
             fichiers de sous-titres. Données hébergées dans l&apos;Union
-            européenne (région AWS Europe — Irlande) —{" "}
+            européenne (région AWS Europe, Irlande):{" "}
             <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">
               supabase.com
             </a>
           </li>
           <li>
-            <strong>Cloudflare, Inc.</strong> — réseau de diffusion (CDN) et
+            <strong>Cloudflare, Inc.</strong>, réseau de diffusion (CDN) et
             stockage des vidéos (Cloudflare R2). 101 Townsend St, San Francisco,
-            CA 94107, États-Unis —{" "}
+            CA 94107, États-Unis:{" "}
             <a href="https://cloudflare.com" target="_blank" rel="noopener noreferrer">
               cloudflare.com
             </a>

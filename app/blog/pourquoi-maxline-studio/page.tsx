@@ -89,9 +89,9 @@ export default function PourquoiMaxlineStudio() {
             </h2>
 
             <p>
-              Il y a six mois, une amie créatrice — disons Léa, 27 ans, 25 000
+              Il y a six mois, une amie créatrice, disons Léa, 27 ans, 25 000
               abonnés sur YouTube, ambition d&apos;ouvrir une audience
-              anglophone — me racontait son dernier dimanche. Elle avait passé
+              anglophone, me racontait son dernier dimanche. Elle avait passé
               quatre heures à traduire à la main les sous-titres d&apos;une
               vidéo de douze minutes. Le lundi matin, elle a publié la version
               anglaise. Le lundi soir, elle avait 200 vues dessus. Elle a
@@ -128,16 +128,16 @@ export default function PourquoiMaxlineStudio() {
             <p>
               Le marché mondial de la traduction vidéo IA est passé de 2,68
               milliards de dollars en 2024 à un projet de 33,4 milliards en
-              2034 — un taux de croissance annuel composé de 28 %. C&apos;est
-              une vague. Mais sur le segment qui m&apos;intéresse —{" "}
-              <strong>les créateurs solo francophones</strong> — il y a cinq
+              2034, un taux de croissance annuel composé de 28 %. C&apos;est
+              une vague. Mais sur le segment qui m&apos;intéresse,{" "}
+              <strong>les créateurs solo francophones</strong>, il y a cinq
               trous distincts que je n&apos;ai vus comblés par personne.
             </p>
 
             <p>
               <strong>Un :</strong> aucun outil sérieux n&apos;est{" "}
               <em>français-first</em>. L&apos;interface, le support client, la
-              documentation — tout est anglophone. Pour une créatrice qui passe
+              documentation, tout est anglophone. Pour une créatrice qui passe
               déjà sa journée à traduire, c&apos;est une friction de plus.
             </p>
 
@@ -178,7 +178,7 @@ export default function PourquoiMaxlineStudio() {
 
             <p>
               Cinq trous. Sur un marché qui multiplie par douze en dix ans. Et
-              le profil cible — créateur FR à 5-50k abonnés — est précisément
+              le profil cible, créateur FR à 5-50k abonnés, est précisément
               celui qui passe sous le radar de tous les outils en place, qui
               visent soit la masse TikTok soit l&apos;entreprise.
             </p>
@@ -193,8 +193,7 @@ export default function PourquoiMaxlineStudio() {
               <strong>
                 transcrire le français, traduire en anglais, sortir des
                 sous-titres propres exportables vers les logiciels de montage
-              </strong>{" "}
-              — point.
+              </strong>,{" "}point.
             </p>
 
             <p>
@@ -340,19 +339,19 @@ export default function PourquoiMaxlineStudio() {
             </h2>
 
             <p>
-              <strong>Je promets</strong> de construire en public — code,
+              <strong>Je promets</strong> de construire en public, code,
               décisions, chiffres bruts, doutes. Je promets une suppression
               automatique des vidéos à J+30 après traitement. Je promets que
               tes données ne serviront jamais à entraîner un modèle d&apos;IA.
               Je promets un support humain en français, sous 24 h. Je promets
               que si je dois augmenter les prix un jour, les premiers inscrits
-              garderont le tarif d&apos;origine — clause grand-père, écrite
+              garderont le tarif d&apos;origine, clause grand-père, écrite
               dans les CGV.
             </p>
 
             <p>
               <strong>Je ne promets pas</strong> que ça va marcher. Je ne
-              promets pas une qualité de traduction parfaite — la machine
+              promets pas une qualité de traduction parfaite, la machine
               n&apos;est pas humaine, et l&apos;édition manuelle restera
               toujours utile pour les nuances. Je ne promets pas un MVP sans
               bug. Je ne promets pas que je ne ferai pas d&apos;erreurs.
@@ -398,7 +397,7 @@ export default function PourquoiMaxlineStudio() {
             </ul>
 
             <p>
-              Si tu veux suivre tout ça — les bons jours et les mauvais — je
+              Si tu veux suivre tout ça, les bons jours et les mauvais, je
               raconterai chaque étape ici dans le journal, plus quelques posts
               X / LinkedIn. Tu peux aussi t&apos;inscrire à la waitlist sur la
               page d&apos;accueil, je préviens par email au lancement.
@@ -410,10 +409,10 @@ export default function PourquoiMaxlineStudio() {
               On se reparle bientôt.
             </p>
 
-            <p className="text-base text-neutral-500 mt-4">— Maxence</p>
+            <p className="text-base text-neutral-500 mt-4">Maxence</p>
           </div>
 
-          {/* CTA bas d'article — fiche éditeur */}
+          {/* CTA bas d'article, fiche éditeur */}
           <aside className="mt-20 bg-ivory-50 border-2 border-ink-900 rounded-sm p-8 md:p-10 shadow-[6px_6px_0_0_rgba(26,24,20,1)]">
             <div className="flex items-center gap-3 mb-4">
               <span className="annotation">§ Pré-lancement ouvert</span>
@@ -427,7 +426,7 @@ export default function PourquoiMaxlineStudio() {
             </h2>
             <p className="text-ink-700 mb-6 leading-relaxed">
               Maxline est en ligne. Crée ton atelier et sous-titre ta première
-              vidéo gratuitement, sans carte — 12 €/mois ensuite, sans engagement.
+              vidéo gratuitement, sans carte, 12 €/mois ensuite, sans engagement.
             </p>
             <Link href="/signup" className="btn-pen text-base">
               Créer mon atelier

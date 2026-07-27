@@ -42,7 +42,7 @@ export function Manifesto() {
                 respecte votre temps, votre voix, et votre budget.
               </p>
               <p className="text-ink-900 font-medium text-xl font-display italic">
-                Pas un outil de plus. Un outil de moins —{" "}
+                Pas un outil de plus. Un outil de moins&nbsp;:{" "}
                 <HandUnderline variant="rouge" style="straight">
                   celui qu&apos;il fallait
                 </HandUnderline>

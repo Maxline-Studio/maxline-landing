@@ -127,7 +127,7 @@ export default async function AtelierPage() {
           </div>
         ) : (
           <p className="mt-7 font-mono text-[10px] uppercase tracking-widest text-ink-300">
-            Rang maximal atteint — merci de votre fidélité.
+            Rang maximal atteint. Merci de votre fidélité.
           </p>
         )}
       </section>
@@ -215,7 +215,7 @@ export default async function AtelierPage() {
             <p className="text-sm text-ink-600 max-w-md mx-auto leading-relaxed">
               Aucun bonus pour l&apos;instant. Vos récompenses (continuité,
               anniversaire, parrainage, cadeaux) apparaîtront ici, avec leur date
-              et leur raison — en toute transparence.
+              et leur raison, en toute transparence.
             </p>
           </div>
         ) : (
@@ -230,7 +230,7 @@ export default async function AtelierPage() {
                     {REWARD_LABELS[r.type as RewardType] ?? r.type}
                   </div>
                   <div className="text-xs text-ink-500 truncate">
-                    {r.reason || "—"} ·{" "}
+                    {r.reason || "-"} ·{" "}
                     {new Date(r.created_at).toLocaleDateString("fr-FR", {
                       day: "2-digit",
                       month: "short",

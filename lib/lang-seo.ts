@@ -33,7 +33,7 @@ export const LANG_SEO: Record<Lang, LangSeo> = {
     toAngle:
       "Le public francophone est exigeant sur la langue : une traduction française réussie doit sonner naturelle, jamais « traduite ». C'est précisément le terrain de jeu d'un studio français.",
     fromAngle:
-      "Vous partez d'un contenu français : tout l'enjeu est de préserver votre ton, votre humour et votre registre — y compris l'argot — dans la langue d'arrivée.",
+      "Vous partez d'un contenu français : tout l'enjeu est de préserver votre ton, votre humour et votre registre, y compris l'argot, dans la langue d'arrivée.",
     specifics:
       "Le français a ses pièges de sous-titrage : la ponctuation à espace insécable (« ! », « ? », « : »), les accents, et un texte généralement plus long que l'anglais. Un bon sous-titrage condense sans trahir le registre.",
   },
@@ -41,7 +41,7 @@ export const LANG_SEO: Record<Lang, LangSeo> = {
     slug: "anglais",
     native: "English",
     speakers: "près de 1,5 milliard de locuteurs",
-    where: "États-Unis, Royaume-Uni, Canada — et la langue commune d'Internet",
+    where: "États-Unis, Royaume-Uni, Canada, et la langue commune d'Internet",
     family: "langue germanique",
     toAngle:
       "L'anglais ouvre la plus large audience internationale qui soit. C'est souvent la première traduction qui fait décoller une chaîne au-delà des frontières.",
@@ -100,7 +100,7 @@ export const LANG_SEO: Record<Lang, LangSeo> = {
     fromAngle:
       "Le portugais est riche et chaleureux ; la traduction doit en préserver le naturel.",
     specifics:
-      "Distinguez le portugais du Brésil et celui du Portugal : vocabulaire, orthographe et tournures diffèrent (« você » vs « tu »). On cale la variante sur votre audience cible — le plus souvent le Brésil pour la vidéo en ligne.",
+      "Distinguez le portugais du Brésil et celui du Portugal : vocabulaire, orthographe et tournures diffèrent (« você » vs « tu »). On cale la variante sur votre audience cible, le plus souvent le Brésil pour la vidéo en ligne.",
   },
   ru: {
     slug: "russe",
@@ -126,7 +126,7 @@ export const LANG_SEO: Record<Lang, LangSeo> = {
     fromAngle:
       "Partir du chinois demande une vraie compréhension du contexte ; la traduction doit dérouler le sens sans rigidité.",
     specifics:
-      "Le chinois ne sépare pas les mots par des espaces et chaque caractère porte beaucoup de sens. Résultat : un sous-titre se découpe au caractère, sur des lignes courtes. Maxline gère ce découpage CJK nativement (≈ 16 caractères par ligne, deux lignes max) — là où beaucoup d'outils laissent des lignes interminables.",
+      "Le chinois ne sépare pas les mots par des espaces et chaque caractère porte beaucoup de sens. Résultat : un sous-titre se découpe au caractère, sur des lignes courtes. Maxline gère ce découpage CJK nativement (≈ 16 caractères par ligne, deux lignes max), là où beaucoup d'outils laissent des lignes interminables.",
   },
   ja: {
     slug: "japonais",
@@ -139,7 +139,7 @@ export const LANG_SEO: Record<Lang, LangSeo> = {
     fromAngle:
       "Le japonais joue sur l'implicite et les niveaux de politesse ; la traduction doit expliciter sans alourdir.",
     specifics:
-      "Le japonais mêle trois écritures (hiragana, katakana, kanji), ne met pas d'espaces entre les mots, et code la politesse (keigo) dans la grammaire. Les sous-titres se découpent au caractère, sur des lignes courtes — ce que Maxline gère nativement pour rester lisible à l'écran.",
+      "Le japonais mêle trois écritures (hiragana, katakana, kanji), ne met pas d'espaces entre les mots, et code la politesse (keigo) dans la grammaire. Les sous-titres se découpent au caractère, sur des lignes courtes, ce que Maxline gère nativement pour rester lisible à l'écran.",
   },
   ar: {
     slug: "arabe",
@@ -222,13 +222,13 @@ export function pairFromSlug(slug: string): LangPair | null {
 export function pairNote(source: Lang, target: Lang): string {
   const ROMANCE = new Set<Lang>(["fr", "es", "it", "pt"]);
   if (isRtl(target)) {
-    return `Comme ${withArticle(target)} s'écrit de droite à gauche, Maxline affiche et édite vos sous-titres en RTL — un détail que la plupart des outils négligent, et qui change tout à l'écran.`;
+    return `Comme ${withArticle(target)} s'écrit de droite à gauche, Maxline affiche et édite vos sous-titres en RTL, un détail que la plupart des outils négligent, et qui change tout à l'écran.`;
   }
   if (isCjk(target)) {
     return `${cap(withArticle(target))} ne sépare pas les mots par des espaces : Maxline découpe les sous-titres au caractère, sur des lignes courtes, pour rester lisible.`;
   }
   if (target === "en") {
-    return `L'anglais étant plus concis, la traduction depuis ${withArticle(source)} raccourcit souvent le texte — pratique pour des sous-titres rapides à lire.`;
+    return `L'anglais étant plus concis, la traduction depuis ${withArticle(source)} raccourcit souvent le texte, pratique pour des sous-titres rapides à lire.`;
   }
   if (target === "de") {
     return `L'allemand allonge le texte (mots composés) : on condense davantage la traduction depuis ${withArticle(source)} pour éviter des sous-titres trop longs.`;
@@ -236,7 +236,7 @@ export function pairNote(source: Lang, target: Lang): string {
   if (ROMANCE.has(source) && ROMANCE.has(target)) {
     return `${cap(withArticle(source))} et ${withArticle(target)} sont deux langues latines proches : la structure des phrases se ressemble, ce qui aide à garder des sous-titres fluides et bien calés.`;
   }
-  return `L'enjeu d'une traduction ${langName(source)} → ${langName(target)} réussie, c'est de préserver le registre et le ton — pas seulement les mots.`;
+  return `L'enjeu d'une traduction ${langName(source)} → ${langName(target)} réussie, c'est de préserver le registre et le ton, pas seulement les mots.`;
 }
 
 function cap(s: string): string {

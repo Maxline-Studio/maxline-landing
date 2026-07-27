@@ -16,7 +16,7 @@ type Mode = "lines" | "paragraph";
 
 /**
  * Extracteur de texte : retire les timecodes et numéros d'un .srt/.vtt et ne
- * garde que le texte — une ligne par sous-titre, ou un paragraphe fluide.
+ * garde que le texte, une ligne par sous-titre, ou un paragraphe fluide.
  * 100 % navigateur (parse → texte), 0 €.
  */
 export function SubtitleExtractor() {
@@ -146,7 +146,7 @@ export function SubtitleExtractor() {
               Déposer ou choisir un fichier
             </button>
             <p className="mt-1 font-mono text-[10px] uppercase tracking-widest text-ink-400">
-              .srt · .vtt — ou collez le texte ci-dessous
+              .srt · .vtt, ou collez le texte ci-dessous
             </p>
             <input
               ref={fileRef}

@@ -138,7 +138,7 @@ export function BillingActions({
         {isSubscribed && (
           <p className="text-sm text-ink-600 mb-5">
             Vous êtes abonné. Changer de plan se fait via le portail sécurisé
-            Stripe, au prorata — aucun double prélèvement.
+            Stripe, au prorata, sans double prélèvement.
           </p>
         )}
         {annualAvailable && !isSubscribed && (

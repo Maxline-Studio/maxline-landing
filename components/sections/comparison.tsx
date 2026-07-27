@@ -135,8 +135,8 @@ export function Comparison() {
             </h2>
             <p className="mt-6 text-lg text-ink-700 leading-relaxed">
               Les autres outils sont excellents pour faire un peu de tout, dans
-              toutes les langues. Maxline fait <em>une</em> chose — le
-              français et l&apos;anglais, vraiment bien — pour les créateurs
+              toutes les langues. Maxline fait <em>une</em> chose, vraiment
+              bien&nbsp;: du sous-titrage pensé pour les créateurs
               francophones.
             </p>
           </div>

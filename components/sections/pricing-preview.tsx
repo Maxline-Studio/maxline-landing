@@ -63,9 +63,9 @@ const SUB_PLANS: SubPlan[] = [
 ];
 
 const CREDITS_FEATURES = [
-  "Pack 30 min — 8 €",
-  "Pack 100 min — 22 €",
-  "Pack 300 min — 55 €",
+  "Pack 30 min : 8 €",
+  "Pack 100 min : 22 €",
+  "Pack 300 min : 55 €",
   "Crédits sans expiration",
   "Exports sous-titres inclus (.srt, .vtt, .txt)",
   "Atelier inclus dès la première minute",

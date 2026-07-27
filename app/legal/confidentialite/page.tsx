@@ -33,7 +33,7 @@ export default function Confidentialite() {
         <ul>
           <li>
             <strong>Compte</strong> : adresse email, nom affiché, et soit un mot de
-            passe (jamais stocké en clair — haché par notre prestataire
+            passe (jamais stocké en clair, haché par notre prestataire
             d&apos;authentification), soit votre identifiant de connexion Google si
             vous utilisez « Continuer avec Google ».
           </li>
@@ -68,24 +68,23 @@ export default function Confidentialite() {
       <LegalSection title="3. Pourquoi, et sur quelle base légale">
         <ul>
           <li>
-            Fournir le service (compte, import, transcription, traduction, exports)
-            — <strong>exécution du contrat</strong>.
+            Fournir le service (compte, import, transcription, traduction, exports), <strong>exécution du contrat</strong>.
           </li>
           <li>
-            Gérer l&apos;abonnement, la facturation et la comptabilité —{" "}
+            Gérer l&apos;abonnement, la facturation et la comptabilité:{" "}
             <strong>exécution du contrat</strong> et{" "}
             <strong>obligation légale</strong>.
           </li>
           <li>
-            Emails de service (confirmation, état des vidéos, bonus) —{" "}
-            <strong>exécution du contrat</strong>. Emails de liste d&apos;attente —{" "}
+            Emails de service (confirmation, état des vidéos, bonus):{" "}
+            <strong>exécution du contrat</strong>. Emails de liste d&apos;attente:{" "}
             <strong>consentement</strong>.
           </li>
           <li>
-            Programme de parrainage et bonus — <strong>exécution du contrat</strong>.
+            Programme de parrainage et bonus, <strong>exécution du contrat</strong>.
           </li>
           <li>
-            Sécurité, prévention de la fraude et des abus —{" "}
+            Sécurité, prévention de la fraude et des abus:{" "}
             <strong>intérêt légitime</strong>.
           </li>
         </ul>
@@ -124,38 +123,38 @@ export default function Confidentialite() {
         </p>
         <ul>
           <li>
-            <strong>Supabase</strong> — base de données, comptes, sous-titres ·{" "}
+            <strong>Supabase</strong>, base de données, comptes, sous-titres ·{" "}
             <em>Union européenne (Irlande)</em>
           </li>
           <li>
-            <strong>Vercel</strong> — hébergement du site et des fonctions ·{" "}
+            <strong>Vercel</strong>, hébergement du site et des fonctions ·{" "}
             <em>États-Unis</em>
           </li>
           <li>
-            <strong>Cloudflare (R2)</strong> — stockage des vidéos et diffusion ·{" "}
+            <strong>Cloudflare (R2)</strong>, stockage des vidéos et diffusion ·{" "}
             <em>États-Unis</em>
           </li>
           <li>
-            <strong>Google Cloud</strong> — serveur qui réalise le traitement vidéo ·{" "}
+            <strong>Google Cloud</strong>, serveur qui réalise le traitement vidéo ·{" "}
             <em>États-Unis</em>
           </li>
           <li>
-            <strong>Groq</strong> — transcription audio par intelligence artificielle ·{" "}
+            <strong>Groq</strong>, transcription audio par intelligence artificielle ·{" "}
             <em>États-Unis</em>
           </li>
           <li>
-            <strong>Anthropic (Claude)</strong> — traduction par intelligence
+            <strong>Anthropic (Claude)</strong>, traduction par intelligence
             artificielle · <em>États-Unis</em>
           </li>
           <li>
-            <strong>Stripe</strong> — paiement et abonnement ·{" "}
+            <strong>Stripe</strong>, paiement et abonnement ·{" "}
             <em>Irlande / États-Unis</em>
           </li>
           <li>
-            <strong>Resend</strong> — envoi des emails · <em>États-Unis</em>
+            <strong>Resend</strong>, envoi des emails · <em>États-Unis</em>
           </li>
           <li>
-            <strong>Google</strong> — connexion « Continuer avec Google » (si vous
+            <strong>Google</strong>, connexion « Continuer avec Google » (si vous
             l&apos;utilisez)
           </li>
         </ul>

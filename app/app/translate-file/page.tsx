@@ -44,7 +44,7 @@ export default async function TranslateFilePage() {
         </span>
       </h1>
       <p className="text-ink-600 leading-relaxed mb-8 max-w-xl">
-        On traduit votre fichier en gardant les timecodes — vous récupérez le
+        On traduit votre fichier en gardant les timecodes. Vous récupérez le
         fichier prêt à l&apos;emploi. Pas de vidéo à uploader.
       </p>
 

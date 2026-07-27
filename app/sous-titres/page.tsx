@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     "ajouter des sous-titres à une vidéo",
   ],
   openGraph: {
-    title: `${TITLE} — Maxline Studio`,
+    title: `${TITLE} · Maxline Studio`,
     description: DESCRIPTION,
     url: absoluteUrl(PATH),
     type: "website",
@@ -74,7 +74,7 @@ export default function SousTitresHub() {
 
             <p className="text-lg text-ink-600 leading-relaxed max-w-2xl mb-14">
               Chaque plateforme et chaque usage a ses règles. Choisissez le vôtre
-              pour des conseils concrets — et des sous-titres faits pour ça.
+              pour des conseils concrets, et des sous-titres faits pour ça.
             </p>
 
             <ul className="grid sm:grid-cols-2 gap-6">

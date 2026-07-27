@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <Link
           href="/"
           className="inline-flex items-center gap-3 group"
-          aria-label="Maxline Studio — accueil"
+          aria-label="Maxline Studio, accueil"
         >
           <div className="relative flex items-center">
             <span className="font-display font-black text-2xl tracking-tight text-ink-900 leading-none">

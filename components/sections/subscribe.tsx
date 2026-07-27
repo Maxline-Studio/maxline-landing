@@ -99,7 +99,7 @@ export function Subscribe() {
           <p className="mt-6 text-lg text-ink-300 max-w-xl">
             {loggedIn
               ? "Votre atelier vous attend. Déposez une vidéo, on s'occupe des sous-titres et des traductions."
-              : "Le studio est ouvert. Créez votre compte, sous-titrez votre première vidéo gratuitement — sans carte bancaire. 12 €/mois ensuite, sans engagement."}
+              : "Le studio est ouvert. Créez votre compte, sous-titrez votre première vidéo gratuitement, sans carte bancaire. 12 €/mois ensuite, sans engagement."}
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -141,7 +141,7 @@ export function Subscribe() {
             .
           </h3>
           <p className="text-base text-ink-300 max-w-xl mb-6">
-            Je construis Maxline en public — décisions, chiffres, coulisses.
+            Je construis Maxline en public&nbsp;: décisions, chiffres, coulisses.
             Laissez votre email pour recevoir les nouveautés (rien d&apos;autre).
           </p>
         </div>

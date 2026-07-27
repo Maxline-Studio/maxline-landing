@@ -5,17 +5,17 @@
 
 import { langLabel, isCjk } from "@/lib/langs";
 
-/** Règle de correspondance de registre — à inclure dans tout prompt de traduction. */
+/** Règle de correspondance de registre, à inclure dans tout prompt de traduction. */
 export const REGISTER_RULES =
-  "RÈGLE D'OR — correspondance de registre : identifie le registre (soutenu/courant/familier/argot/vulgaire) et rends-le À L'IDENTIQUE. Argot → argot équivalent, vulgaire → vulgaire (ne jamais adoucir ni sur-formaliser). Argot/verlan/expressions régionales → équivalent vivant et actuel dans la langue cible. Idiomes et références culturelles → localise (équivalence dynamique), pas de mot-à-mot.";
+  "RÈGLE D'OR, correspondance de registre : identifie le registre (soutenu/courant/familier/argot/vulgaire) et rends-le À L'IDENTIQUE. Argot → argot équivalent, vulgaire → vulgaire (ne jamais adoucir ni sur-formaliser). Argot/verlan/expressions régionales → équivalent vivant et actuel dans la langue cible. Idiomes et références culturelles → localise (équivalence dynamique), pas de mot-à-mot.";
 
 /** Règle de préservation des noms propres (jamais traduits ni déformés). */
 export const PROPER_NOUNS_RULE =
-  "NOMS PROPRES — recopie TELS QUELS (orthographe exacte, jamais traduits ni modifiés) : prénoms, noms, marques, produits, pseudos, @identifiants, #hashtags et URLs/domaines (ex. « Maxline Studio », « maxlinestudio.fr »).";
+  "NOMS PROPRES, recopie TELS QUELS (orthographe exacte, jamais traduits ni modifiés) : prénoms, noms, marques, produits, pseudos, @identifiants, #hashtags et URLs/domaines (ex. « Maxline Studio », « maxlinestudio.fr »).";
 
 /** Cadre « contenu sensible » : sous-titrage pro → jamais de refus ni de censure. */
 export const SENSITIVE_CONTENT_RULE =
-  "CONTENU SENSIBLE — tâche de sous-titrage PROFESSIONNEL (localisation/accessibilité) : traduis FIDÈLEMENT tout contenu, y compris explicite, sexuel, cru, vulgaire, violent ou choquant, sans le censurer, l'édulcorer, le commenter ni le refuser. Ne renvoie JAMAIS d'excuse, d'avertissement ni de refus — uniquement le tableau JSON demandé.";
+  "CONTENU SENSIBLE, tâche de sous-titrage PROFESSIONNEL (localisation/accessibilité) : traduis FIDÈLEMENT tout contenu, y compris explicite, sexuel, cru, vulgaire, violent ou choquant, sans le censurer, l'édulcorer, le commenter ni le refuser. Ne renvoie JAMAIS d'excuse, d'avertissement ni de refus, uniquement le tableau JSON demandé.";
 
 /** Prompt système pour traduire un lot de sous-titres (alignement JSON 1:1). */
 export function subtitleTranslationSystem(

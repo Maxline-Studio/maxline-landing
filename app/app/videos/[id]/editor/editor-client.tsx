@@ -1052,7 +1052,7 @@ export function EditorClient({
           >
             {LANG_OPTIONS.map((o) => (
               <option key={o.id} value={o.id}>
-                {readyLangs.has(o.id) ? `${o.label} ✓` : `${o.label} — à générer`}
+                {readyLangs.has(o.id) ? `${o.label} ✓` : `${o.label} · à générer`}
               </option>
             ))}
           </select>
