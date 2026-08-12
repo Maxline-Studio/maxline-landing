@@ -10,7 +10,14 @@ import {
   videoFolder,
   STORAGE_BUCKET,
 } from "@/lib/storage";
-import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
+import {
+  presignGet,
+  deleteObjects,
+  createMultipartUpload,
+  presignParts,
+  completeMultipartUpload,
+  abortMultipartUpload,
+} from "@/lib/r2";
 import { isLang, langLabel, type Lang } from "@/lib/langs";
 import { isCutProfile, DEFAULT_CUT_PROFILE } from "@/lib/cut-profiles";
 import { findByOverlap } from "@/lib/segment-match";
@@ -31,17 +38,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
 export type StartUploadResult =
-  | { ok: true; videoId: string; uploadUrl: string }
+  | { ok: true; videoId: string }
   | { ok: false; error: string };
 
 /**
  * ÉTAPE 1 — appelée DÈS LE DÉPÔT du fichier, avant même que l'utilisateur ait
  * choisi sa langue.
  *
- * Crée la ligne `videos` (statut 'queued', configuration par défaut) ET renvoie
- * l'URL PUT présignée : le navigateur peut donc commencer à envoyer le fichier
- * pendant que l'utilisateur réfléchit. Sur une vidéo de 200 Mo en fibre, l'envoi
- * est souvent DÉJÀ TERMINÉ au moment où il clique sur « Générer ».
+ * Crée la ligne `videos` (statut 'queued', configuration par défaut) ; le
+ * navigateur enchaîne aussitôt sur l'envoi EN PLUSIEURS PARTIES, pendant que
+ * l'utilisateur réfléchit. Sur une vidéo de 200 Mo en fibre, l'envoi est souvent
+ * DÉJÀ TERMINÉ au moment où il clique sur « Générer ».
  *
  * Une seule action (avant : createVideoUpload puis createSourceUploadUrl, deux
  * allers-retours, chacun refaisant getUser + une lecture).
@@ -131,19 +138,110 @@ export async function startVideoUpload(params: {
     };
   }
 
+  // L'envoi lui-même se fait en plusieurs parties (beginMultipartUpload puis
+  // signUploadParts) : plus d'URL PUT unique à présigner ici.
+  return { ok: true, videoId: video.id };
+}
+
+// ─────────────────────────────────────────────────────────────────
+//  Envoi en plusieurs parties
+// ─────────────────────────────────────────────────────────────────
+/**
+ * Vérifie que la vidéo appartient bien à l'utilisateur et renvoie sa clé de
+ * stockage. Toutes les actions multipart passent par là : une URL de partie
+ * présignée est un droit d'écriture, on ne la délivre jamais sans contrôle.
+ */
+async function ownedKey(
+  videoId: string,
+): Promise<{ ok: true; key: string } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("id, format, status, storage_key_source")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+  if (!video) return { ok: false, error: "Vidéo introuvable." };
+  if (video.storage_key_source) {
+    return { ok: false, error: "Cette vidéo a déjà été envoyée." };
+  }
+  return { ok: true, key: sourceKey(user.id, videoId, video.format || "mp4") };
+}
+
+/** Ouvre un envoi en plusieurs parties. */
+export async function beginMultipartUpload(
+  videoId: string,
+): Promise<{ ok: true; uploadId: string } | { ok: false; error: string }> {
+  const owned = await ownedKey(videoId);
+  if (!owned.ok) return owned;
   try {
-    const key = sourceKey(user.id, video.id, ext);
-    const uploadUrl = await presignPut(key);
-    return { ok: true, videoId: video.id, uploadUrl };
+    const uploadId = await createMultipartUpload(owned.key);
+    return { ok: true, uploadId };
   } catch (e) {
-    // La ligne existe mais l'upload est impossible : on la nettoie pour ne pas
-    // laisser de vidéo fantôme dans « Mes vidéos ».
-    await supabase.from("videos").delete().eq("id", video.id);
     return {
       ok: false,
-      error: e instanceof Error ? e.message : "Préparation de l'upload impossible.",
+      error: e instanceof Error ? e.message : "Ouverture de l'envoi impossible.",
     };
   }
+}
+
+/** URLs présignées pour un lot de parties. */
+export async function signUploadParts(
+  videoId: string,
+  uploadId: string,
+  partNumbers: number[],
+): Promise<{ ok: true; urls: string[] } | { ok: false; error: string }> {
+  const owned = await ownedKey(videoId);
+  if (!owned.ok) return owned;
+  // Garde-fou : un client malveillant ne doit pas pouvoir faire signer
+  // dix mille URLs d'un coup.
+  const clean = partNumbers
+    .filter((n) => Number.isInteger(n) && n >= 1 && n <= 10000)
+    .slice(0, 64);
+  if (clean.length === 0) return { ok: false, error: "Parties invalides." };
+  try {
+    const urls = await presignParts(owned.key, uploadId, clean);
+    return { ok: true, urls };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Signature des parties impossible.",
+    };
+  }
+}
+
+/** Assemble les parties en un objet unique. */
+export async function finishMultipartUpload(
+  videoId: string,
+  uploadId: string,
+  parts: { partNumber: number; etag: string }[],
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const owned = await ownedKey(videoId);
+  if (!owned.ok) return owned;
+  try {
+    await completeMultipartUpload(owned.key, uploadId, parts);
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : "Assemblage du fichier impossible.",
+    };
+  }
+}
+
+/** Abandonne un envoi (changement de fichier, départ de la page). */
+export async function cancelMultipartUpload(
+  videoId: string,
+  uploadId: string,
+): Promise<void> {
+  const owned = await ownedKey(videoId);
+  if (!owned.ok) return;
+  await abortMultipartUpload(owned.key, uploadId);
 }
 
 export type FinalizeUploadResult = { ok: true } | { ok: false; error: string };

@@ -78,6 +78,112 @@ export async function presignGet(
   return signed.url;
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  Envoi en PLUSIEURS PARTIES (multipart)
+// ─────────────────────────────────────────────────────────────────
+/**
+ * Pourquoi : l'envoi se faisait en UN SEUL PUT, jusqu'à 1 Go, sans découpage,
+ * sans reprise et sans réessai. Une micro-coupure à 95 % et tout était perdu —
+ * il fallait tout recommencer. C'est l'une des raisons pour lesquelles « l'import
+ * est interminable ».
+ *
+ * Avec le découpage en parties : chaque morceau est réessayé indépendamment, et
+ * plusieurs partent en parallèle (une seule connexion TCP plafonne bien en
+ * dessous de la bande passante disponible).
+ */
+
+/** Extrait le contenu d'une balise XML (les réponses S3 sont en XML). */
+function xmlTag(xml: string, tag: string): string | null {
+  const m = xml.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`));
+  return m ? m[1]!.trim() : null;
+}
+
+/** Ouvre un envoi multipart et renvoie son identifiant. */
+export async function createMultipartUpload(
+  key: string,
+  contentType?: string,
+): Promise<string> {
+  const res = await client().fetch(`${objectUrl(key)}?uploads=`, {
+    method: "POST",
+    headers: contentType ? { "content-type": contentType } : undefined,
+  });
+  const body = await res.text();
+  if (!res.ok) {
+    throw new Error(`R2 createMultipartUpload ${res.status} : ${body.slice(0, 200)}`);
+  }
+  const id = xmlTag(body, "UploadId");
+  if (!id) throw new Error("R2 : UploadId absent de la réponse.");
+  return id;
+}
+
+/** URLs PUT présignées pour un lot de parties (numérotées à partir de 1). */
+export async function presignParts(
+  key: string,
+  uploadId: string,
+  partNumbers: number[],
+  ttlSeconds = 7200,
+): Promise<string[]> {
+  const aws = client();
+  return Promise.all(
+    partNumbers.map(async (n) => {
+      const url = new URL(objectUrl(key));
+      url.searchParams.set("partNumber", String(n));
+      url.searchParams.set("uploadId", uploadId);
+      url.searchParams.set("X-Amz-Expires", String(ttlSeconds));
+      const signed = await aws.sign(url.toString(), {
+        method: "PUT",
+        aws: { signQuery: true },
+      });
+      return signed.url;
+    }),
+  );
+}
+
+/** Assemble les parties envoyées en un objet unique. */
+export async function completeMultipartUpload(
+  key: string,
+  uploadId: string,
+  parts: { partNumber: number; etag: string }[],
+): Promise<void> {
+  const ordered = [...parts].sort((a, b) => a.partNumber - b.partNumber);
+  const xml =
+    "<CompleteMultipartUpload>" +
+    ordered
+      .map(
+        (p) =>
+          `<Part><PartNumber>${p.partNumber}</PartNumber><ETag>${p.etag}</ETag></Part>`,
+      )
+      .join("") +
+    "</CompleteMultipartUpload>";
+
+  const res = await client().fetch(
+    `${objectUrl(key)}?uploadId=${encodeURIComponent(uploadId)}`,
+    { method: "POST", body: xml, headers: { "content-type": "application/xml" } },
+  );
+  const body = await res.text();
+  // S3 peut renvoyer 200 AVEC une erreur dans le corps : il faut lire le XML.
+  if (!res.ok || body.includes("<Error>")) {
+    throw new Error(
+      `R2 completeMultipartUpload ${res.status} : ${body.slice(0, 300)}`,
+    );
+  }
+}
+
+/** Abandonne un envoi multipart (libère les parties déjà stockées). */
+export async function abortMultipartUpload(
+  key: string,
+  uploadId: string,
+): Promise<void> {
+  try {
+    await client().fetch(
+      `${objectUrl(key)}?uploadId=${encodeURIComponent(uploadId)}`,
+      { method: "DELETE" },
+    );
+  } catch {
+    /* best-effort : R2 purge seul les envois inachevés */
+  }
+}
+
 /** Supprime des objets R2 (best-effort, ignore les absents/erreurs). */
 export async function deleteObjects(
   keys: (string | null | undefined)[],

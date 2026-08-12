@@ -41,7 +41,12 @@ import {
   startVideoUpload,
   finalizeVideoUpload,
   cancelVideoUpload,
+  beginMultipartUpload,
+  signUploadParts,
+  finishMultipartUpload,
+  cancelMultipartUpload,
 } from "@/lib/video-actions";
+import { uploadInParts } from "@/lib/upload-multipart";
 import { LANG_OPTIONS, langLabel, type Lang } from "@/lib/langs";
 import {
   CUT_PROFILE_OPTIONS,
@@ -95,8 +100,10 @@ export function UploadClient({
     setTransfer(t);
   }, []);
 
-  // Requête d'envoi en cours (pour l'annuler si l'utilisateur change de fichier).
-  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  // Envoi en cours (pour l'annuler si l'utilisateur change de fichier).
+  const abortRef = useRef<AbortController | null>(null);
+  /** Identifiant de l'envoi multipart, nécessaire pour l'abandonner proprement. */
+  const uploadIdRef = useRef<string | null>(null);
   // Id de la vidéo en brouillon, pour le nettoyage.
   const draftIdRef = useRef<string | null>(null);
   // Empêche le nettoyage après un départ en traitement réussi.
@@ -104,11 +111,18 @@ export function UploadClient({
 
   /** Abandonne le brouillon en cours (changement de fichier, départ de la page). */
   const discardDraft = useCallback(() => {
-    xhrRef.current?.abort();
-    xhrRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
     const id = draftIdRef.current;
+    const uploadId = uploadIdRef.current;
     draftIdRef.current = null;
-    if (id && !committedRef.current) void cancelVideoUpload(id);
+    uploadIdRef.current = null;
+    if (id && !committedRef.current) {
+      // On libère aussi les parties déjà déposées : sans ça, elles resteraient
+      // facturées sur le stockage jusqu'à la purge automatique de R2.
+      if (uploadId) void cancelMultipartUpload(id, uploadId);
+      void cancelVideoUpload(id);
+    }
   }, []);
 
   // Nettoyage si l'utilisateur quitte la page avec un brouillon non validé.
@@ -182,16 +196,50 @@ export function UploadClient({
       draftIdRef.current = started.videoId;
       setTransferBoth({ state: "uploading", videoId: started.videoId, pct: 0 });
 
+      const onPct = (pct: number) => {
+        const cur = transferRef.current;
+        if (cur.state === "uploading" && cur.videoId === started.videoId) {
+          setTransferBoth({ ...cur, pct });
+        }
+      };
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       try {
-        await uploadWithProgress(f, started.uploadUrl, xhrRef, (pct) => {
-          const cur = transferRef.current;
-          if (cur.state === "uploading" && cur.videoId === started.videoId) {
-            setTransferBoth({ ...cur, pct });
-          }
+        // Envoi en PLUSIEURS PARTIES : chaque morceau est réessayé
+        // indépendamment et plusieurs partent en parallèle. Avant, un unique
+        // PUT de 1 Go : une coupure à 95 % et tout était à refaire.
+        const begun = await beginMultipartUpload(started.videoId);
+        if (!begun.ok) throw new Error(begun.error);
+        uploadIdRef.current = begun.uploadId;
+
+        const parts = await uploadInParts(f, {
+          signParts: async (numbers) => {
+            const res = await signUploadParts(
+              started.videoId,
+              begun.uploadId,
+              numbers,
+            );
+            if (!res.ok) throw new Error(res.error);
+            return res.urls;
+          },
+          onProgress: onPct,
+          signal: controller.signal,
         });
+
+        const done = await finishMultipartUpload(
+          started.videoId,
+          begun.uploadId,
+          parts,
+        );
+        if (!done.ok) throw new Error(done.error);
+
+        uploadIdRef.current = null;
         setTransferBoth({ state: "uploaded", videoId: started.videoId });
       } catch (e) {
-        if (e instanceof Error && e.message === "aborted") return; // changement de fichier
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        if (e instanceof Error && e.message === "aborted") return;
         setTransferBoth({
           state: "error",
           videoId: started.videoId,
@@ -663,50 +711,3 @@ const chipCls = (active: boolean) =>
       ? "border-rouge-500 bg-rouge-50 text-ink-900"
       : "border-ivory-300 text-ink-600 hover:border-ink-400"
   }`;
-
-/**
- * Upload direct navigateur → Cloudflare R2 via XHR (pour la progression), sur une
- * URL PUT présignée (la signature est dans l'URL, aucun en-tête d'auth à fournir).
- * La requête est exposée via `ref` pour pouvoir être annulée si l'utilisateur
- * change de fichier en cours de route.
- */
-function uploadWithProgress(
-  file: File,
-  presignedUrl: string,
-  ref: React.MutableRefObject<XMLHttpRequest | null>,
-  onProgress: (pct: number) => void,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    ref.current = xhr;
-    xhr.open("PUT", presignedUrl, true);
-    if (file.type) {
-      xhr.setRequestHeader("Content-Type", file.type);
-    }
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    };
-
-    xhr.onload = () => {
-      ref.current = null;
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve();
-      } else {
-        reject(new Error(`HTTP ${xhr.status}, ${xhr.responseText.slice(0, 120)}`));
-      }
-    };
-    xhr.onerror = () => {
-      ref.current = null;
-      reject(new Error("erreur réseau pendant l'envoi"));
-    };
-    xhr.onabort = () => {
-      ref.current = null;
-      reject(new Error("aborted"));
-    };
-
-    xhr.send(file);
-  });
-}
