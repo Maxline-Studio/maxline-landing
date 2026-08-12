@@ -601,16 +601,15 @@ input, textarea, select {
 /* ─── Plein écran maison du lecteur ─── */
 /* Le conteneur remplit l'écran ; la vidéo garde son format réel, centrée, pour
    que les sous-titres natifs restent dans le cadre de la vidéo (pas de débordement
-   sur les bandes noires d'un format vertical). */
+   sur les bandes noires d'un format vertical).
+   NB : la taille du cadre (.ml-player-inner) est calculée en pixels par le
+   lecteur, à partir de la MESURE de la scène (ResizeObserver). Le plein écran
+   n'a donc plus besoin de forcer des dimensions ici : agrandir le conteneur
+   suffit, la mesure suit. Les anciens `!important` en vh entraient en conflit
+   avec cette mesure. */
 .ml-player:fullscreen {
   width: 100vw;
   height: 100vh;
-}
-.ml-player:fullscreen .ml-player-inner {
-  width: auto !important;
-  height: 100vh !important;
-  max-width: 100vw !important;
-  max-height: 100vh !important;
 }
 /* En plein écran, sous-titres plus grands (la vidéo occupe tout l'écran).
    Réutilise le multiplicateur de taille S/M/L (--sub-scale) défini sur l'overlay. */

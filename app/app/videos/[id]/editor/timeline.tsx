@@ -1,31 +1,51 @@
 "use client";
 
 /**
- * Timeline horizontale de l'éditeur : règle temporelle (scrub), piste
- * vignettes (dégradés v1 — vraies vignettes en phase 2), forme d'onde
- * (synthétique v1, dérivée des fenêtres de cues — vrais pics worker en
- * Sprint B), piste des sous-titres (blocs sélectionnables, poignées de
- * rognage avec AIMANTATION aux bords voisins et à la tête de lecture,
- * déplacement à la souris), tête de lecture + suivi automatique.
+ * Timeline horizontale de l'éditeur.
  *
- * Perf vidéos longues : l'onde est dessinée sur un canvas « sticky » de la
- * largeur du viewport (redessiné au scroll) — jamais un canvas de la largeur
- * totale (30 min × 80 px/s dépasserait la taille max d'un canvas). Les blocs
- * sont mémoïsés + content-visibility.
+ * ─── Ce qui a changé (audit 2026-08) et POURQUOI ─────────────────────────────
+ *
+ * 1. **La tête de lecture ne passe plus par React.** Elle s'abonne à la
+ *    `PlaybackClock` et se déplace en écrivant un `transform` CSS. Avant, le
+ *    temps courant était un état React rafraîchi 60 fois par seconde : la
+ *    timeline entière se reconstruisait à chaque image.
+ *
+ * 2. **Délégation d'événements.** Les blocs ne portent plus de gestionnaires :
+ *    un seul jeu de gestionnaires vit sur la piste, et retrouve le bloc visé via
+ *    `data-idx` / `data-handle`. Avant, `cues.map()` recréait quatre fonctions
+ *    par bloc à chaque rendu, ce qui **annulait complètement le `memo()`** :
+ *    400 à 700 composants se re-rendaient 60 fois par seconde.
+ *
+ * 3. **Virtualisation.** Seuls les blocs visibles (± un écran de marge) sont
+ *    montés. Une vidéo de 30 minutes ne monte plus 2 000 nœuds DOM.
+ *
+ * 4. **Aucune lecture de layout dans la boucle chaude.** `scrollLeft` et la
+ *    largeur visible sont tenus à jour par les événements `scroll`/`resize` et
+ *    lus depuis des refs — jamais mesurés pendant l'animation (ce qui forçait
+ *    un recalcul de mise en page à chaque image).
+ *
+ * 5. **Fini le décor mensonger.** La piste « forme d'onde » était une onde
+ *    ALÉATOIRE fabriquée à partir des fenêtres de cues, et les vignettes des
+ *    dégradés de couleur : caler un sous-titre « sur l'onde » ne calait sur
+ *    rien. La piste est désormais une bande de **présence de parole**, ce
+ *    qu'elle a toujours réellement été — dessinée sobrement et nommée
+ *    honnêtement. Les vraies formes d'onde arriveront avec les pics calculés
+ *    par le worker à l'extraction audio.
  */
 import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 import { AlertTriangle, GripHorizontal } from "lucide-react";
 import { cps, CPS_WARN, MIN_CUE_DURATION, formatClock, type Cue } from "./types";
+import type { PlaybackClock } from "./playback-clock";
 
-const TRACK_THUMBS_H = 26;
-const TRACK_WAVE_H = 34;
+const TRACK_SPEECH_H = 30;
 const TRACK_SUBS_H = 62;
 const RULER_H = 22;
 
@@ -55,16 +75,37 @@ function snapTime(
   return best != null ? { t: best, snapped: best } : { t, snapped: null };
 }
 
-export function Timeline({
+/**
+ * Premier index dont la FIN dépasse `t` — borne gauche de virtualisation.
+ *
+ * Les cues sont triés par DÉBUT ; comme l'éditeur autorise les bornes souples
+ * (un cue peut chevaucher son voisin), les FINS ne sont pas strictement
+ * croissantes. On recule donc de quelques indices : la dichotomie reste juste
+ * au cue près, et la marge garantit qu'aucun bloc chevauchant n'est oublié au
+ * bord gauche. Le coût est nul.
+ */
+const OVERLAP_MARGIN = 8;
+function firstVisible(cues: Cue[], t: number): number {
+  let lo = 0;
+  let hi = cues.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[mid]!.end < t) lo = mid + 1;
+    else hi = mid;
+  }
+  return Math.max(0, lo - OVERLAP_MARGIN);
+}
+
+export const Timeline = memo(function Timeline({
   cues,
   duration,
-  currentTime,
+  clock,
   isPlaying,
   selectedIdx,
+  activeIdx,
   pxPerSec,
   snap,
   follow,
-  isAudio,
   rtl,
   onSelect,
   onScrub,
@@ -75,13 +116,16 @@ export function Timeline({
 }: {
   cues: Cue[];
   duration: number;
-  currentTime: number;
+  /** Horloge de lecture (hors React) : source du temps courant. */
+  clock: PlaybackClock;
   isPlaying: boolean;
   selectedIdx: number;
+  /** Index du cue en cours de lecture (-1 si aucun). Change quelques fois par
+   * seconde, jamais à la fréquence d'affichage. */
+  activeIdx: number;
   pxPerSec: number;
   snap: boolean;
   follow: boolean;
-  isAudio: boolean;
   rtl?: boolean;
   /** Tap/clic sur un bloc. `fromTap` = vrai geste utilisateur (peut ouvrir la feuille). */
   onSelect: (idx: number, fromTap: boolean) => void;
@@ -95,16 +139,87 @@ export function Timeline({
   onReady?: (viewportWidth: number) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const playheadRef = useRef<HTMLDivElement>(null);
+  const speechRef = useRef<HTMLCanvasElement>(null);
   const [snapGuide, setSnapGuide] = useState<number | null>(null);
 
   const innerWidth = Math.max(1, Math.ceil(duration * pxPerSec) + 80);
 
-  // ─── Zoom initial : le parent le calcule depuis la largeur visible ───
-  useEffect(() => {
-    if (scrollRef.current && onReady) onReady(scrollRef.current.clientWidth);
+  // ─── Géométrie de défilement, tenue à jour HORS boucle d'animation ───
+  // Lire `scrollLeft` / `clientWidth` pendant l'animation force un recalcul de
+  // mise en page à chaque image. On les met en cache ici, à la source.
+  const scrollLeftRef = useRef(0);
+  const viewportWRef = useRef(0);
+  const [view, setView] = useState({ left: 0, width: 0 });
+
+  useLayoutEffect(() => {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+
+    const syncView = () => {
+      viewportWRef.current = scroller.clientWidth;
+      scrollLeftRef.current = scroller.scrollLeft;
+      // L'état de virtualisation n'est rafraîchi que lorsqu'on a défilé d'au
+      // moins un tiers d'écran : quelques rendus par geste, pas un par pixel.
+      setView((prev) => {
+        const dx = Math.abs(prev.left - scroller.scrollLeft);
+        if (dx < scroller.clientWidth / 3 && prev.width === scroller.clientWidth) {
+          return prev;
+        }
+        return { left: scroller.scrollLeft, width: scroller.clientWidth };
+      });
+    };
+
+    syncView();
+    onReady?.(scroller.clientWidth);
+
+    let raf = 0;
+    const onScroll = () => {
+      scrollLeftRef.current = scroller.scrollLeft;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(syncView);
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    const ro = new ResizeObserver(syncView);
+    ro.observe(scroller);
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      ro.disconnect();
+      cancelAnimationFrame(raf);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ─── Tête de lecture + suivi : abonnement à l'horloge, ZÉRO rendu React ───
+  const followRef = useRef(follow);
+  followRef.current = follow;
+  const playingRef = useRef(isPlaying);
+  playingRef.current = isPlaying;
+
+  useEffect(() => {
+    const head = playheadRef.current;
+    if (!head) return;
+
+    const apply = (t: number) => {
+      const x = t * pxPerSec;
+      head.style.transform = `translate3d(${x}px,0,0)`;
+
+      // Suivi : on ne recentre que si la tête sort de la zone de confort, et on
+      // ne lit AUCUNE dimension (tout vient des refs tenues à jour au scroll).
+      if (!followRef.current || !playingRef.current) return;
+      const left = scrollLeftRef.current;
+      const vw = viewportWRef.current;
+      if (vw > 0 && (x < left + vw * 0.15 || x > left + vw * 0.75)) {
+        const target = Math.max(0, x - vw * 0.35);
+        scrollLeftRef.current = target;
+        const scroller = scrollRef.current;
+        if (scroller) scroller.scrollLeft = target;
+      }
+    };
+
+    apply(clock.time);
+    return clock.subscribe(apply);
+  }, [clock, pxPerSec]);
 
   // ─── Règle : graduations adaptatives (≤ ~400 ticks quel que soit le zoom) ───
   const ticks = useMemo(() => {
@@ -119,32 +234,17 @@ export function Timeline({
     return out;
   }, [duration, pxPerSec]);
 
-  // ─── Vignettes (v1 : cellules dégradées déterministes ; phase 2 : sprite) ───
-  const thumbCells = useMemo(() => {
-    if (isAudio || duration <= 0) return [];
-    const cellDur = Math.max(2, duration / 240);
-    const hues = [215, 205, 30, 25, 220, 35, 210, 20, 230, 28];
-    const cells: { left: number; width: number; bg: string }[] = [];
-    for (let i = 0; i * cellDur < duration; i++) {
-      const h = hues[i % hues.length]!;
-      const l = 24 + (i % 4) * 5;
-      cells.push({
-        left: i * cellDur * pxPerSec,
-        width: cellDur * pxPerSec - 2,
-        bg: `linear-gradient(150deg, hsl(${h},28%,${l}%), hsl(${h + 18},26%,${l - 9}%))`,
-      });
-    }
-    return cells;
-  }, [isAudio, duration, pxPerSec]);
-
-  // ─── Forme d'onde : canvas sticky redessiné selon le scroll ───
-  const drawWave = useCallback(() => {
-    const canvas = canvasRef.current;
+  // ─── Piste « parole » : bande HONNÊTE de présence de parole ───
+  // Ce n'est pas une forme d'onde (on n'a pas encore les pics audio) : c'est
+  // exactement l'information dont on dispose — où quelqu'un parle. On la dessine
+  // comme telle, sans amplitude inventée.
+  const drawSpeech = useCallback(() => {
+    const canvas = speechRef.current;
     const scroller = scrollRef.current;
     if (!canvas || !scroller || duration <= 0) return;
     const dpr = window.devicePixelRatio || 1;
     const w = scroller.clientWidth;
-    const h = TRACK_WAVE_H;
+    const h = TRACK_SPEECH_H;
     if (canvas.width !== Math.round(w * dpr)) {
       canvas.width = Math.round(w * dpr);
       canvas.height = Math.round(h * dpr);
@@ -155,39 +255,27 @@ export function Timeline({
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = "#1D3557"; // encre — lisible sur ivoire, clin d'œil Atelier
-    ctx.globalAlpha = 0.72;
-    const barW = 2;
-    const gap = 1;
-    const mid = h / 2;
-    const scrollLeft = scroller.scrollLeft;
-    // Onde SYNTHÉTIQUE : énergie dans les fenêtres de cues (≈ la parole), quasi
-    // silence ailleurs. Remplacée par les vrais pics worker au Sprint B.
-    for (let x = 0; x < w; x += barW + gap) {
-      const t = (scrollLeft + x) / pxPerSec;
-      if (t > duration) break;
-      let inSpeech = false;
-      // cues triés par temps → sortie anticipée
-      for (let i = 0; i < cues.length; i++) {
-        const c = cues[i]!;
-        if (c.start - 0.08 > t) break;
-        if (t <= c.end + 0.08) {
-          inSpeech = true;
-          break;
-        }
-      }
-      const seed = Math.sin(t * 12.9898) * 43758.5453;
-      const r = seed - Math.floor(seed);
-      const env = inSpeech ? 0.3 + 0.58 * Math.abs(Math.sin(t * 3.1 + r * 2)) : 0.05;
-      const amp = Math.max(1, env * (0.55 + 0.45 * r) * (h - 6) / 2);
-      ctx.fillRect(x, mid - amp, barW, amp * 2);
+
+    const left = scroller.scrollLeft;
+    const t0 = left / pxPerSec;
+    const t1 = (left + w) / pxPerSec;
+    ctx.fillStyle = "#1D3557"; // encre
+    ctx.globalAlpha = 0.2;
+    const barTop = 6;
+    const barH = h - 12;
+    for (let i = firstVisible(cues, t0); i < cues.length; i++) {
+      const c = cues[i]!;
+      if (c.start > t1) break;
+      const x = c.start * pxPerSec - left;
+      const cw = Math.max(2, (c.end - c.start) * pxPerSec);
+      ctx.fillRect(x, barTop, cw, barH);
     }
     ctx.globalAlpha = 1;
   }, [duration, pxPerSec, cues]);
 
   useEffect(() => {
-    drawWave();
-  }, [drawWave]);
+    drawSpeech();
+  }, [drawSpeech, view]);
 
   useEffect(() => {
     const scroller = scrollRef.current;
@@ -195,29 +283,17 @@ export function Timeline({
     let raf = 0;
     const onScroll = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(drawWave);
+      raf = requestAnimationFrame(drawSpeech);
     };
     scroller.addEventListener("scroll", onScroll, { passive: true });
-    const ro = new ResizeObserver(() => drawWave());
+    const ro = new ResizeObserver(() => drawSpeech());
     ro.observe(scroller);
     return () => {
       scroller.removeEventListener("scroll", onScroll);
       ro.disconnect();
       cancelAnimationFrame(raf);
     };
-  }, [drawWave]);
-
-  // ─── Suivi de la tête de lecture ───
-  useEffect(() => {
-    if (!follow || !isPlaying) return;
-    const scroller = scrollRef.current;
-    if (!scroller) return;
-    const x = currentTime * pxPerSec;
-    const vw = scroller.clientWidth;
-    if (x < scroller.scrollLeft + vw * 0.15 || x > scroller.scrollLeft + vw * 0.75) {
-      scroller.scrollLeft = Math.max(0, x - vw * 0.35);
-    }
-  }, [currentTime, isPlaying, follow, pxPerSec]);
+  }, [drawSpeech]);
 
   // ─── Bloc sélectionné visible (hors lecture) ───
   useEffect(() => {
@@ -258,7 +334,7 @@ export function Timeline({
     scrubbing.current = false;
   };
 
-  // ─── Rognage (poignées) + déplacement (souris) avec aimantation ───
+  // ─── Rognage / déplacement : gestionnaires DÉLÉGUÉS sur la piste ───
   type Drag = {
     idx: number;
     mode: "trim-l" | "trim-r" | "move";
@@ -270,23 +346,37 @@ export function Timeline({
   };
   const dragRef = useRef<Drag | null>(null);
   const suppressClickRef = useRef(false);
+  const cuesRef = useRef(cues);
+  cuesRef.current = cues;
 
-  const startDrag = (
-    e: React.PointerEvent,
-    idx: number,
-    mode: Drag["mode"],
-    allowTouch = false,
-  ) => {
-    // Déplacement du bloc entier au DOIGT : réservé à la poignée centrale du bloc
-    // actif (allowTouch), sinon un glissement sur le corps entrerait en conflit
-    // avec le scroll de la timeline. À la souris, tout le corps déplace.
-    if (mode === "move" && e.pointerType !== "mouse" && !allowTouch) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const c = cues[idx];
+  /** Retrouve le bloc et la poignée visés par un événement, via data-*. */
+  const hit = (
+    e: React.PointerEvent | React.MouseEvent,
+  ): { idx: number; handle: string | null } | null => {
+    const target = e.target as HTMLElement | null;
+    const block = target?.closest<HTMLElement>("[data-idx]");
+    if (!block) return null;
+    const idx = Number(block.dataset.idx);
+    if (!Number.isInteger(idx)) return null;
+    const handleEl = target?.closest<HTMLElement>("[data-handle]");
+    return { idx, handle: handleEl?.dataset.handle ?? null };
+  };
+
+  const onTrackPointerDown = (e: React.PointerEvent) => {
+    const h = hit(e);
+    if (!h) return;
+    const mode: Drag["mode"] =
+      h.handle === "l" ? "trim-l" : h.handle === "r" ? "trim-r" : "move";
+    // Déplacement du bloc entier au DOIGT : réservé à la poignée centrale du
+    // bloc actif, sinon un glissement sur le corps entrerait en conflit avec le
+    // défilement de la timeline. À la souris, tout le corps déplace.
+    if (mode === "move" && e.pointerType !== "mouse" && h.handle !== "grip") return;
+
+    const c = cuesRef.current[h.idx];
     if (!c) return;
+    e.preventDefault();
     dragRef.current = {
-      idx,
+      idx: h.idx,
       mode,
       pointerId: e.pointerId,
       moved: false,
@@ -294,8 +384,16 @@ export function Timeline({
       origStart: c.start,
       origEnd: c.end,
     };
-    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-    if (idx !== selectedIdx) onSelect(idx, false);
+    // Capture sur la PISTE (et non sur le bloc) : le glissement survit à la
+    // sortie du pointeur hors du bloc, et au remontage du bloc pendant l'édition.
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (h.idx !== selectedIdx) onSelect(h.idx, false);
+  };
+
+  const onTrackClick = (e: React.MouseEvent) => {
+    if (suppressClickRef.current) return;
+    const h = hit(e);
+    if (h) onSelect(h.idx, true);
   };
 
   const onDragMove = (e: React.PointerEvent) => {
@@ -309,15 +407,15 @@ export function Timeline({
     }
     // Bornes SOUPLES : on ne bloque plus aux voisins → un cue peut GLISSER
     // devant/derrière un autre (réordonné au relâcher). Seule limite : [0, durée].
-    // L'aimantation reste active (accroche aux bords voisins + tête de lecture)
-    // mais n'empêche jamais de passer.
+    const list = cuesRef.current;
+    const playhead = clock.time;
     const threshold = (snap ? 8 : 0) / pxPerSec;
     if (d.mode === "move") {
       const dt = (e.clientX - d.startX) / pxPerSec;
       const len = d.origEnd - d.origStart;
       let ns = d.origStart + dt;
-      const rs = snapTime(ns, d.idx, cues, currentTime, threshold);
-      const re = snapTime(ns + len, d.idx, cues, currentTime, threshold);
+      const rs = snapTime(ns, d.idx, list, playhead, threshold);
+      const re = snapTime(ns + len, d.idx, list, playhead, threshold);
       let guide: number | null = null;
       if (rs.snapped != null) {
         ns = rs.t;
@@ -331,10 +429,11 @@ export function Timeline({
       onTiming(d.idx, ns, ns + len);
     } else {
       const t0 = timeFromEvent(e.clientX);
-      const r = snapTime(t0, d.idx, cues, currentTime, threshold);
+      const r = snapTime(t0, d.idx, list, playhead, threshold);
       const t = r.t;
       setSnapGuide(r.snapped);
-      const c = cues[d.idx]!;
+      const c = list[d.idx];
+      if (!c) return;
       if (d.mode === "trim-l") {
         const ns = Math.max(0, Math.min(c.end - MIN_CUE_DURATION, t));
         onTiming(d.idx, ns, c.end);
@@ -357,8 +456,21 @@ export function Timeline({
     }, 0);
   };
 
-  // En mode « move », l'aimantation n'est active que si snap est vrai.
-  const snapForMove = snap;
+  // ─── Virtualisation : uniquement les blocs visibles ± un écran de marge ───
+  const { from, to } = useMemo(() => {
+    const vw = view.width || 1200;
+    const overscan = vw;
+    const t0 = Math.max(0, (view.left - overscan) / pxPerSec);
+    const t1 = (view.left + vw + overscan) / pxPerSec;
+    const start = firstVisible(cues, t0);
+    let end = start;
+    while (end < cues.length && cues[end]!.start <= t1) end++;
+    // On garde toujours le bloc sélectionné monté (l'inspecteur s'y réfère).
+    return {
+      from: Math.min(start, Math.max(0, selectedIdx)),
+      to: Math.max(end, Math.min(cues.length, selectedIdx + 1)),
+    };
+  }, [cues, view, pxPerSec, selectedIdx]);
 
   return (
     <div
@@ -381,10 +493,7 @@ export function Timeline({
             <div key={tick.t}>
               <div
                 className="absolute bottom-0 w-px bg-ivory-300"
-                style={{
-                  left: tick.t * pxPerSec,
-                  height: tick.major ? 10 : 6,
-                }}
+                style={{ left: tick.t * pxPerSec, height: tick.major ? 10 : 6 }}
               />
               {tick.label && (
                 <span
@@ -398,70 +507,52 @@ export function Timeline({
           ))}
         </div>
 
-        {/* Vignettes (clic = se déplacer) */}
-        {!isAudio && (
-          <div
-            className="relative overflow-hidden border-b border-ivory-200"
-            style={{ height: TRACK_THUMBS_H }}
-            onClick={(e) => onScrub(timeFromEvent(e.clientX))}
-          >
-            {thumbCells.map((cell, i) => (
-              <div
-                key={i}
-                className="absolute top-[3px] bottom-[3px] rounded-[2px] opacity-90"
-                style={{ left: cell.left, width: cell.width, background: cell.bg }}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Forme d'onde — canvas sticky (largeur viewport), redessiné au scroll */}
+        {/* Présence de parole — canvas « sticky » (largeur du viewport) */}
         <div
           className="relative border-b border-ivory-200"
-          style={{ height: TRACK_WAVE_H }}
+          style={{ height: TRACK_SPEECH_H }}
           onClick={(e) => onScrub(timeFromEvent(e.clientX))}
         >
           <canvas
-            ref={canvasRef}
+            ref={speechRef}
             className="sticky left-0 block"
-            aria-label="Forme d'onde audio"
+            aria-label="Présence de parole"
           />
         </div>
 
-        {/* Sous-titres */}
+        {/* Sous-titres — gestionnaires DÉLÉGUÉS (aucun handler par bloc) */}
         <div
           className="relative"
           style={{ height: TRACK_SUBS_H }}
+          onPointerDown={onTrackPointerDown}
           onPointerMove={onDragMove}
           onPointerUp={onDragEnd}
           onPointerCancel={onDragEnd}
+          onClick={onTrackClick}
         >
-          {cues.map((c, i) => (
-            <CueBlock
-              key={c.id}
-              cue={c}
-              index={i}
-              pxPerSec={pxPerSec}
-              active={i === selectedIdx}
-              isCurrent={currentTime >= c.start && currentTime < c.end}
-              rtl={rtl}
-              onTap={() => {
-                if (suppressClickRef.current) return;
-                onSelect(i, true);
-              }}
-              onBodyDown={(e) => startDrag(e, i, "move")}
-              onGripDown={(e) => startDrag(e, i, "move", true)}
-              onHandleDown={(e, side) =>
-                startDrag(e, i, side === "l" ? "trim-l" : "trim-r")
-              }
-            />
-          ))}
+          {cues.slice(from, to).map((c, k) => {
+            const i = from + k;
+            return (
+              <CueBlock
+                key={c.id}
+                index={i}
+                start={c.start}
+                end={c.end}
+                text={c.text}
+                pxPerSec={pxPerSec}
+                active={i === selectedIdx}
+                isCurrent={i === activeIdx}
+                rtl={rtl}
+              />
+            );
+          })}
         </div>
 
-        {/* Tête de lecture */}
+        {/* Tête de lecture — déplacée en DOM direct par l'horloge */}
         <div
-          className="absolute top-0 bottom-0 z-10 pointer-events-none"
-          style={{ left: currentTime * pxPerSec }}
+          ref={playheadRef}
+          data-playhead
+          className="absolute top-0 bottom-0 left-0 z-10 pointer-events-none will-change-transform"
         >
           <div className="absolute top-0 bottom-0 -left-px w-0.5 bg-rouge-500" />
           <div
@@ -475,7 +566,7 @@ export function Timeline({
         </div>
 
         {/* Guide d'aimantation */}
-        {snapForMove && snapGuide != null && (
+        {snap && snapGuide != null && (
           <div
             className="absolute top-0 bottom-0 z-[9] w-0 border-l border-dashed border-encre-500 pointer-events-none"
             style={{ left: snapGuide * pxPerSec }}
@@ -484,60 +575,60 @@ export function Timeline({
       </div>
     </div>
   );
-}
+});
 
 // ─────────────────────────────────────────────────────────────────
-//  Bloc de sous-titre (mémoïsé : seuls les blocs affectés se re-rendent)
-// ─────────────────────────────────────────────────────────────────
+/**
+ * Bloc de sous-titre. **Aucun gestionnaire d'événement, que des props
+ * primitives** : c'est ce qui rend `memo()` réellement efficace. Le bloc ne se
+ * re-rend que si son propre texte, ses bornes, le zoom ou son état changent.
+ * L'interaction passe par la délégation (`data-idx` / `data-handle`).
+ */
 const CueBlock = memo(function CueBlock({
-  cue,
-  index: _index,
+  index,
+  start,
+  end,
+  text,
   pxPerSec,
   active,
   isCurrent,
   rtl,
-  onTap,
-  onBodyDown,
-  onGripDown,
-  onHandleDown,
 }: {
-  cue: Cue;
   index: number;
+  start: number;
+  end: number;
+  text: string;
   pxPerSec: number;
   active: boolean;
   isCurrent: boolean;
   rtl?: boolean;
-  onTap: () => void;
-  onBodyDown: (e: React.PointerEvent) => void;
-  onGripDown: (e: React.PointerEvent) => void;
-  onHandleDown: (e: React.PointerEvent, side: "l" | "r") => void;
 }) {
-  const speed = cps(cue);
+  const speed = cps({ start, end, text });
   const fast = speed > CPS_WARN;
   return (
     <div
-      className={`absolute top-[7px] bottom-[7px] flex items-stretch overflow-hidden rounded border-[1.5px] cursor-pointer transition-shadow ${
+      data-idx={index}
+      className={`absolute top-[7px] bottom-[7px] flex items-stretch overflow-hidden rounded border-[1.5px] cursor-pointer ${
         active
           ? "border-rouge-500 bg-ivory-50 shadow-[0_2px_10px_rgba(200,57,47,0.22)] z-[2]"
-          : "border-ivory-300 bg-ivory-50/90 hover:border-ink-400"
+          : isCurrent
+            ? "border-ink-400 bg-ivory-50"
+            : "border-ivory-300 bg-ivory-50/90 hover:border-ink-400"
       }`}
       style={{
-        left: cue.start * pxPerSec,
-        width: Math.max(22, (cue.end - cue.start) * pxPerSec),
-        contentVisibility: "auto",
+        left: start * pxPerSec,
+        width: Math.max(22, (end - start) * pxPerSec),
       }}
-      onClick={onTap}
-      onPointerDown={onBodyDown}
     >
       <div
+        data-handle="l"
         className={`w-3.5 flex-shrink-0 flex items-center justify-center cursor-col-resize ${
           active ? "text-rouge-500" : "text-ivory-300"
         }`}
         style={{ touchAction: "none" }}
-        onPointerDown={(e) => onHandleDown(e, "l")}
         role="slider"
         aria-label="Début du sous-titre"
-        aria-valuenow={Math.round(cue.start * 100) / 100}
+        aria-valuenow={Math.round(start * 100) / 100}
         tabIndex={-1}
       >
         <span className="h-1/2 w-[3px] rounded-full bg-current" />
@@ -545,31 +636,26 @@ const CueBlock = memo(function CueBlock({
       <div
         dir={rtl ? "rtl" : undefined}
         className={`flex-1 min-w-0 self-center px-0.5 text-[10.5px] leading-[1.25] line-clamp-2 pointer-events-none ${
-          isCurrent ? "text-ink-900" : "text-ink-600"
+          isCurrent ? "text-ink-900 font-medium" : "text-ink-600"
         }`}
       >
-        {cue.text || "…"}
+        {text || "…"}
       </div>
       {/* Poignée de DÉPLACEMENT (bloc actif) : permet de glisser le sous-titre au
           doigt (le corps du bloc, lui, laisse défiler la timeline au toucher). */}
       {active && (
-        <button
-          type="button"
-          aria-label="Déplacer ce sous-titre"
-          onPointerDown={(e) => {
-            e.stopPropagation();
-            onGripDown(e);
-          }}
-          onClick={(e) => e.stopPropagation()}
+        <span
+          data-handle="grip"
+          aria-hidden
           style={{ touchAction: "none" }}
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[3] inline-flex items-center justify-center h-6 w-8 rounded-full bg-rouge-500/90 text-ivory-50 shadow-sm cursor-grab active:cursor-grabbing"
         >
           <GripHorizontal className="h-3.5 w-3.5" aria-hidden />
-        </button>
+        </span>
       )}
       {fast && (
         <span
-          className="absolute top-0.5 right-4 inline-flex items-center gap-0.5 font-mono text-[8px] text-[#A87B00]"
+          className="absolute top-0.5 right-4 inline-flex items-center gap-0.5 font-mono text-[8px] text-[#A87B00] pointer-events-none"
           title={`${speed.toFixed(0)} caractères/seconde : difficile à lire`}
         >
           <AlertTriangle className="h-2.5 w-2.5" aria-hidden />
@@ -577,14 +663,14 @@ const CueBlock = memo(function CueBlock({
         </span>
       )}
       <div
+        data-handle="r"
         className={`w-3.5 flex-shrink-0 flex items-center justify-center cursor-col-resize ${
           active ? "text-rouge-500" : "text-ivory-300"
         }`}
         style={{ touchAction: "none" }}
-        onPointerDown={(e) => onHandleDown(e, "r")}
         role="slider"
         aria-label="Fin du sous-titre"
-        aria-valuenow={Math.round(cue.end * 100) / 100}
+        aria-valuenow={Math.round(end * 100) / 100}
         tabIndex={-1}
       >
         <span className="h-1/2 w-[3px] rounded-full bg-current" />

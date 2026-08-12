@@ -43,6 +43,11 @@ import {
   cancelVideoUpload,
 } from "@/lib/video-actions";
 import { LANG_OPTIONS, langLabel, type Lang } from "@/lib/langs";
+import {
+  CUT_PROFILE_OPTIONS,
+  DEFAULT_CUT_PROFILE,
+  type CutProfileId,
+} from "@/lib/cut-profiles";
 
 type Phase = "idle" | "validating" | "configure" | "finalizing" | "done";
 
@@ -67,6 +72,9 @@ export function UploadClient({
   const [sourceLang, setSourceLang] = useState<Lang | "auto">("auto");
   // Noms propres à respecter (marques/prénoms/noms/URLs) — corrige l'ASR.
   const [importantTerms, setImportantTerms] = useState("");
+  // Style de découpe. « Équilibré » par défaut : des groupes de sens complets,
+  // au lieu de l'ancien plafond dur de six mots qui hachait les phrases.
+  const [cutProfile, setCutProfile] = useState<CutProfileId>(DEFAULT_CUT_PROFILE);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [phase, setPhase] = useState<Phase>("idle");
   const [submitting, setSubmitting] = useState(false);
@@ -219,6 +227,7 @@ export function UploadClient({
       sourceLang,
       targetLang,
       importantTerms,
+      cutProfile,
     });
     if (!res.ok) {
       setError(res.error);
@@ -250,6 +259,7 @@ export function UploadClient({
     sourceLang,
     targetLang,
     importantTerms,
+    cutProfile,
     router,
   ]);
 
@@ -463,6 +473,46 @@ export function UploadClient({
                     Marques, prénoms, noms, pseudos, sites… On les écrit
                     exactement, et on ne les traduit pas.
                   </p>
+                </div>
+
+                {/* Style de découpe des sous-titres */}
+                <div className="mt-5">
+                  <span className="block font-mono text-[10px] uppercase tracking-widest text-ink-500 mb-2">
+                    Style de découpe
+                  </span>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {CUT_PROFILE_OPTIONS.map((o) => {
+                      const active = cutProfile === o.id;
+                      return (
+                        <button
+                          key={o.id}
+                          type="button"
+                          onClick={() => setCutProfile(o.id)}
+                          aria-pressed={active}
+                          className={`text-left p-3 rounded-sm border transition-colors ${
+                            active
+                              ? "border-ink-900 bg-ivory-100"
+                              : "border-ivory-300 hover:border-ink-400"
+                          }`}
+                        >
+                          <span className="block text-sm font-semibold text-ink-900">
+                            {o.label}
+                            {o.id === DEFAULT_CUT_PROFILE && (
+                              <span className="ml-1.5 font-mono text-[9px] uppercase tracking-wide text-ink-400">
+                                défaut
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-1.5 block whitespace-pre-line rounded-sm bg-ink-900 px-2 py-1.5 text-center text-[10px] leading-snug text-ivory-50">
+                            {o.sample}
+                          </span>
+                          <span className="mt-1.5 block text-[11px] leading-snug text-ink-500">
+                            {o.hint}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Avancé, préciser la langue parlée */}

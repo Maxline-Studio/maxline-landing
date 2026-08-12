@@ -101,6 +101,8 @@ export type Database = {
           source_lang_auto: boolean;
           target_same_as_source: boolean;
           important_terms: string | null;
+          /** Style de découpe des sous-titres (migration 031). */
+          cut_profile: string;
           uploaded_at: string;
           user_edited: boolean;
           user_id: string;
@@ -136,6 +138,7 @@ export type Database = {
           source_lang_auto?: boolean;
           target_same_as_source?: boolean;
           important_terms?: string | null;
+          cut_profile?: string;
           uploaded_at?: string;
           user_edited?: boolean;
           user_id: string;

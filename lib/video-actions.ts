@@ -12,6 +12,8 @@ import {
 } from "@/lib/storage";
 import { presignPut, presignGet, deleteObjects } from "@/lib/r2";
 import { isLang, langLabel, type Lang } from "@/lib/langs";
+import { isCutProfile, DEFAULT_CUT_PROFILE } from "@/lib/cut-profiles";
+import { findByOverlap } from "@/lib/segment-match";
 import type { VideoStatus, Segment } from "@/lib/video-types";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import { callClaude, isAnthropicConfigured } from "@/lib/anthropic";
@@ -167,6 +169,8 @@ export async function finalizeVideoUpload(
     targetLang?: Lang | "same";
     /** Noms propres à respecter (marques/prénoms/noms/URLs). */
     importantTerms?: string;
+    /** Style de découpe des sous-titres (défaut : « équilibré »). */
+    cutProfile?: string;
   },
 ): Promise<FinalizeUploadResult> {
   const supabase = await createClient();
@@ -244,6 +248,9 @@ export async function finalizeVideoUpload(
       target_same_as_source: targetSameAsSource,
       important_terms:
         (config.importantTerms || "").trim().slice(0, 600) || null,
+      cut_profile: isCutProfile(config.cutProfile)
+        ? config.cutProfile
+        : DEFAULT_CUT_PROFILE,
       storage_key_source: key,
     })
     .eq("id", videoId)
@@ -651,7 +658,13 @@ export async function regenerateLine(
   const isTranslation = srcLang !== tgtLang;
 
   // Référence : la ligne source (mode traduction) ou la ligne cible actuelle.
-  const sourceText = sourceSegs[index]?.text ?? "";
+  //
+  // ⚠️ La correspondance source ↔ cible se fait par le TEMPS, plus par l'index.
+  // L'index était faux dès la première édition : ajouter, diviser ou fusionner
+  // une ligne décale toute la suite, et on régénérait alors à partir d'une
+  // phrase source qui n'avait rien à voir. Depuis la refonte du pipeline, les
+  // deux langues n'ont de toute façon plus forcément le même nombre de lignes.
+  const sourceText = findByOverlap(sourceSegs, targetSegs[index])?.text ?? "";
   const reference = isTranslation ? sourceText || currentTarget : currentTarget;
   if (!reference) return { ok: false, error: "Ligne vide." };
 

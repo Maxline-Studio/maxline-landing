@@ -82,6 +82,7 @@ import {
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 import { prorateWordTimings } from "@/lib/karaoke";
+import { textByOverlap } from "@/lib/segment-match";
 import {
   withIds,
   stripIds,
@@ -91,6 +92,8 @@ import {
   type Cue,
 } from "./types";
 import { useHistory } from "./use-history";
+import { planInsertion } from "./cue-ops";
+import { PlaybackClock, findActiveIndex } from "./playback-clock";
 import { Timeline } from "./timeline";
 import { Inspector, type InspectorTab } from "./inspector";
 import { ActionBar, type ActionBarAction } from "./action-bar";
@@ -187,8 +190,13 @@ export function EditorClient({
   }, [isProcessing, poll]);
 
   // ─── Lecture / temps ───
+  // Le temps de lecture NE PASSE PAS par l'état React : il vit dans une horloge
+  // à laquelle le lecteur publie et à laquelle la timeline s'abonne. Le seul
+  // état rafraîchi en lecture est l'index du sous-titre courant, qui change
+  // quelques fois par seconde. Voir `playback-clock.ts` pour le pourquoi.
   const playerRef = useRef<SubtitlePlayerHandle>(null);
-  const [currentTime, setCurrentTime] = useState(0);
+  const clock = useMemo(() => new PlaybackClock(), []);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
 
   // ─── Sauvegarde ───
@@ -455,11 +463,20 @@ export function EditorClient({
     if (!isDesktop()) setSheetOpen(true);
   }, []);
 
-  const activeIndex = useMemo(
-    () =>
-      segments.findIndex((s) => currentTime >= s.start && currentTime < s.end),
-    [segments, currentTime],
-  );
+  // Sous-titre courant : recalculé à chaque image par l'horloge, mais l'état
+  // React n'est touché QUE lorsque l'index change réellement.
+  const activeIndexRef = useRef(-1);
+  useEffect(() => {
+    const sync = (t: number) => {
+      const next = findActiveIndex(segmentsRef.current, t, activeIndexRef.current);
+      if (next !== activeIndexRef.current) {
+        activeIndexRef.current = next;
+        setActiveIndex(next);
+      }
+    };
+    sync(clock.time); // recale après une édition qui déplace les cues
+    return clock.subscribe(sync);
+  }, [clock, segments]);
 
   // ─── Opérations d'édition ───
   const commitHistory = useCallback(() => {
@@ -563,31 +580,39 @@ export function EditorClient({
     [applyEdit, reproWords, resortAndRemap],
   );
 
-  const addLineAfter = useCallback(
-    (idx: number) => {
-      const list = segmentsRef.current;
-      const cur = list[idx];
-      const newStart = cur ? cur.end : currentTime;
-      if (newStart >= duration - 0.3) return;
-      commitHistory();
-      const next = list[idx + 1];
-      const newEnd = next ? next.start : Math.min(newStart + 2, duration);
-      const newSeg: Cue = {
-        id: nextCueId(),
-        start: newStart,
-        end: Math.max(newEnd, newStart + 0.5),
-        text: "",
-      };
-      applyEdit((prev) => [
-        ...prev.slice(0, idx + 1),
-        newSeg,
-        ...prev.slice(idx + 1),
-      ]);
-      setSelectedIdx(idx + 1);
-      openSheet("selection");
-    },
-    [applyEdit, commitHistory, currentTime, duration, openSheet],
-  );
+  /**
+   * Ajoute une ligne **à la tête de lecture** — là où l'utilisateur regarde.
+   *
+   * L'ancienne version insérait après le cue SÉLECTIONNÉ, or `selectedIdx` vaut
+   * 0 tant qu'on n'a rien cliqué : on regardait la vidéo à 3 min 20 s, on
+   * cliquait « Ajouter », et la ligne apparaissait à 2 secondes. C'est ce
+   * comportement qui était remonté comme « le sous-titre ne s'ajoute pas sur la
+   * timeline mais beaucoup plus loin ».
+   *
+   * Règles : on part de la tête de lecture ; si elle tombe DANS un sous-titre,
+   * on démarre juste après lui ; on s'arrête au sous-titre suivant (ou à la fin
+   * de la vidéo). En toute fin de vidéo, on recule pour faire tenir la ligne au
+   * lieu d'échouer en silence comme avant.
+   */
+  const addLineAtPlayhead = useCallback(() => {
+    const plan = planInsertion(segmentsRef.current, clock.time, duration);
+    if (!plan) return;
+
+    commitHistory();
+    const newSeg: Cue = {
+      id: nextCueId(),
+      start: plan.start,
+      end: plan.end,
+      text: "",
+    };
+    applyEdit((prev) => [
+      ...prev.slice(0, plan.index),
+      newSeg,
+      ...prev.slice(plan.index),
+    ]);
+    setSelectedIdx(plan.index);
+    openSheet("selection");
+  }, [applyEdit, clock, commitHistory, duration, openSheet]);
 
   const deleteLine = useCallback(
     (idx: number) => {
@@ -628,10 +653,10 @@ export function EditorClient({
     if (!c) return;
     const words = c.text.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
     if (words.length < 2) return;
+    const now = clock.time;
     const inside =
-      currentTime > c.start + MIN_CUE_DURATION &&
-      currentTime < c.end - MIN_CUE_DURATION;
-    const t = inside ? currentTime : (c.start + c.end) / 2;
+      now > c.start + MIN_CUE_DURATION && now < c.end - MIN_CUE_DURATION;
+    const t = inside ? now : (c.start + c.end) / 2;
     const ratio = (t - c.start) / (c.end - c.start);
     const cut = Math.min(
       words.length - 1,
@@ -651,7 +676,7 @@ export function EditorClient({
       };
       return [...prev.slice(0, idx), a, b, ...prev.slice(idx + 2)];
     });
-  }, [applyEdit, commitHistory, currentTime, selectedIdx]);
+  }, [applyEdit, clock, commitHistory, selectedIdx]);
 
   const regenerate = useCallback(
     async (idx: number) => {
@@ -851,29 +876,77 @@ export function EditorClient({
         deleteLine(selectedIdx);
       } else if (e.key === "ArrowRight") {
         const step = e.shiftKey ? 0.1 : 1;
-        playerRef.current?.seekTo(Math.min(duration, currentTime + step), {
+        playerRef.current?.seekTo(Math.min(duration, clock.time + step), {
           play: false,
         });
       } else if (e.key === "ArrowLeft") {
         const step = e.shiftKey ? 0.1 : 1;
-        playerRef.current?.seekTo(Math.max(0, currentTime - step), {
+        playerRef.current?.seekTo(Math.max(0, clock.time - step), {
           play: false,
         });
+      } else if (e.key === "a" || e.key === "A") {
+        addLineAtPlayhead();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [currentTime, deleteLine, duration, redo, selectedIdx, splitSelected, undo]);
+  }, [
+    addLineAtPlayhead,
+    clock,
+    deleteLine,
+    duration,
+    redo,
+    selectedIdx,
+    splitSelected,
+    undo,
+  ]);
 
   // ─── Barre d'actions mobile ───
   const onAction = (action: ActionBarAction) => {
     if (action === "text") openSheet("selection");
     else if (action === "style") openSheet("style");
     else if (action === "split") splitSelected();
-    else if (action === "add") addLineAfter(selectedIdx);
+    else if (action === "add") addLineAtPlayhead();
     else if (action === "delete") deleteLine(selectedIdx);
     else if (action === "export") openSheet("export");
   };
+
+  // ─── Ponts vers la timeline ───
+  // La timeline est mémoïsée : ses callbacks DOIVENT être stables, sinon elle
+  // se re-rend à chaque rendu du parent et on perd tout le bénéfice.
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
+  const onTimelineSelect = useCallback(
+    (idx: number, fromTap: boolean) => {
+      setSelectedIdx(idx);
+      if (!fromTap) return;
+      // Aligne l'aperçu sur le cue sélectionné (sauf en pleine lecture, pour ne
+      // pas interrompre le visionnage). `seekTo` publie déjà dans l'horloge.
+      const c = segmentsRef.current[idx];
+      if (c && !isPlayingRef.current) {
+        playerRef.current?.seekTo(c.start, { play: false });
+      }
+      if (!isDesktop()) openSheet("selection");
+      else setTab("selection");
+    },
+    [openSheet],
+  );
+
+  const onTimelineScrub = useCallback((t: number) => {
+    playerRef.current?.seekTo(t, { play: false });
+  }, []);
+
+  const onTimelineReady = useCallback(
+    (width: number) => {
+      if (zoomInitRef.current) return;
+      zoomInitRef.current = true;
+      // Zoom initial : ~20 s visibles (borné), toute la vidéo si courte.
+      const fit = width / Math.min(Math.max(duration, 5), 20);
+      setPxPerSec(Math.max(6, Math.min(120, fit)));
+    },
+    [duration],
+  );
 
   // ─── Aperçu (données du lecteur) ───
   const activeText = activeIndex >= 0 ? segments[activeIndex]?.text : "";
@@ -1072,7 +1145,10 @@ export function EditorClient({
       {/* Rangée centrale : aperçu (+ inspecteur docké en desktop) */}
       <div className="flex-1 min-h-0 flex">
         <div className="flex-1 min-w-0 min-h-0 bg-ink-900 flex items-center justify-center px-2 py-2 sm:px-4">
-          <div className="w-full max-w-[1100px]">
+          {/* Hauteur DÉFINIE (h-full) : le lecteur mesure cette boîte pour
+              calculer son cadre. Sans hauteur définie, il retomberait sur une
+              hauteur de contenu et déborderait — le défaut d'origine. */}
+          <div className="w-full h-full min-h-0 max-w-[1100px]">
             <SubtitlePlayer
               ref={playerRef}
               videoUrl={videoUrl}
@@ -1083,8 +1159,7 @@ export function EditorClient({
               multiSpeaker={multiSpeaker}
               rtl={targetRtl}
               subtitleStyle={subtitleStyle}
-              smoothTime
-              onTimeUpdate={setCurrentTime}
+              clock={clock}
               onPlayingChange={setIsPlaying}
               langs={LANG_OPTIONS.map((o) => ({
                 id: o.id,
@@ -1107,7 +1182,10 @@ export function EditorClient({
             cue: selectedCue,
             index: selectedIdx,
             total: segments.length,
-            sourceText: segmentsSource[selectedIdx]?.text,
+            // Correspondance PAR LE TEMPS, pas par l'index : les deux langues
+            // n'ont plus forcément le même nombre de lignes, et l'index se
+            // décale dès la première division/fusion.
+            sourceText: textByOverlap(segmentsSource, selectedCue),
             targetRtl,
             sourceRtl,
             multiSpeaker,
@@ -1123,7 +1201,7 @@ export function EditorClient({
             onRegenerate: () => regenerate(selectedIdx),
             onSplit: splitSelected,
             onMerge: () => mergeWithNext(selectedIdx),
-            onAdd: () => addLineAfter(selectedIdx),
+            onAdd: addLineAtPlayhead,
             onDelete: () => deleteLine(selectedIdx),
           }}
           style={subtitleStyle}
@@ -1190,11 +1268,9 @@ export function EditorClient({
         >
           Suivi
         </button>
-        <span className="ml-2 font-mono text-[10px] text-ink-500 tabular-nums flex-shrink-0">
-          {formatClock(currentTime)} / {formatClock(duration)}
-        </span>
+        <ClockReadout clock={clock} duration={duration} />
         <span className="hidden lg:block ml-auto font-mono text-[9.5px] text-ink-400 flex-shrink-0 pr-2">
-          espace lecture · S diviser · Suppr supprimer · ←→ naviguer · Ctrl+Z annuler
+          espace lecture · S diviser · A ajouter · Suppr supprimer · ←→ naviguer · Ctrl+Z annuler
         </span>
       </div>
 
@@ -1203,42 +1279,20 @@ export function EditorClient({
         <Timeline
           cues={segments}
           duration={duration}
-          currentTime={currentTime}
+          clock={clock}
           isPlaying={isPlaying}
           selectedIdx={selectedIdx}
+          activeIdx={activeIndex}
           pxPerSec={pxPerSec}
           snap={snap}
           follow={follow}
-          isAudio={isAudio}
           rtl={targetRtl}
-          onSelect={(idx, fromTap) => {
-            setSelectedIdx(idx);
-            if (fromTap) {
-              // Aligne l'aperçu sur le cue sélectionné (sauf en pleine lecture,
-              // pour ne pas interrompre le visionnage).
-              const c = segments[idx];
-              if (c && !isPlaying) {
-                playerRef.current?.seekTo(c.start, { play: false });
-                setCurrentTime(c.start);
-              }
-              if (!isDesktop()) openSheet("selection");
-              else setTab("selection");
-            }
-          }}
-          onScrub={(t) => {
-            playerRef.current?.seekTo(t, { play: false });
-            setCurrentTime(t);
-          }}
+          onSelect={onTimelineSelect}
+          onScrub={onTimelineScrub}
           onEditStart={commitHistory}
           onTiming={setTimingLive}
           onEditEnd={finalizeTiming}
-          onReady={(width) => {
-            if (zoomInitRef.current) return;
-            zoomInitRef.current = true;
-            // Zoom initial : ~20 s visibles (borné), toute la vidéo si courte.
-            const fit = width / Math.min(Math.max(duration, 5), 20);
-            setPxPerSec(Math.max(6, Math.min(120, fit)));
-          }}
+          onReady={onTimelineReady}
         />
       </div>
 
@@ -1249,6 +1303,46 @@ export function EditorClient({
 }
 
 // ─────────────────────────────────────────────────────────────────
+/**
+ * Horloge « 1:23 / 4:56 » de la barre d'outils.
+ *
+ * Elle s'abonne à la `PlaybackClock` et écrit le texte DIRECTEMENT dans le DOM.
+ * Auparavant elle lisait un état React rafraîchi soixante fois par seconde —
+ * c'est-à-dire qu'un simple compteur de secondes forçait un rendu complet de
+ * l'éditeur à chaque image.
+ */
+function ClockReadout({
+  clock,
+  duration,
+}: {
+  clock: PlaybackClock;
+  duration: number;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let last = "";
+    const apply = (t: number) => {
+      // On n'écrit dans le DOM que si le texte affiché change réellement
+      // (résolution : la seconde) → au plus une écriture par seconde.
+      const next = formatClock(t);
+      if (next !== last) {
+        last = next;
+        el.textContent = next;
+      }
+    };
+    apply(clock.time);
+    return clock.subscribe(apply);
+  }, [clock]);
+
+  return (
+    <span className="ml-2 font-mono text-[10px] text-ink-500 tabular-nums flex-shrink-0">
+      <span ref={ref}>0:00</span> / {formatClock(duration)}
+    </span>
+  );
+}
+
 function SaveIndicator({
   state,
   lastSavedAt,

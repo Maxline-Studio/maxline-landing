@@ -175,9 +175,13 @@ function SelectionTab({ s }: { s: SelectionApi }) {
     return (
       <div className="text-center py-10 text-ink-500 text-sm">
         <p className="mb-4">Aucune ligne sélectionnée.</p>
-        <button onClick={s.onAdd} className="btn-outline text-sm">
+        <button
+          onClick={s.onAdd}
+          className="btn-outline text-sm"
+          title="La ligne est créée à la tête de lecture"
+        >
           <Plus className="h-4 w-4" aria-hidden />
-          Ajouter une ligne
+          Ajouter une ligne ici
         </button>
       </div>
     );
@@ -279,7 +283,10 @@ function SelectionTab({ s }: { s: SelectionApi }) {
             Fusionner
           </RowBtn>
         )}
-        <RowBtn onClick={s.onAdd} title="Ajouter une ligne après">
+        <RowBtn
+          onClick={s.onAdd}
+          title="Ajouter une ligne à la tête de lecture (A)"
+        >
           <Plus className="h-3.5 w-3.5" aria-hidden />
           Ajouter
         </RowBtn>
