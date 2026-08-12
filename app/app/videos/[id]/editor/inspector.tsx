@@ -61,6 +61,10 @@ export type ExportApi = {
   isAudio: boolean;
   burnStatus: BurnStatus;
   burnProgress: number;
+  /** Où la gravure a lieu : sur la machine de l'utilisateur ou sur le worker.
+   * Les deux n'ont pas les mêmes contraintes — il faut le dire clairement
+   * (garder l'onglet ouvert vs pouvoir fermer la page). */
+  burnMode: "local" | "serveur" | null;
   metaLine: string;
   targetLangShort: string;
   onExport: (fmt: "srt" | "vtt" | "txt" | "fcpxml") => void;
@@ -488,8 +492,11 @@ function ExportTab({ x }: { x: ExportApi }) {
                 />
               </div>
               <p className="text-xs text-ink-500 mt-1.5 font-mono">
-                Réencodage complet de la vidéo, cela peut prendre quelques
-                minutes.
+                {x.burnMode === "local"
+                  ? "› gravure sur votre machine, gardez cet onglet ouvert."
+                  : x.burnMode === "serveur"
+                    ? "› gravure sur nos serveurs, vous pouvez fermer la page."
+                    : "Réencodage complet de la vidéo, cela peut prendre quelques minutes."}
               </p>
             </div>
           ) : (

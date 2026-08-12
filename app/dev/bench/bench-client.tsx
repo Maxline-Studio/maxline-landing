@@ -23,6 +23,7 @@ import {
   MIN_NEW_CUE,
 } from "@/app/app/videos/[id]/editor/cue-ops";
 import type { Cue } from "@/app/app/videos/[id]/editor/types";
+import { DEFAULT_SUBTITLE_STYLE } from "@/lib/subtitle-style";
 
 const CUE_COUNT = 600;
 const VIDEO_SECONDS = 600;
@@ -52,6 +53,7 @@ export function BenchClient() {
   const [results, setResults] = useState<Result[]>([]);
   const [running, setRunning] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [exportMsg, setExportMsg] = useState("");
   const [boxH, setBoxH] = useState(280);
   const [boxW, setBoxW] = useState(900);
 
@@ -273,6 +275,83 @@ export function BenchClient() {
     setRunning(false);
   }, [clock]);
 
+  // ─── Export MP4 dans le navigateur : la vraie preuve ───
+  const runExport = useCallback(async () => {
+    if (!videoUrl) return;
+    setRunning(true);
+    const out: Result[] = [];
+    const t0 = performance.now();
+    try {
+      const { checkExportSupport } = await import("@/lib/export/capabilities");
+      const support = await checkExportSupport(640, 360, 30);
+      out.push({
+        label: "Encodeur H.264 disponible",
+        ok: support.ok,
+        detail: support.ok
+          ? `codec ${support.codec}, ${support.hardware ? "matériel" : "logiciel"}`
+          : support.reason,
+      });
+      if (!support.ok) {
+        setResults(out);
+        setRunning(false);
+        return;
+      }
+
+      const { burnInBrowser } = await import("@/lib/export/burn-in-browser");
+      const blob = await burnInBrowser({
+        videoUrl,
+        segments: [
+          { start: 0, end: 1.5, text: "Premier sous-titre gravé" },
+          { start: 1.6, end: 3.2, text: "Deuxième ligne\nsur deux lignes" },
+        ],
+        style: DEFAULT_SUBTITLE_STYLE,
+        fps: 25,
+        onProgress: (p) => setExportMsg(`${p.phase} ${p.pct}%`),
+      });
+      const seconds = (performance.now() - t0) / 1000;
+      out.push({
+        label: "MP4 produit",
+        ok: blob.size > 1000 && blob.type === "video/mp4",
+        detail: `${(blob.size / 1024).toFixed(0)} Ko, type ${blob.type}, en ${seconds.toFixed(1)} s`,
+      });
+
+      // Le fichier est-il RELISIBLE ? C'est la seule preuve qui compte : un
+      // muxage invalide produit un blob de bonne taille mais illisible.
+      const url = URL.createObjectURL(blob);
+      const check = await new Promise<{ ok: boolean; detail: string }>((res) => {
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        const timer = setTimeout(
+          () => res({ ok: false, detail: "métadonnées jamais chargées" }),
+          8000,
+        );
+        v.onloadedmetadata = () => {
+          clearTimeout(timer);
+          res({
+            ok: v.videoWidth > 0 && isFinite(v.duration) && v.duration > 0,
+            detail: `${v.videoWidth}×${v.videoHeight}, ${v.duration.toFixed(2)} s`,
+          });
+        };
+        v.onerror = () => {
+          clearTimeout(timer);
+          res({ ok: false, detail: "le navigateur refuse de le lire" });
+        };
+        v.src = url;
+      });
+      out.push({ label: "MP4 relisible", ...check });
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      out.push({
+        label: "Export",
+        ok: false,
+        detail: err instanceof Error ? err.message : String(err),
+      });
+    }
+    setExportMsg("");
+    setResults(out);
+    setRunning(false);
+  }, [videoUrl]);
+
   return (
     <div className="p-6 space-y-6 bg-ivory-50 min-h-dvh">
       <div>
@@ -284,17 +363,29 @@ export function BenchClient() {
         </p>
       </div>
 
-      <button
-        onClick={run}
-        disabled={running || !videoUrl}
-        className="btn-pen text-sm disabled:opacity-50"
-      >
-        {running
-          ? "Mesure en cours…"
-          : videoUrl
-            ? "Lancer les mesures"
-            : "Fabrication de la vidéo de test…"}
-      </button>
+      <div className="flex flex-wrap gap-2 items-center">
+        <button
+          onClick={run}
+          disabled={running || !videoUrl}
+          className="btn-pen text-sm disabled:opacity-50"
+        >
+          {running
+            ? "Mesure en cours…"
+            : videoUrl
+              ? "Lancer les mesures"
+              : "Fabrication de la vidéo de test…"}
+        </button>
+        <button
+          onClick={runExport}
+          disabled={running || !videoUrl}
+          className="btn-outline text-sm disabled:opacity-50"
+        >
+          Tester l&apos;export MP4
+        </button>
+        {exportMsg && (
+          <span className="font-mono text-xs text-ink-500">{exportMsg}</span>
+        )}
+      </div>
 
       {results.length > 0 && (
         <ul className="space-y-1 font-mono text-xs" data-bench-results>

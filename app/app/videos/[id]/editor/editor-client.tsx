@@ -372,8 +372,17 @@ export function EditorClient({
   const markDirty = useCallback(() => {
     dirtyRef.current = true;
     setSaveState("dirty");
-    // Un MP4 gravé devient périmé dès la 1re édition → invalidé.
-    setBurnStatus((b) => (b === "done" ? "idle" : b));
+    // Un MP4 gravé devient périmé dès la 1re édition → invalidé. On libère
+    // aussi le fichier gardé en mémoire par la gravure locale : sans ça, le
+    // bouton « Télécharger » servirait une version obsolète.
+    setBurnStatus((b) => {
+      if (b !== "done") return b;
+      if (localBlobRef.current) {
+        URL.revokeObjectURL(localBlobRef.current);
+        localBlobRef.current = null;
+      }
+      return "idle";
+    });
   }, []);
 
   const applyEdit = useCallback(
@@ -788,9 +797,25 @@ export function EditorClient({
   }, []);
 
   // ─── Burn MP4 ───
+  /** Fichier produit par la gravure LOCALE (URL blob), s'il y en a un. */
+  const localBlobRef = useRef<string | null>(null);
+  const abortLocalRef = useRef<AbortController | null>(null);
+  const [burnMode, setBurnMode] = useState<"local" | "serveur" | null>(null);
+
+  useEffect(
+    () => () => {
+      if (localBlobRef.current) URL.revokeObjectURL(localBlobRef.current);
+      abortLocalRef.current?.abort();
+    },
+    [],
+  );
+
   const burnInProgress = burnStatus === "queued" || burnStatus === "burning";
   useEffect(() => {
     if (!burnInProgress) return;
+    // Gravure LOCALE : aucun job serveur à interroger — la progression vient
+    // directement de l'encodeur du navigateur.
+    if (burnMode === "local") return;
     let stop = false;
     const check = async () => {
       const res = await getBurnStatus(initialVideo.id);
@@ -804,10 +829,19 @@ export function EditorClient({
       stop = true;
       clearInterval(interval);
     };
-  }, [burnInProgress, initialVideo.id]);
+  }, [burnInProgress, burnMode, initialVideo.id]);
 
-  const requestBurnVideo = async () => {
-    setErrorMessage(null);
+  /**
+   * Incrustation MP4.
+   *
+   * On tente D'ABORD la gravure **dans le navigateur** (encodeur matériel de la
+   * machine) : quelques minutes au lieu de plus d'une heure, aucune file
+   * d'attente, et le fichier ne transite jamais par le serveur. Si la machine
+   * ou la vidéo ne s'y prêtent pas, on retombe silencieusement sur le worker —
+   * l'utilisateur n'est jamais laissé devant un échec sec.
+   */
+  const startServerBurn = useCallback(async () => {
+    setBurnMode("serveur");
     setBurnProgress(0);
     setBurnStatus("queued");
     const res = await requestBurn(
@@ -817,11 +851,81 @@ export function EditorClient({
     );
     if (!res.ok) {
       setBurnStatus("idle");
+      setBurnMode(null);
       if (res.error) setErrorMessage(res.error);
     }
-  };
+  }, [initialVideo.id, subtitleStyle]);
+
+  const requestBurnVideo = useCallback(async () => {
+    setErrorMessage(null);
+    if (localBlobRef.current) {
+      URL.revokeObjectURL(localBlobRef.current);
+      localBlobRef.current = null;
+    }
+    if (!videoUrl || isAudio) {
+      await startServerBurn();
+      return;
+    }
+
+    // Sauvegarde d'abord : on grave la DERNIÈRE version éditée.
+    if (dirtyRef.current) await save();
+
+    setBurnMode("local");
+    setBurnProgress(0);
+    setBurnStatus("burning");
+    const controller = new AbortController();
+    abortLocalRef.current = controller;
+
+    try {
+      // Import différé : le moteur d'encodage (et son muxeur) ne pèse sur le
+      // chargement de l'éditeur que si l'utilisateur demande vraiment un MP4.
+      const { burnInBrowser } = await import("@/lib/export/burn-in-browser");
+      const blob = await burnInBrowser({
+        videoUrl,
+        segments: stripIds(segmentsRef.current),
+        style: subtitleStyle,
+        rtl: targetRtl,
+        signal: controller.signal,
+        onProgress: (p) => {
+          // L'audio est traité avant la vidéo : on affiche une progression
+          // globale honnête plutôt que deux barres qui repartent de zéro.
+          const pct = p.phase === "audio" ? p.pct * 0.1 : 10 + p.pct * 0.9;
+          setBurnProgress(Math.round(pct));
+        },
+      });
+      localBlobRef.current = URL.createObjectURL(blob);
+      setBurnProgress(100);
+      setBurnStatus("done");
+    } catch (err) {
+      abortLocalRef.current = null;
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setBurnStatus("idle");
+        setBurnMode(null);
+        return;
+      }
+      // Machine ou source incompatible → on bascule sur le worker.
+      await startServerBurn();
+    }
+  }, [
+    isAudio,
+    save,
+    startServerBurn,
+    subtitleStyle,
+    targetRtl,
+    videoUrl,
+  ]);
 
   const downloadBurned = async () => {
+    // Gravure locale : le fichier est déjà là, aucun aller-retour serveur.
+    if (localBlobRef.current) {
+      const a = document.createElement("a");
+      a.href = localBlobRef.current;
+      a.download = `${initialVideo.original_filename.replace(/\.[^.]+$/, "")}-sous-titre.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return;
+    }
     const res = await getBurnedUrl(initialVideo.id);
     if (res.ok && res.url) {
       const a = document.createElement("a");
@@ -1211,6 +1315,7 @@ export function EditorClient({
             isAudio,
             burnStatus,
             burnProgress,
+            burnMode,
             metaLine,
             targetLangShort: langShort(targetLang),
             onExport: downloadExport,
