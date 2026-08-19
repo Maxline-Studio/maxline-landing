@@ -52,6 +52,8 @@ import {
   requestBurn,
   getBurnStatus,
   getBurnedUrl,
+  getSourceUrlForExport,
+  recordBrowserExport,
   type BurnStatus,
 } from "@/lib/video-actions";
 import type { SubtitleLang } from "@/lib/subtitles-store";
@@ -801,6 +803,11 @@ export function EditorClient({
   const localBlobRef = useRef<string | null>(null);
   const abortLocalRef = useRef<AbortController | null>(null);
   const [burnMode, setBurnMode] = useState<"local" | "serveur" | null>(null);
+  /** Le fichier a été écrit directement à l'emplacement choisi : il n'y a plus
+   * rien à télécharger, seulement à le dire. */
+  const [savedToDisk, setSavedToDisk] = useState(false);
+  /** Temps restant estimé de la gravure locale, en secondes. */
+  const [burnEta, setBurnEta] = useState<number | null>(null);
 
   useEffect(
     () => () => {
@@ -840,31 +847,71 @@ export function EditorClient({
    * ou la vidéo ne s'y prêtent pas, on retombe silencieusement sur le worker —
    * l'utilisateur n'est jamais laissé devant un échec sec.
    */
-  const startServerBurn = useCallback(async () => {
-    setBurnMode("serveur");
-    setBurnProgress(0);
-    setBurnStatus("queued");
-    const res = await requestBurn(
-      initialVideo.id,
-      stripIds(segmentsRef.current),
-      subtitleStyle,
-    );
-    if (!res.ok) {
-      setBurnStatus("idle");
-      setBurnMode(null);
-      if (res.error) setErrorMessage(res.error);
-    }
-  }, [initialVideo.id, subtitleStyle]);
+  const startServerBurn = useCallback(
+    async (fallbackReason?: string) => {
+      setBurnMode("serveur");
+      setBurnProgress(0);
+      setBurnEta(null);
+      setBurnStatus("queued");
+      const res = await requestBurn(
+        initialVideo.id,
+        stripIds(segmentsRef.current),
+        subtitleStyle,
+        fallbackReason,
+      );
+      if (!res.ok) {
+        setBurnStatus("idle");
+        setBurnMode(null);
+        if (res.error) setErrorMessage(res.error);
+      }
+    },
+    [initialVideo.id, subtitleStyle],
+  );
+
+  /** Nom de fichier proposé au téléchargement / à l'enregistrement. */
+  const exportFileName = useCallback(
+    () =>
+      `${initialVideo.original_filename.replace(/\.[^.]+$/, "")}-sous-titre.mp4`,
+    [initialVideo.original_filename],
+  );
 
   const requestBurnVideo = useCallback(async () => {
     setErrorMessage(null);
+    setSavedToDisk(false);
     if (localBlobRef.current) {
       URL.revokeObjectURL(localBlobRef.current);
       localBlobRef.current = null;
     }
     if (!videoUrl || isAudio) {
-      await startServerBurn();
+      await startServerBurn(isAudio ? "fichier_audio" : "pas_de_video");
       return;
+    }
+
+    const { burnInBrowser, canSaveToDisk } = await import(
+      "@/lib/export/burn-in-browser"
+    );
+
+    // Destination sur le disque, demandée MAINTENANT : le sélecteur de fichier
+    // exige un geste utilisateur encore « frais ». En écrivant au fil de l'eau,
+    // la mémoire ne dépend plus de la durée de la vidéo — c'est ce qui rend les
+    // exports longs possibles.
+    let fileHandle: FileSystemFileHandle | undefined;
+    if (canSaveToDisk()) {
+      try {
+        fileHandle = await (
+          window as unknown as {
+            showSaveFilePicker: (o: unknown) => Promise<FileSystemFileHandle>;
+          }
+        ).showSaveFilePicker({
+          suggestedName: exportFileName(),
+          types: [
+            { description: "Vidéo MP4", accept: { "video/mp4": [".mp4"] } },
+          ],
+        });
+      } catch {
+        // Sélecteur refusé ou annulé : on continue en mémoire. Ce n'est pas une
+        // erreur, seulement un autre chemin.
+      }
     }
 
     // Sauvegarde d'abord : on grave la DERNIÈRE version éditée.
@@ -872,41 +919,91 @@ export function EditorClient({
 
     setBurnMode("local");
     setBurnProgress(0);
+    setBurnEta(null);
     setBurnStatus("burning");
     const controller = new AbortController();
     abortLocalRef.current = controller;
 
-    try {
-      // Import différé : le moteur d'encodage (et son muxeur) ne pèse sur le
-      // chargement de l'éditeur que si l'utilisateur demande vraiment un MP4.
-      const { burnInBrowser } = await import("@/lib/export/burn-in-browser");
-      const blob = await burnInBrowser({
-        videoUrl,
+    const onProgress = (p: { phase: string; pct: number; etaSeconds?: number }) => {
+      // La préparation est brève : on lui réserve les 3 premiers pour cent
+      // plutôt que d'afficher une barre qui repart de zéro à chaque phase.
+      const pct =
+        p.phase === "preparation"
+          ? p.pct * 0.03
+          : p.phase === "video"
+            ? 3 + p.pct * 0.94
+            : 97 + p.pct * 0.03;
+      setBurnProgress(Math.round(pct));
+      setBurnEta(p.etaSeconds ?? null);
+    };
+
+    /** Une tentative de gravure locale sur une URL donnée. */
+    const attempt = async (url: string) =>
+      burnInBrowser({
+        videoUrl: url,
         segments: stripIds(segmentsRef.current),
         style: subtitleStyle,
         rtl: targetRtl,
+        fileHandle,
         signal: controller.signal,
-        onProgress: (p) => {
-          // L'audio est traité avant la vidéo : on affiche une progression
-          // globale honnête plutôt que deux barres qui repartent de zéro.
-          const pct = p.phase === "audio" ? p.pct * 0.1 : 10 + p.pct * 0.9;
-          setBurnProgress(Math.round(pct));
-        },
+        onProgress,
       });
-      localBlobRef.current = URL.createObjectURL(blob);
+
+    try {
+      // On grave la SOURCE. Le proxy d'aperçu ne sert que de filet : il est en
+      // 854 px et déjà recompressé, donc on n'y va que si la source est
+      // illisible ici (codec exotique, en-têtes inaccessibles).
+      const src = await getSourceUrlForExport(initialVideo.id);
+      let result;
+      try {
+        result = await attempt(src.ok && src.url ? src.url : videoUrl);
+      } catch (err) {
+        const reason =
+          err && typeof err === "object" && "reason" in err
+            ? String((err as { reason: unknown }).reason)
+            : "";
+        const sourceUnreadable =
+          reason === "format_illisible" ||
+          reason === "codec_video_indecodable" ||
+          reason === "codec_audio_indecodable";
+        if (!src.ok || !src.url || !sourceUnreadable) throw err;
+        result = await attempt(videoUrl);
+      }
+
+      if (result.blob) {
+        localBlobRef.current = URL.createObjectURL(result.blob);
+      } else {
+        setSavedToDisk(true);
+      }
       setBurnProgress(100);
+      setBurnEta(null);
       setBurnStatus("done");
+      // Trace du chemin réellement emprunté : sans elle, une gravure locale
+      // lente redeviendrait impossible à diagnostiquer.
+      void recordBrowserExport(initialVideo.id, result.stats.elapsedMs);
     } catch (err) {
       abortLocalRef.current = null;
+      // Le fichier partiel est déjà jeté par le moteur (voir diskTarget) : on ne
+      // le referme pas ici, ce serait le VALIDER sur le disque.
       if (err instanceof DOMException && err.name === "AbortError") {
         setBurnStatus("idle");
         setBurnMode(null);
+        setBurnEta(null);
         return;
       }
-      // Machine ou source incompatible → on bascule sur le worker.
-      await startServerBurn();
+      // Machine ou source incompatible → on bascule sur le worker, EN DISANT
+      // pourquoi. Un repli muet est ce qui a rendu le diagnostic impossible.
+      const reason =
+        err && typeof err === "object" && "reason" in err
+          ? String((err as { reason: unknown }).reason)
+          : err instanceof Error
+            ? `erreur:${err.name}`
+            : "inconnu";
+      await startServerBurn(reason);
     }
   }, [
+    exportFileName,
+    initialVideo.id,
     isAudio,
     save,
     startServerBurn,
@@ -916,11 +1013,19 @@ export function EditorClient({
   ]);
 
   const downloadBurned = async () => {
+    // Déjà écrit à l'emplacement choisi par l'utilisateur : il n'y a rien à
+    // retélécharger, et proposer un second fichier serait trompeur.
+    if (savedToDisk) {
+      setErrorMessage(
+        "La vidéo est déjà enregistrée à l'emplacement que vous avez choisi.",
+      );
+      return;
+    }
     // Gravure locale : le fichier est déjà là, aucun aller-retour serveur.
     if (localBlobRef.current) {
       const a = document.createElement("a");
       a.href = localBlobRef.current;
-      a.download = `${initialVideo.original_filename.replace(/\.[^.]+$/, "")}-sous-titre.mp4`;
+      a.download = exportFileName();
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -1316,6 +1421,8 @@ export function EditorClient({
             burnStatus,
             burnProgress,
             burnMode,
+            savedToDisk,
+            burnEta,
             metaLine,
             targetLangShort: langShort(targetLang),
             onExport: downloadExport,

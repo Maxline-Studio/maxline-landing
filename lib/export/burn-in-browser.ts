@@ -1,171 +1,321 @@
 "use client";
 
 /**
- * Incrustation des sous-titres DANS LE NAVIGATEUR.
+ * Incrustation des sous-titres DANS LE NAVIGATEUR — décodage séquentiel.
  *
- * ─── Pourquoi ────────────────────────────────────────────────────────────────
- * L'incrustation serveur tourne sur une VM à 0,25 vCPU : x264 logiciel, file
- * d'attente globale à 1, aller-retour transatlantique. En production, un burn
- * démarré à 17:12 était encore en cours à 18:43 avant d'être abandonné. Aucune
- * optimisation de ligne de commande ne rattrape un facteur 20 de puissance
- * manquante.
+ * ─── Ce qui a été jeté, et pourquoi ──────────────────────────────────────────
+ * La première version (12 août) avançait par DÉPLACEMENTS : pour chaque image de
+ * sortie, `video.currentTime = t` puis attente de `seeked`. Mesuré le 18 août sur
+ * un fichier réel, à machine constante :
  *
- * La machine de l'utilisateur, elle, a un encodeur MATÉRIEL. C'est exactement
- * ce que fait un logiciel de montage : il encode en local, sans réseau. Ici,
- * l'encodage ne coûte plus rien au serveur et ne fait plus attendre personne.
+ *   déplacement image par image ....... 48 ms (début) → 85 ms (milieu de fichier)
+ *   décodage séquentiel ............... 0,8 ms
+ *   chaîne complète, ancienne ......... 185 ms / image
+ *   chaîne complète, celle-ci ......... 3,13 ms / image   (×59)
  *
- * ─── Le choix technique qui compte ───────────────────────────────────────────
- * On aurait pu lire la vidéo en accéléré et capturer les images présentées
- * (`playbackRate` + `requestVideoFrameCallback`). C'est tentant mais faux : le
- * nombre d'images présentées est plafonné par la FRÉQUENCE DE L'ÉCRAN. À 8× sur
- * une vidéo 30 fps, il faudrait présenter 240 images par seconde ; un écran 60 Hz
- * en fournit 60. On perdrait les trois quarts des images.
+ * La cause est mécanique : un MP4 ne contient une image clé que toutes les
+ * quelques secondes (le proxy d'aperçu : UNE toutes les 250 images). Se déplacer
+ * à l'image N force le navigateur à repartir de l'image clé précédente et à
+ * décoder puis JETER tout ce qui sépare les deux — environ 125 images à chaque
+ * fois. On payait 125 décodages pour en garder un.
  *
- * On avance donc par **déplacements successifs** (`currentTime` puis `seeked`).
- * Ce n'est borné par aucun écran, et surtout c'est DÉTERMINISTE : chaque image
- * de sortie existe, aucune n'est perdue.
+ * Un décodeur lit une vidéo dans l'ordre. C'est tout ce qu'il fallait faire.
+ *
+ * ─── Trois autres défauts corrigés au passage ────────────────────────────────
+ *  1. On gravait le PROXY d'aperçu (854 px, CRF 30, audio déjà recompressé) en
+ *     croyant graver la source. On grave désormais la source.
+ *  2. La sortie était forcée à 30 img/s depuis une source à 24 : une image sur
+ *     cinq était un doublon. On suit maintenant la cadence de la source.
+ *  3. L'audio était décompressé en mémoire puis RÉENCODÉ. Les paquets d'origine
+ *     sont désormais recopiés tels quels : zéro perte, zéro travail.
+ *
+ * ─── Pourquoi mediabunny ─────────────────────────────────────────────────────
+ * Démultiplexage, décodage, rotation, encodage, multiplexage et contre-pression
+ * dans une seule bibliothèque, écrite par l'auteur de `mp4-muxer`. Elle traite
+ * en particulier la ROTATION des vidéos de téléphone, qu'un décodage brut
+ * ignorerait — on aurait sorti les vidéos verticales couchées.
  */
-import { Muxer, ArrayBufferTarget } from "mp4-muxer";
+import {
+  ALL_FORMATS,
+  AudioSampleSource,
+  AudioSampleSink,
+  BufferTarget,
+  CanvasSink,
+  CanvasSource,
+  EncodedAudioPacketSource,
+  EncodedPacketSink,
+  Input,
+  Mp4OutputFormat,
+  Output,
+  Quality,
+  StreamTarget,
+  UrlSource,
+  getFirstEncodableVideoCodec,
+  type InputAudioTrack,
+  type StreamTargetChunk,
+} from "mediabunny";
 import type { SubtitleStyle } from "@/lib/subtitle-style";
 import type { Segment } from "@/lib/video-types";
 import { speakerColor, countSpeakers } from "@/lib/speakers";
 import {
   activeSegmentIndex,
   drawSubtitle,
+  ensureFontLoaded,
+  resolveFontFamilies,
   resolveSubtitlePaint,
   type SubtitlePaint,
 } from "@/lib/subtitle-render";
-import {
-  bitrateFor,
-  checkExportSupport,
-  scaleToFit,
-  type ExportSupport,
-} from "./capabilities";
+import { bitrateFor, scaleToFit } from "./capabilities";
 
-export type BurnPhase = "preparation" | "audio" | "video" | "finalisation";
-export type BurnProgress = { phase: BurnPhase; pct: number };
+export type BurnPhase = "preparation" | "video" | "finalisation";
+export type BurnProgress = {
+  phase: BurnPhase;
+  pct: number;
+  /** Secondes restantes estimées, une fois la mesure assez stable pour être honnête. */
+  etaSeconds?: number;
+};
+
+/** Ce que l'export a réellement fait — sert à l'instrumentation, pas à l'UI. */
+export type BurnStats = {
+  /** Durée totale de l'export, en millisecondes. */
+  elapsedMs: number;
+  /** Images encodées. */
+  frames: number;
+  /** Durée de la vidéo, en secondes. */
+  durationSeconds: number;
+  /** Définition de sortie. */
+  width: number;
+  height: number;
+  /** L'audio a-t-il été recopié tel quel (vs réencodé, vs absent) ? */
+  audio: "copie" | "reencode" | "aucun";
+  /** Le fichier a-t-il été écrit directement sur le disque de l'utilisateur ? */
+  toDisk: boolean;
+};
+
+export type BurnResult = {
+  /** Absent quand le fichier a été écrit directement sur le disque. */
+  blob: Blob | null;
+  stats: BurnStats;
+};
 
 export type BurnOptions = {
-  /** URL de la vidéo source (présignée R2). Le CORS doit autoriser GET depuis
-   * le site, sinon le canvas est « teinté » et l'encodage est refusé. */
+  /**
+   * URL de la vidéo SOURCE (présignée R2). Le CORS doit autoriser GET depuis le
+   * site et exposer les requêtes de plage, sinon la lecture séquentielle
+   * échoue et on repart sur le serveur.
+   */
   videoUrl: string;
   segments: Segment[];
   style: SubtitleStyle;
   rtl?: boolean;
-  /** Images par seconde de la sortie. 30 suffit pour du sous-titrage. */
-  fps?: number;
   /** Plus grand côté de la sortie (défaut 1920, comme le worker). */
   maxDim?: number;
+  /**
+   * Destination sur le disque de l'utilisateur, obtenue par l'appelant DANS le
+   * gestionnaire de clic (`showSaveFilePicker`). Quand elle est fournie, le MP4
+   * est écrit au fil de l'eau et la mémoire ne dépend plus de la durée de la
+   * vidéo. Sinon on assemble en mémoire — d'où le plafond ci-dessous.
+   *
+   * On reçoit le HANDLE et non un flux déjà ouvert : c'est le sélecteur qui
+   * exige un geste utilisateur, pas l'ouverture. Garder le handle permet de
+   * SUPPRIMER le fichier si l'export échoue, au lieu de laisser une carcasse.
+   */
+  fileHandle?: FileSystemFileHandle;
   signal?: AbortSignal;
   onProgress?: (p: BurnProgress) => void;
 };
 
-/** Au-delà, on refuse : décoder l'audio entier en mémoire deviendrait risqué
- * (une heure de son stéréo décompressé pèse plus d'un gigaoctet). */
-const MAX_DURATION_SECONDS = 20 * 60;
+/**
+ * Plafond appliqué UNIQUEMENT à l'assemblage en mémoire. Avec une destination
+ * disque, il n'y a plus de limite : c'est tout l'intérêt.
+ */
+const MAX_IN_MEMORY_SECONDS = 12 * 60;
 
 export class BurnUnsupportedError extends Error {
-  constructor(message: string) {
+  /** Motif court et stable, écrit en base pour savoir POURQUOI on est retombé
+   * sur le serveur. Sans lui, un repli ne laisse aucune trace exploitable. */
+  readonly reason: string;
+  constructor(reason: string, message: string) {
     super(message);
     this.name = "BurnUnsupportedError";
+    this.reason = reason;
   }
-}
-
-/** Charge la vidéo dans un élément masqué et attend ses métadonnées. */
-function loadVideo(url: string): Promise<HTMLVideoElement> {
-  return new Promise((resolve, reject) => {
-    const v = document.createElement("video");
-    // INDISPENSABLE : sans en-têtes CORS, dessiner la vidéo « teinte » le canvas
-    // et toute lecture de pixels devient interdite → l'encodage échoue.
-    v.crossOrigin = "anonymous";
-    v.preload = "auto";
-    v.muted = true;
-    v.playsInline = true;
-    v.src = url;
-    const onError = () =>
-      reject(
-        new BurnUnsupportedError(
-          "Impossible de lire la vidéo source dans le navigateur.",
-        ),
-      );
-    v.addEventListener("error", onError, { once: true });
-    v.addEventListener(
-      "loadedmetadata",
-      () => {
-        if (!v.videoWidth || !v.videoHeight) {
-          onError();
-          return;
-        }
-        resolve(v);
-      },
-      { once: true },
-    );
-  });
-}
-
-/** Déplace la lecture à `t` et attend que l'image soit réellement prête. */
-function seekTo(v: HTMLVideoElement, t: number): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const onSeeked = () => {
-      v.removeEventListener("error", onError);
-      resolve();
-    };
-    const onError = () => {
-      v.removeEventListener("seeked", onSeeked);
-      reject(new Error("Déplacement dans la vidéo impossible."));
-    };
-    v.addEventListener("seeked", onSeeked, { once: true });
-    v.addEventListener("error", onError, { once: true });
-    v.currentTime = Math.min(t, Math.max(0, (v.duration || 0) - 0.001));
-  });
 }
 
 function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new DOMException("Export annulé", "AbortError");
 }
 
+/** Le navigateur sait-il écrire directement dans un fichier choisi ? */
+export function canSaveToDisk(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    typeof (window as { showSaveFilePicker?: unknown }).showSaveFilePicker ===
+      "function"
+  );
+}
+
+/**
+ * Adapte un fichier choisi par l'utilisateur à la cible de mediabunny.
+ *
+ * Le multiplexeur écrit à des POSITIONS arbitraires (il revient poser les
+ * en-têtes). On repositionne donc explicitement avant chaque écriture : écrire
+ * séquentiellement produirait un fichier corrompu.
+ *
+ * ⚠️ Le point délicat : mediabunny ferme ce flux DANS LES DEUX CAS, à la
+ * finalisation comme à l'annulation. Or fermer un `FileSystemWritableFileStream`
+ * VALIDE son contenu sur le disque. Sans la garde ci-dessous, annuler un export
+ * déposerait une vidéo tronquée — d'apparence normale — à l'emplacement que
+ * l'utilisateur a choisi. On ne valide donc que si la finalisation a commencé,
+ * et on jette le fichier dans tous les autres cas.
+ */
+function diskTarget(handle: FileSystemFileHandle): Promise<{
+  target: StreamTarget;
+  /** À appeler juste avant `output.finalize()`. */
+  beginFinalize: () => void;
+  /** Jette le fichier partiel si l'export n'a pas abouti. */
+  discardIfIncomplete: () => Promise<void>;
+}> {
+  return handle.createWritable().then((stream) => {
+    let finalizing = false;
+    let settled = false;
+
+    const discard = async () => {
+      if (settled) return;
+      settled = true;
+      await stream.abort?.().catch(() => {});
+      // Le fichier créé par le sélecteur reste sinon sur le disque, vide et
+      // trompeur. `remove()` n'existe pas partout : on tente, sans exiger.
+      await (
+        handle as unknown as { remove?: () => Promise<void> }
+      ).remove?.().catch(() => {});
+    };
+
+    const writable = new WritableStream<StreamTargetChunk>({
+      async write(chunk) {
+        await stream.write({
+          type: "write",
+          position: chunk.position,
+          data: chunk.data,
+        });
+      },
+      async close() {
+        if (!finalizing) {
+          await discard();
+          return;
+        }
+        settled = true;
+        await stream.close();
+      },
+      async abort() {
+        await discard();
+      },
+    });
+
+    return {
+      target: new StreamTarget(writable, { chunked: true }),
+      beginFinalize: () => {
+        finalizing = true;
+      },
+      discardIfIncomplete: discard,
+    };
+  });
+}
+
 /**
  * Grave les sous-titres et renvoie le MP4 final.
  *
- * Lève `BurnUnsupportedError` quand la machine ou la source ne s'y prêtent pas :
- * l'appelant doit alors basculer sur l'incrustation serveur. On ne laisse
- * JAMAIS l'utilisateur devant un échec sec.
+ * Lève `BurnUnsupportedError` — avec un motif exploitable — quand la machine ou
+ * la source ne s'y prêtent pas : l'appelant bascule alors sur l'incrustation
+ * serveur. On ne laisse JAMAIS l'utilisateur devant un échec sec.
  */
-export async function burnInBrowser(opts: BurnOptions): Promise<Blob> {
-  const fps = opts.fps ?? 30;
-  const report = (phase: BurnPhase, pct: number) =>
-    opts.onProgress?.({ phase, pct: Math.max(0, Math.min(100, Math.round(pct))) });
+export async function burnInBrowser(opts: BurnOptions): Promise<BurnResult> {
+  const startedAt = performance.now();
+  const report = (phase: BurnPhase, pct: number, etaSeconds?: number) =>
+    opts.onProgress?.({
+      phase,
+      pct: Math.max(0, Math.min(100, Math.round(pct))),
+      etaSeconds,
+    });
 
   report("preparation", 0);
   throwIfAborted(opts.signal);
 
-  const video = await loadVideo(opts.videoUrl);
-  const duration = video.duration;
-  if (!isFinite(duration) || duration <= 0) {
-    throw new BurnUnsupportedError("Durée de la vidéo inconnue.");
-  }
-  if (duration > MAX_DURATION_SECONDS) {
+  // ── 1) Ouvrir la source, en flux ────────────────────────────────────────
+  // `UrlSource` lit par plages au fil du décodage : on ne télécharge pas le
+  // fichier entier avant de commencer, et une vidéo de 600 Mo ne remplit pas
+  // la mémoire.
+  const input = new Input({
+    source: new UrlSource(opts.videoUrl),
+    formats: ALL_FORMATS,
+  });
+
+  if (!(await input.canRead())) {
     throw new BurnUnsupportedError(
-      `Vidéo trop longue pour l'export local (${Math.round(duration / 60)} min).`,
+      "format_illisible",
+      "Le navigateur ne reconnaît pas le format de cette vidéo.",
     );
   }
 
-  const out = scaleToFit(video.videoWidth, video.videoHeight, opts.maxDim ?? 1920);
-  const support: ExportSupport = await checkExportSupport(out.width, out.height, fps);
-  if (!support.ok) throw new BurnUnsupportedError(support.reason);
+  const videoTrack = await input.getPrimaryVideoTrack();
+  if (!videoTrack) {
+    throw new BurnUnsupportedError(
+      "aucune_piste_video",
+      "Ce fichier ne contient pas de piste vidéo.",
+    );
+  }
+  if (!(await videoTrack.canDecode())) {
+    throw new BurnUnsupportedError(
+      "codec_video_indecodable",
+      "Ce navigateur ne sait pas décoder le codec de cette vidéo.",
+    );
+  }
 
-  // ── Canvas de composition ────────────────────────────────────────────────
+  // Dimensions d'AFFICHAGE : elles tiennent compte de la rotation du fichier
+  // (une vidéo de téléphone est stockée couchée) et du rapport de pixels.
+  const displayWidth = await videoTrack.getDisplayWidth();
+  const displayHeight = await videoTrack.getDisplayHeight();
+  const out = scaleToFit(displayWidth, displayHeight, opts.maxDim ?? 1920);
+
+  const durationSeconds = await input.computeDuration();
+  if (!isFinite(durationSeconds) || durationSeconds <= 0) {
+    throw new BurnUnsupportedError(
+      "duree_inconnue",
+      "Durée de la vidéo indéterminable.",
+    );
+  }
+  if (!opts.fileHandle && durationSeconds > MAX_IN_MEMORY_SECONDS) {
+    throw new BurnUnsupportedError(
+      "trop_long_sans_disque",
+      `Vidéo de ${Math.round(durationSeconds / 60)} min : trop longue pour être assemblée en mémoire.`,
+    );
+  }
+
+  const codec = await getFirstEncodableVideoCodec(["avc"], {
+    width: out.width,
+    height: out.height,
+  });
+  if (!codec) {
+    throw new BurnUnsupportedError(
+      "aucun_encodeur",
+      "Aucun encodeur H.264 disponible sur cette machine.",
+    );
+  }
+
+  // ── 2) Préparer le dessin ───────────────────────────────────────────────
   const canvas = document.createElement("canvas");
   canvas.width = out.width;
   canvas.height = out.height;
   const ctx = canvas.getContext("2d", { alpha: false });
-  if (!ctx) throw new BurnUnsupportedError("Canvas 2D indisponible.");
+  if (!ctx) {
+    throw new BurnUnsupportedError("canvas_indisponible", "Canvas 2D indisponible.");
+  }
 
-  // Les polices doivent être chargées AVANT le premier dessin, sinon les
-  // premières images seraient rendues avec une police de repli.
-  if (document.fonts?.ready) await document.fonts.ready;
-
-  // ── Paints pré-calculés (un par locuteur) ────────────────────────────────
+  // Les polices réelles (next/font) ne sont connues qu'à l'exécution, et il faut
+  // les avoir CHARGÉES avant la première image : sinon les premières secondes
+  // seraient gravées avec une police de repli, puis l'apparence changerait en
+  // cours de vidéo.
+  const families = resolveFontFamilies();
   const multiSpeaker = countSpeakers(opts.segments) > 1;
   const paintCache = new Map<number, SubtitlePaint>();
   const paintFor = (speaker: number | undefined): SubtitlePaint => {
@@ -175,262 +325,243 @@ export async function burnInBrowser(opts: BurnOptions): Promise<Blob> {
       p = resolveSubtitlePaint(
         opts.style,
         key >= 0 ? speakerColor(key) : null,
+        families,
       );
       paintCache.set(key, p);
     }
     return p;
   };
+  const base = paintFor(undefined);
+  await ensureFontLoaded(base.fontFamily, base.fontWeight, base.italic);
 
-  // ── Audio : décodé AVANT tout le reste ───────────────────────────────────
+  report("preparation", 100);
+  throwIfAborted(opts.signal);
+
+  // ── 3) Construire la sortie ─────────────────────────────────────────────
+  const disk = opts.fileHandle ? await diskTarget(opts.fileHandle) : null;
+  const bufferTarget = disk ? null : new BufferTarget();
+  const output = new Output({
+    // Sur disque : métadonnées en fin de fichier (aucune mémoire retenue).
+    // En mémoire : « fast start », puisque tout est déjà là de toute façon.
+    format: new Mp4OutputFormat({
+      fastStart: disk ? false : "in-memory",
+    }),
+    target: disk ? disk.target : bufferTarget!,
+  });
+
+  const videoSource = new CanvasSource(canvas, {
+    codec,
+    // ⚠️ `new Quality(3_500_000)` ne veut PAS dire « 3,5 Mbit/s » : un nombre nu
+    // est lu comme un NIVEAU de qualité. Passé tel quel, il produisait un
+    // encodage quasi sans perte — 128 Mo pour 22 secondes de vidéo, inutilisable
+    // pour une publication. Le débit doit être nommé explicitement.
+    quality: new Quality({ bitrate: bitrateFor(out.width, out.height, 30) }),
+    // Une image clé toutes les 2 s : on peut se déplacer dans le fichier final
+    // sans le relire depuis le début.
+    keyFrameInterval: 2,
+  });
+  output.addVideoTrack(videoSource);
+
+  // ── 4) L'audio : recopie d'abord, réencodage seulement s'il le faut ─────
+  const audioTrack = await input.getPrimaryAudioTrack();
+
+  // Décalage temporel commun aux DEUX pistes.
   //
-  // On décode l'audio en premier pour deux raisons : on n'encode pas des
-  // milliers d'images pour rien si l'audio pose problème, et surtout il faut
-  // SAVOIR s'il y aura une piste audio avant de construire le muxeur.
+  // Une piste AAC commence presque toujours par des échantillons « d'amorce »
+  // portant un horodatage NÉGATIF (ici : -18 ms) : le décodeur est censé les
+  // consommer sans les restituer. Un MP4 n'accepte pas de temps négatif, et la
+  // recopie échouait donc dès la première image sonore.
   //
-  // Distinction essentielle :
-  //  - la vidéo n'a PAS de piste audio (clip muet, export d'animation) → on
-  //    produit un MP4 muet, c'est le résultat correct ;
-  //  - la vidéo a une piste audio qu'on n'arrive PAS à décoder → on refuse et
-  //    on laisse le serveur faire. Rendre un fichier muet en silence serait
-  //    pire que tout : l'utilisateur ne s'en apercevrait qu'après publication.
-  report("audio", 0);
-  const expectsAudio = await hasAudioTrack(video);
-  let audioBuffer: AudioBuffer | null = null;
-  try {
-    audioBuffer = await decodeAudio(opts.videoUrl, opts.signal);
-  } catch (err) {
-    if (err instanceof DOMException && err.name === "AbortError") throw err;
-    if (expectsAudio) {
-      throw new BurnUnsupportedError(
-        "La piste audio n'a pas pu être traitée dans le navigateur.",
-      );
-    }
-    audioBuffer = null; // vidéo réellement muette
-  }
-  if (audioBuffer && audioBuffer.length === 0) audioBuffer = null;
+  // On décale l'ensemble d'une même valeur — jamais l'audio seul : décaler une
+  // seule piste désynchroniserait la voix de l'image, ce qui est bien pire que
+  // les quelques millisecondes qu'on déplace ici.
+  const firstTimestamp = await input.getFirstTimestamp();
+  const shift = Math.max(0, -firstTimestamp);
 
-  // ── Muxeur + encodeurs ───────────────────────────────────────────────────
-  const target = new ArrayBufferTarget();
-  const muxer = new Muxer({
-    target,
-    fastStart: "in-memory", // lecture possible avant téléchargement complet
-    video: { codec: "avc", width: out.width, height: out.height },
-    ...(audioBuffer
-      ? {
-          audio: {
-            codec: "aac" as const,
-            numberOfChannels: 2,
-            sampleRate: audioBuffer.sampleRate,
-          },
-        }
-      : {}),
-  });
+  const audioPlan = await planAudio(output, audioTrack, shift);
 
-  let encodeError: unknown = null;
-  const videoEncoder = new VideoEncoder({
-    output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
-    error: (e) => (encodeError = e),
-  });
-  videoEncoder.configure({
-    codec: support.codec,
-    width: out.width,
-    height: out.height,
-    bitrate: bitrateFor(out.width, out.height, fps),
-    framerate: fps,
-    hardwareAcceleration: support.hardware ? "prefer-hardware" : "no-preference",
-  });
+  await output.start();
 
-  let audioEncoder: AudioEncoder | null = null;
-  if (audioBuffer) {
-    audioEncoder = new AudioEncoder({
-      output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
-      error: (e) => (encodeError = e),
+  // ── 5) Les deux flux, en parallèle ──────────────────────────────────────
+  let frames = 0;
+  let aborted = false;
+
+  const pumpVideo = async () => {
+    const sink = new CanvasSink(videoTrack, {
+      width: out.width,
+      height: out.height,
+      fit: "contain",
+      // Les canvas sont recyclés en anneau : la mémoire vidéo reste constante
+      // au lieu d'être réallouée à chaque image.
+      poolSize: 3,
     });
-    try {
-      await encodeAudio(audioBuffer, audioEncoder, opts.signal, (p) =>
-        report("audio", p),
-      );
-    } catch (err) {
-      videoEncoder.close();
-      audioEncoder.close();
-      if (err instanceof DOMException && err.name === "AbortError") throw err;
-      throw new BurnUnsupportedError(
-        "La piste audio n'a pas pu être encodée dans le navigateur.",
-      );
-    }
-  }
-  report("audio", 100);
+    let lastReport = 0;
+    for await (const frame of sink.canvases()) {
+      if (opts.signal?.aborted) {
+        aborted = true;
+        break;
+      }
+      ctx.drawImage(frame.canvas, 0, 0, out.width, out.height);
 
-  // ── Vidéo : image par image, déplacement déterministe ────────────────────
-  const totalFrames = Math.max(1, Math.floor(duration * fps));
-  const frameDurationUs = Math.round(1_000_000 / fps);
+      const idx = activeSegmentIndex(opts.segments, frame.timestamp);
+      if (idx >= 0) {
+        const seg = opts.segments[idx]!;
+        drawSubtitle(ctx, {
+          width: out.width,
+          height: out.height,
+          text: seg.text,
+          paint: paintFor(seg.speaker),
+          words: seg.words,
+          time: frame.timestamp,
+          animation: opts.style.animation,
+          rtl: opts.rtl,
+        });
+      }
 
-  for (let i = 0; i < totalFrames; i++) {
-    throwIfAborted(opts.signal);
-    if (encodeError) throw encodeError;
+      // `add` ne rend la main que lorsque l'encodeur ET l'écriture peuvent
+      // suivre. C'est la contre-pression correcte : aucune minuterie, donc
+      // l'export ne s'effondre pas quand l'onglet passe en arrière-plan.
+      await videoSource.add(Math.max(0, frame.timestamp + shift), frame.duration);
+      frames++;
 
-    const t = i / fps;
-    await seekTo(video, t);
-
-    ctx.drawImage(video, 0, 0, out.width, out.height);
-
-    const idx = activeSegmentIndex(opts.segments, t);
-    if (idx >= 0) {
-      const seg = opts.segments[idx]!;
-      drawSubtitle(ctx, {
-        width: out.width,
-        height: out.height,
-        text: seg.text,
-        paint: paintFor(seg.speaker),
-        words: seg.words,
-        time: t,
-        animation: opts.style.animation,
-        rtl: opts.rtl,
-      });
-    }
-
-    const frame = new VideoFrame(canvas, {
-      timestamp: Math.round(t * 1_000_000),
-      duration: frameDurationUs,
-    });
-    // Image clé toutes les 2 secondes : permet de se déplacer dans le fichier
-    // final sans le relire depuis le début.
-    videoEncoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
-    frame.close();
-
-    // On ne laisse pas la file d'encodage enfler indéfiniment : sur une longue
-    // vidéo, cela ferait exploser la mémoire.
-    if (videoEncoder.encodeQueueSize > 8) {
-      await new Promise<void>((r) => setTimeout(r, 0));
-      while (videoEncoder.encodeQueueSize > 4) {
-        await new Promise<void>((r) => setTimeout(r, 4));
+      const now = performance.now();
+      if (now - lastReport > 250) {
+        lastReport = now;
+        const done = Math.min(1, frame.timestamp / durationSeconds);
+        const elapsed = (now - startedAt) / 1000;
+        report(
+          "video",
+          done * 100,
+          done > 0.03 ? Math.max(0, elapsed / done - elapsed) : undefined,
+        );
       }
     }
-    if (i % 10 === 0) report("video", (i / totalFrames) * 100);
-  }
-
-  report("finalisation", 0);
-  await videoEncoder.flush();
-  if (audioEncoder) await audioEncoder.flush();
-  if (encodeError) throw encodeError;
-  videoEncoder.close();
-  audioEncoder?.close();
-  muxer.finalize();
-  report("finalisation", 100);
-
-  video.src = "";
-  video.remove();
-  return new Blob([target.buffer as ArrayBuffer], { type: "video/mp4" });
-}
-
-/**
- * La source a-t-elle une piste audio ?
- *
- * Il n'existe pas d'API universelle. On interroge donc, dans l'ordre, les
- * indices que les navigateurs exposent réellement. En dernier recours on répond
- * « oui » : c'est le choix PRUDENT — mieux vaut retomber sur le serveur que
- * livrer un fichier muet sans prévenir.
- */
-async function hasAudioTrack(v: HTMLVideoElement): Promise<boolean> {
-  const anyV = v as unknown as {
-    mozHasAudio?: boolean;
-    webkitAudioDecodedByteCount?: number;
-    audioTracks?: { length: number };
   };
-  if (typeof anyV.mozHasAudio === "boolean") return anyV.mozHasAudio;
-  if (anyV.audioTracks && typeof anyV.audioTracks.length === "number") {
-    return anyV.audioTracks.length > 0;
+
+  try {
+    await Promise.all([pumpVideo(), audioPlan.pump(opts.signal)]);
+    if (aborted) throw new DOMException("Export annulé", "AbortError");
+
+    report("finalisation", 0);
+    // À partir d'ici, et seulement à partir d'ici, fermer le fichier signifie
+    // « le valider ». Voir `diskTarget`.
+    disk?.beginFinalize();
+    await output.finalize();
+    report("finalisation", 100);
+  } catch (err) {
+    await output.cancel().catch(() => {});
+    // Filet : si `cancel` n'a pas touché le flux, on jette quand même le
+    // fichier partiel plutôt que de le laisser sur le disque de l'utilisateur.
+    await disk?.discardIfIncomplete();
+    throw err;
+  } finally {
+    await input.dispose?.();
   }
-  if (typeof anyV.webkitAudioDecodedByteCount === "number") {
-    // Le compteur ne bouge qu'une fois du son réellement décodé : on lit un
-    // court instant, en silence, pour lui laisser une chance de s'incrémenter.
-    try {
-      v.muted = true;
-      await v.play();
-      await new Promise((r) => setTimeout(r, 220));
-      v.pause();
-      v.currentTime = 0;
-    } catch {
-      /* lecture refusée : on retombe sur la réponse prudente */
-    }
-    return (anyV.webkitAudioDecodedByteCount ?? 0) > 0;
-  }
-  return true;
+
+  const stats: BurnStats = {
+    elapsedMs: Math.round(performance.now() - startedAt),
+    frames,
+    durationSeconds: Math.round(durationSeconds * 100) / 100,
+    width: out.width,
+    height: out.height,
+    audio: audioPlan.kind,
+    toDisk: !!disk,
+  };
+
+  return {
+    blob: bufferTarget?.buffer
+      ? new Blob([bufferTarget.buffer], { type: "video/mp4" })
+      : null,
+    stats,
+  };
 }
+
+// ─────────────────────────────────────────────────────────────────
+//  Audio
+// ─────────────────────────────────────────────────────────────────
+
+type AudioPlan = {
+  kind: BurnStats["audio"];
+  pump: (signal?: AbortSignal) => Promise<void>;
+};
 
 /**
- * Décode la piste audio de la source.
+ * Décide quoi faire de la piste audio, dans cet ordre :
  *
- * `decodeAudioData` gère lui-même le conteneur (MP4, WebM, MOV…), ce qui évite
- * d'embarquer un démultiplexeur complet. En contrepartie il décompresse tout en
- * mémoire — d'où la limite de durée posée plus haut.
+ *  1. **Recopie telle quelle** si le codec d'origine tient dans un MP4 (c'est le
+ *     cas de la quasi-totalité des vidéos : AAC). Aucun décodage, aucun
+ *     réencodage, aucune perte de qualité, coût nul.
+ *  2. **Réencodage** sinon (source Opus/Vorbis d'un WebM, par exemple).
+ *  3. **Rien** si la vidéo est réellement muette.
+ *
+ * Une vidéo SONORE dont l'audio échoue ne doit jamais produire un MP4 muet en
+ * silence : l'utilisateur ne s'en apercevrait qu'après publication. Dans ce cas
+ * on lève, et le serveur prend le relais.
  */
-async function decodeAudio(
-  url: string,
-  signal: AbortSignal | undefined,
-): Promise<AudioBuffer> {
-  throwIfAborted(signal);
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error(`Téléchargement audio : HTTP ${res.status}`);
-  const bytes = await res.arrayBuffer();
-  throwIfAborted(signal);
+async function planAudio(
+  output: Output,
+  track: InputAudioTrack | null,
+  /** Décalage commun aux deux pistes, pour supprimer les temps négatifs. */
+  shift: number,
+): Promise<AudioPlan> {
+  if (!track) return { kind: "aucun", pump: async () => {} };
 
-  const AudioCtx =
-    window.AudioContext ??
-    (window as unknown as { webkitAudioContext: typeof AudioContext })
-      .webkitAudioContext;
-  const audioCtx = new AudioCtx();
-  try {
-    return await audioCtx.decodeAudioData(bytes);
-  } finally {
-    void audioCtx.close();
+  const codec = await track.getCodec();
+  const supported = output.format.getSupportedCodecs();
+
+  // ── 1) Recopie des paquets d'origine ──────────────────────────────────
+  if (codec && supported.includes(codec)) {
+    const source = new EncodedAudioPacketSource(codec);
+    output.addAudioTrack(source);
+    const config = await track.getDecoderConfig();
+    return {
+      kind: "copie",
+      pump: async (signal) => {
+        const sink = new EncodedPacketSink(track);
+        let first = true;
+        for await (const packet of sink.packets()) {
+          if (signal?.aborted) return;
+          const shifted =
+            shift > 0
+              ? packet.clone({ timestamp: packet.timestamp + shift })
+              : packet;
+          await source.add(
+            shifted,
+            first && config ? { decoderConfig: config } : undefined,
+          );
+          first = false;
+        }
+      },
+    };
   }
-}
 
-/** Réencode un AudioBuffer déjà décodé en AAC, par blocs d'une seconde. */
-async function encodeAudio(
-  buffer: AudioBuffer,
-  encoder: AudioEncoder,
-  signal: AbortSignal | undefined,
-  onProgress: (pct: number) => void,
-): Promise<void> {
-  const channels = Math.min(2, buffer.numberOfChannels) || 1;
-  const sampleRate = buffer.sampleRate;
-  encoder.configure({
-    codec: "mp4a.40.2", // AAC-LC : lu partout
-    sampleRate,
-    numberOfChannels: 2,
-    bitrate: 128_000,
+  // ── 2) Réencodage, seulement si la recopie est impossible ─────────────
+  if (!(await track.canDecode())) {
+    throw new BurnUnsupportedError(
+      "codec_audio_indecodable",
+      "La piste audio de cette vidéo n'est pas lisible par ce navigateur.",
+    );
+  }
+  // `AudioSampleSource` et non `AudioBufferSource` : le second replace toujours
+  // le son à partir de zéro, ce qui le décalerait de `shift` par rapport à
+  // l'image. Ici on garde les horodatages d'origine et on applique EXACTEMENT
+  // le même décalage qu'à la vidéo — la synchronisation est préservée au
+  // millième près.
+  const source = new AudioSampleSource({
+    codec: "aac",
+    bitrate: 192_000,
   });
-
-  // Entrelacement stéréo par blocs d'une seconde.
-  const block = sampleRate;
-  const left = buffer.getChannelData(0);
-  const right = channels > 1 ? buffer.getChannelData(1) : left;
-  const total = buffer.length;
-
-  for (let offset = 0; offset < total; offset += block) {
-    throwIfAborted(signal);
-    const n = Math.min(block, total - offset);
-    const interleaved = new Float32Array(n * 2);
-    for (let i = 0; i < n; i++) {
-      interleaved[i * 2] = left[offset + i] ?? 0;
-      interleaved[i * 2 + 1] = right[offset + i] ?? 0;
-    }
-    const data = new AudioData({
-      format: "f32",
-      sampleRate,
-      numberOfFrames: n,
-      numberOfChannels: 2,
-      timestamp: Math.round((offset / sampleRate) * 1_000_000),
-      data: interleaved,
-    });
-    encoder.encode(data);
-    data.close();
-    onProgress((offset / total) * 100);
-    if (encoder.encodeQueueSize > 8) {
-      await new Promise<void>((r) => setTimeout(r, 4));
-    }
-  }
-  onProgress(100);
+  output.addAudioTrack(source);
+  return {
+    kind: "reencode",
+    pump: async (signal) => {
+      const sink = new AudioSampleSink(track);
+      for await (const sample of sink.samples()) {
+        if (signal?.aborted) return;
+        if (shift > 0) sample.setTimestamp(sample.timestamp + shift);
+        await source.add(sample);
+        sample.close();
+      }
+    },
+  };
 }

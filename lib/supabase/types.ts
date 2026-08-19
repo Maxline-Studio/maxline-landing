@@ -110,6 +110,12 @@ export type Database = {
           burn_error: string | null;
           burn_requested_at: string | null;
           burn_progress: number;
+          /** Instrumentation de l'export (migration 024). */
+          burn_finished_at: string | null;
+          last_export_path: string | null;
+          last_export_ms: number | null;
+          last_export_at: string | null;
+          last_export_fallback: string | null;
         };
         Insert: {
           delete_at?: string | null;
@@ -146,6 +152,12 @@ export type Database = {
           burn_error?: string | null;
           burn_requested_at?: string | null;
           burn_progress?: number;
+          /** Instrumentation de l'export (migration 024). */
+          burn_finished_at?: string | null;
+          last_export_path?: string | null;
+          last_export_ms?: number | null;
+          last_export_at?: string | null;
+          last_export_fallback?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["videos"]["Insert"]>;
         Relationships: [];

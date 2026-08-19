@@ -65,6 +65,11 @@ export type ExportApi = {
    * Les deux n'ont pas les mêmes contraintes — il faut le dire clairement
    * (garder l'onglet ouvert vs pouvoir fermer la page). */
   burnMode: "local" | "serveur" | null;
+  /** Le MP4 a été écrit directement à l'emplacement choisi : il n'y a plus rien
+   * à télécharger. Proposer quand même un téléchargement induirait en erreur. */
+  savedToDisk?: boolean;
+  /** Temps restant estimé de la gravure locale, en secondes. */
+  burnEta?: number | null;
   metaLine: string;
   targetLangShort: string;
   onExport: (fmt: "srt" | "vtt" | "txt" | "fcpxml") => void;
@@ -471,7 +476,12 @@ function ExportTab({ x }: { x: ExportApi }) {
           <p className="font-mono text-[9px] uppercase tracking-widest text-ink-400 mb-2">
             Vidéo avec sous-titres incrustés
           </p>
-          {x.burnStatus === "done" ? (
+          {x.burnStatus === "done" && x.savedToDisk ? (
+            <div className="w-full min-h-[52px] rounded-sm border-2 border-vert-600 text-vert-700 font-semibold text-sm inline-flex items-center justify-center gap-2 px-3 text-center">
+              <Check className="h-4 w-4 shrink-0" aria-hidden />
+              Enregistré à l&apos;emplacement choisi
+            </div>
+          ) : x.burnStatus === "done" ? (
             <button
               onClick={x.onDownloadBurned}
               className="w-full min-h-[52px] rounded-sm bg-rouge-500 text-ivory-50 font-semibold text-sm hover:bg-rouge-600 transition-colors inline-flex items-center justify-center gap-2"
@@ -493,7 +503,18 @@ function ExportTab({ x }: { x: ExportApi }) {
               </div>
               <p className="text-xs text-ink-500 mt-1.5 font-mono">
                 {x.burnMode === "local"
-                  ? "› gravure sur votre machine, gardez cet onglet ouvert."
+                  ? `› gravure sur votre machine, gardez cet onglet ouvert.${
+                      // Un délai annoncé vaut mieux qu'une barre muette : c'est
+                      // l'absence d'estimation qui a fait vivre les 37 minutes
+                      // comme une panne plutôt que comme une attente.
+                      x.burnEta && x.burnEta > 3
+                        ? ` Environ ${
+                            x.burnEta < 60
+                              ? `${Math.ceil(x.burnEta)} s`
+                              : `${Math.ceil(x.burnEta / 60)} min`
+                          } restantes.`
+                        : ""
+                    }`
                   : x.burnMode === "serveur"
                     ? "› gravure sur nos serveurs, vous pouvez fermer la page."
                     : "Réencodage complet de la vidéo, cela peut prendre quelques minutes."}

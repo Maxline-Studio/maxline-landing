@@ -28,6 +28,59 @@ import { DEFAULT_SUBTITLE_STYLE } from "@/lib/subtitle-style";
 const CUE_COUNT = 600;
 const VIDEO_SECONDS = 600;
 
+/**
+ * Destination disque SIMULÉE, à la forme d'un `FileSystemFileHandle`.
+ *
+ * Le vrai sélecteur de fichier exige un geste utilisateur : ce chemin serait
+ * donc intestable en automatique, alors que c'est lui qui sert aux vidéos
+ * longues. On reproduit ici le contrat qui compte : des écritures à des
+ * positions arbitraires, et la distinction entre « fermer » (= valider sur le
+ * disque) et « abandonner ».
+ */
+function makeFakeFile() {
+  let buf = new Uint8Array(0);
+  const state = { committed: false, discarded: false };
+  const put = (pos: number, data: Uint8Array) => {
+    const end = pos + data.length;
+    if (end > buf.length) {
+      const bigger = new Uint8Array(Math.max(end, buf.length * 2));
+      bigger.set(buf);
+      buf = bigger.subarray(0, end);
+      const grown = new Uint8Array(end);
+      grown.set(buf.subarray(0, Math.min(buf.length, end)));
+      buf = grown;
+    }
+    buf.set(data, pos);
+  };
+  const stream = {
+    async write(p: { type: string; position: number; data: Uint8Array }) {
+      put(p.position, p.data);
+    },
+    async close() {
+      state.committed = true;
+    },
+    async abort() {
+      state.discarded = true;
+    },
+  };
+  const handle = {
+    createWritable: async () => stream,
+    remove: async () => {
+      state.discarded = true;
+    },
+  } as unknown as FileSystemFileHandle;
+  return {
+    handle,
+    bytes: () => buf,
+    get committed() {
+      return state.committed;
+    },
+    get discarded() {
+      return state.discarded;
+    },
+  };
+}
+
 /** 600 cues ≈ une vidéo de 10 min découpée façon « court » : le pire cas réel. */
 function makeCues(): Cue[] {
   const out: Cue[] = [];
@@ -54,6 +107,12 @@ export function BenchClient() {
   const [running, setRunning] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState("");
+  /** Vrai fichier déposé par l'opérateur : la seule matière qui prouve quoi que
+   * ce soit sur les performances d'export. */
+  const [realFileUrl, setRealFileUrl] = useState<string | null>(null);
+  const [realFileName, setRealFileName] = useState("");
+  /** Image extraite du MP4 produit : le seul contrôle qui montre le sous-titre. */
+  const previewRef = useRef<HTMLCanvasElement | null>(null);
   const [boxH, setBoxH] = useState(280);
   const [boxW, setBoxW] = useState(900);
 
@@ -276,43 +335,73 @@ export function BenchClient() {
   }, [clock]);
 
   // ─── Export MP4 dans le navigateur : la vraie preuve ───
+  //
+  // La version précédente de ce banc ne testait QUE la petite vidéo synthétique
+  // fabriquée ici. Elle validait donc un export qui, sur un vrai MP4, mettait
+  // 185 ms par image au lieu de 3. Un banc qui ne teste pas la matière réelle ne
+  // protège de rien : on peut désormais lui donner un vrai fichier.
   const runExport = useCallback(async () => {
-    if (!videoUrl) return;
+    const source = realFileUrl ?? videoUrl;
+    if (!source) return;
     setRunning(true);
     const out: Result[] = [];
     const t0 = performance.now();
     try {
-      const { checkExportSupport } = await import("@/lib/export/capabilities");
-      const support = await checkExportSupport(640, 360, 30);
+      // (0) La police se pose-t-elle vraiment sur le canvas ?
+      // `ctx.font` ignore SILENCIEUSEMENT une chaîne invalide et reste à
+      // « 10px sans-serif ». C'est le défaut qui a rendu illisibles tous les
+      // sous-titres gravés dans le navigateur : on le verrouille ici.
+      const { resolveFontFamilies } = await import("@/lib/subtitle-render");
+      const probe = document.createElement("canvas").getContext("2d")!;
+      const family = resolveFontFamilies()[DEFAULT_SUBTITLE_STYLE.font];
+      probe.font = "10px sans-serif";
+      probe.font = `600 59px ${family}`;
       out.push({
-        label: "Encodeur H.264 disponible",
-        ok: support.ok,
-        detail: support.ok
-          ? `codec ${support.codec}, ${support.hardware ? "matériel" : "logiciel"}`
-          : support.reason,
+        label: "Police acceptée par le canvas",
+        ok: probe.font.includes("59px"),
+        detail: probe.font.includes("59px")
+          ? `« ${probe.font} »`
+          : `REJETÉE — le canvas est resté à « ${probe.font} » : les sous-titres sortiraient en 10 px`,
       });
-      if (!support.ok) {
-        setResults(out);
-        setRunning(false);
-        return;
-      }
 
       const { burnInBrowser } = await import("@/lib/export/burn-in-browser");
-      const blob = await burnInBrowser({
-        videoUrl,
+      const result = await burnInBrowser({
+        videoUrl: source,
         segments: [
           { start: 0, end: 1.5, text: "Premier sous-titre gravé" },
           { start: 1.6, end: 3.2, text: "Deuxième ligne\nsur deux lignes" },
         ],
         style: DEFAULT_SUBTITLE_STYLE,
-        fps: 25,
         onProgress: (p) => setExportMsg(`${p.phase} ${p.pct}%`),
       });
+      const blob = result.blob!;
       const seconds = (performance.now() - t0) / 1000;
+      const st = result.stats;
       out.push({
         label: "MP4 produit",
         ok: blob.size > 1000 && blob.type === "video/mp4",
-        detail: `${(blob.size / 1024).toFixed(0)} Ko, type ${blob.type}, en ${seconds.toFixed(1)} s`,
+        detail: `${(blob.size / 1024).toFixed(0)} Ko, ${st.width}×${st.height}, ${st.frames} images, audio ${st.audio}, en ${seconds.toFixed(1)} s`,
+      });
+
+      // LE chiffre anti-régression. Le décodage par déplacements donnait
+      // 185 ms/image ; le décodage séquentiel, 3,13 ms. On échoue bien avant
+      // d'être revenu à l'ancien comportement.
+      const msPerFrame = st.elapsedMs / Math.max(1, st.frames);
+      const speed = st.durationSeconds / (st.elapsedMs / 1000);
+      out.push({
+        label: "Débit d'encodage",
+        ok: msPerFrame < 40,
+        detail: `${msPerFrame.toFixed(2)} ms/image · ×${speed.toFixed(2)} le temps réel (seuil d'alerte : 40 ms/image)`,
+      });
+
+      // Un fichier publiable, pas une copie de laboratoire. Un réglage de
+      // qualité mal interprété a déjà produit 47 Mbit/s (128 Mo pour 22 s), ce
+      // qui passe tous les autres contrôles sans être utilisable.
+      const mbps = (blob.size * 8) / 1e6 / Math.max(0.1, st.durationSeconds);
+      out.push({
+        label: "Poids du fichier",
+        ok: mbps < 15,
+        detail: `${mbps.toFixed(1)} Mbit/s · ${(blob.size / 1048576).toFixed(1)} Mo pour ${st.durationSeconds.toFixed(1)} s (seuil d'alerte : 15 Mbit/s)`,
       });
 
       // Le fichier est-il RELISIBLE ? C'est la seule preuve qui compte : un
@@ -340,6 +429,139 @@ export function BenchClient() {
       });
       out.push({ label: "MP4 relisible", ...check });
       URL.revokeObjectURL(url);
+
+      // ── La preuve qui compte vraiment : le sous-titre est-il LÀ, et lisible ?
+      // Tous les contrôles ci-dessus passaient déjà quand le canvas gravait en
+      // 10 px par défaut. Seul un regard sur l'image le montre.
+      try {
+        const { Input, BlobSource, ALL_FORMATS, CanvasSink } = await import(
+          "mediabunny"
+        );
+        const check2 = new Input({
+          source: new BlobSource(blob),
+          formats: ALL_FORMATS,
+        });
+        const vt = await check2.getPrimaryVideoTrack();
+        if (vt) {
+          const sink = new CanvasSink(vt, { width: 360 });
+          const shot = await sink.getCanvas(0.6);
+          const cv = previewRef.current;
+          if (shot && cv) {
+            cv.width = shot.canvas.width;
+            cv.height = shot.canvas.height;
+            const pctx = cv.getContext("2d")!;
+            pctx.drawImage(shot.canvas, 0, 0);
+
+            // Le sous-titre est-il RÉELLEMENT gravé, et à la bonne taille ?
+            // Le style par défaut pose une boîte sombre pleine largeur sous un
+            // texte clair : on compte les rangées de boîte et les pixels de
+            // texte. Une police tombée à 10 px donnerait une boîte cinq fois
+            // trop courte — précisément le défaut qui a échappé à tous les
+            // autres contrôles pendant six jours.
+            const { width: pw, height: ph } = cv;
+            const px = pctx.getImageData(0, 0, pw, ph).data;
+            let boxRows = 0;
+            let textPixels = 0;
+            for (let y = 0; y < ph; y++) {
+              let dark = 0;
+              for (let x = 0; x < pw; x++) {
+                const i = (y * pw + x) * 4;
+                if (px[i]! < 45 && px[i + 1]! < 45 && px[i + 2]! < 40) dark++;
+              }
+              if (dark <= pw * 0.25) continue;
+              boxRows++;
+              for (let x = 0; x < pw; x++) {
+                const i = (y * pw + x) * 4;
+                if (px[i]! > 200 && px[i + 1]! > 200 && px[i + 2]! > 190)
+                  textPixels++;
+              }
+            }
+            const scale = st.width / pw;
+            const boxPx = Math.round(boxRows * scale);
+            const expected = Math.round(
+              0.055 * Math.min(st.width, st.height) * 1.45,
+            );
+            out.push({
+              label: "Sous-titre gravé et lisible",
+              ok: textPixels > 150 && boxPx > expected * 0.6,
+              detail: `boîte de ${boxPx} px de haut (attendu ≈ ${expected}), ${textPixels} pixels de texte`,
+            });
+          }
+        }
+        await check2.dispose?.();
+      } catch {
+        /* l'aperçu est un confort, son échec ne condamne pas l'export */
+      }
+      // ── Écriture directe sur le disque ────────────────────────────────
+      // Ce chemin sert aux vidéos longues (la mémoire ne suit plus). Il est
+      // impossible à déclencher en automatique — `showSaveFilePicker` exige un
+      // geste — donc on lui fournit une destination SIMULÉE. Deux propriétés
+      // comptent : le fichier écrit doit être un MP4 valide, et une annulation
+      // ne doit RIEN valider (fermer un fichier réel le valide sur le disque,
+      // ce qui déposerait une vidéo tronquée d'apparence normale).
+      const disk = makeFakeFile();
+      const diskRun = await burnInBrowser({
+        videoUrl: source,
+        segments: [{ start: 0, end: 2, text: "Écriture directe sur le disque" }],
+        style: DEFAULT_SUBTITLE_STYLE,
+        fileHandle: disk.handle,
+      });
+      const written = disk.bytes();
+      out.push({
+        label: "Écriture disque — fichier validé",
+        ok:
+          diskRun.blob === null &&
+          diskRun.stats.toDisk &&
+          disk.committed &&
+          written.length > 1000,
+        detail: `${(written.length / 1048576).toFixed(1)} Mo écrits, validé=${disk.committed}, jeté=${disk.discarded}, blob en mémoire=${diskRun.blob === null ? "aucun" : "présent"}`,
+      });
+
+      const readable = await new Promise<{ ok: boolean; detail: string }>((res) => {
+        const u = URL.createObjectURL(new Blob([written], { type: "video/mp4" }));
+        const v = document.createElement("video");
+        v.preload = "metadata";
+        const t = setTimeout(() => res({ ok: false, detail: "illisible" }), 8000);
+        v.onloadedmetadata = () => {
+          clearTimeout(t);
+          URL.revokeObjectURL(u);
+          res({
+            ok: v.videoWidth > 0 && v.duration > 0,
+            detail: `${v.videoWidth}×${v.videoHeight}, ${v.duration.toFixed(2)} s`,
+          });
+        };
+        v.onerror = () => {
+          clearTimeout(t);
+          URL.revokeObjectURL(u);
+          res({ ok: false, detail: "le navigateur refuse de le lire" });
+        };
+        v.src = u;
+      });
+      out.push({ label: "Écriture disque — MP4 relisible", ...readable });
+
+      // Annulation : le fichier ne doit surtout pas être validé.
+      const disk2 = makeFakeFile();
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 250);
+      let aborted = false;
+      try {
+        await burnInBrowser({
+          videoUrl: source,
+          segments: [{ start: 0, end: 2, text: "Annulation" }],
+          style: DEFAULT_SUBTITLE_STYLE,
+          fileHandle: disk2.handle,
+          signal: ctrl.signal,
+        });
+      } catch {
+        aborted = true;
+      }
+      out.push({
+        label: "Annulation — rien n'est validé",
+        ok: aborted && !disk2.committed && disk2.discarded,
+        detail: aborted
+          ? `validé=${disk2.committed} (doit être false), jeté=${disk2.discarded} (doit être true)`
+          : "l'export ne s'est pas interrompu",
+      });
     } catch (err) {
       out.push({
         label: "Export",
@@ -350,7 +572,7 @@ export function BenchClient() {
     setExportMsg("");
     setResults(out);
     setRunning(false);
-  }, [videoUrl]);
+  }, [realFileUrl, videoUrl]);
 
   return (
     <div className="p-6 space-y-6 bg-ivory-50 min-h-dvh">
@@ -377,14 +599,45 @@ export function BenchClient() {
         </button>
         <button
           onClick={runExport}
-          disabled={running || !videoUrl}
+          disabled={running || (!videoUrl && !realFileUrl)}
           className="btn-outline text-sm disabled:opacity-50"
         >
           Tester l&apos;export MP4
+          {realFileUrl ? " (vrai fichier)" : " (vidéo synthétique)"}
         </button>
+        <label className="btn-outline text-sm cursor-pointer">
+          Choisir un vrai MP4…
+          <input
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) return;
+              if (realFileUrl) URL.revokeObjectURL(realFileUrl);
+              setRealFileUrl(URL.createObjectURL(f));
+              setRealFileName(`${f.name} — ${(f.size / 1048576).toFixed(1)} Mo`);
+            }}
+          />
+        </label>
+        {realFileName && (
+          <span className="font-mono text-xs text-ink-600">{realFileName}</span>
+        )}
         {exportMsg && (
           <span className="font-mono text-xs text-ink-500">{exportMsg}</span>
         )}
+        <canvas
+          ref={previewRef}
+          className="border border-ink-200 rounded bg-ink-900"
+          aria-label="Image extraite du MP4 produit"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-xs text-ink-500">
+          L&apos;image ci-dessus est extraite du fichier PRODUIT : c&apos;est le
+          seul contrôle qui montre que le sous-titre est gravé et lisible.
+        </span>
       </div>
 
       {results.length > 0 && (

@@ -557,6 +557,9 @@ export async function requestBurn(
   videoId: string,
   segments?: Segment[],
   style?: SubtitleStyle,
+  /** Motif du repli navigateur → serveur, écrit en base pour le diagnostic.
+   * Absent = le serveur a été choisi directement. */
+  fallbackReason?: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
   const {
@@ -616,6 +619,13 @@ export async function requestBurn(
       burn_status: "queued",
       burn_error: null,
       burn_requested_at: new Date().toISOString(),
+      burn_finished_at: null,
+      // On note le chemin AVANT de savoir s'il aboutira : c'est justement
+      // l'information qui manquait le 18 août.
+      last_export_path: "serveur",
+      last_export_at: new Date().toISOString(),
+      last_export_ms: null,
+      last_export_fallback: fallbackReason?.slice(0, 80) ?? null,
     })
     .eq("id", videoId);
 
@@ -623,6 +633,44 @@ export async function requestBurn(
 
   revalidatePath(`/app/videos/${videoId}`);
   return { ok: true };
+}
+
+/**
+ * Enregistre ce qu'un export NAVIGATEUR a réellement fait.
+ *
+ * Le chemin navigateur ne dépose aucun fichier chez nous : sans cet appel il ne
+ * laisse strictement aucune trace. C'est exactement pour cette raison qu'un
+ * export de 37 minutes est resté introuvable le 18 août 2026 — on ne pouvait
+ * même pas établir quel chemin avait tourné.
+ *
+ * Purement diagnostique : aucune décision produit ni facturation ne s'y appuie.
+ */
+export async function recordBrowserExport(
+  videoId: string,
+  elapsedMs: number,
+): Promise<{ ok: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false };
+
+  const ms = Number.isFinite(elapsedMs)
+    ? Math.max(0, Math.min(24 * 3600 * 1000, Math.round(elapsedMs)))
+    : null;
+
+  const { error } = await supabase
+    .from("videos")
+    .update({
+      last_export_path: "navigateur",
+      last_export_ms: ms,
+      last_export_at: new Date().toISOString(),
+      last_export_fallback: null,
+    })
+    .eq("id", videoId)
+    .eq("user_id", user.id);
+
+  return { ok: !error };
 }
 
 /** Lit l'état du burn + la progression (polling côté éditeur). */
@@ -666,6 +714,44 @@ export async function getBurnStatus(
     error: video.burn_error ?? null,
     progress: typeof video.burn_progress === "number" ? video.burn_progress : 0,
   };
+}
+
+/**
+ * URL présignée de la vidéo SOURCE, pour l'incrustation dans le navigateur.
+ *
+ * L'éditeur affiche le proxy d'aperçu (854 px, CRF 30) : parfait pour se
+ * repérer, désastreux comme matière première d'un export. Jusqu'ici la gravure
+ * navigateur utilisait ce proxy et rendait donc un MP4 bien plus dégradé que
+ * celui du serveur, sans que rien ne le signale. On grave désormais la source.
+ */
+export async function getSourceUrlForExport(
+  videoId: string,
+): Promise<{ ok: boolean; url?: string; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Session expirée." };
+
+  const { data: video } = await supabase
+    .from("videos")
+    .select("status, storage_key_source")
+    .eq("id", videoId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!video || video.status !== "done" || !video.storage_key_source) {
+    return { ok: false, error: "Source indisponible." };
+  }
+
+  try {
+    // 6 h : une gravure longue ne doit pas voir son URL expirer en cours de
+    // route. La lecture se fait par plages, tout au long de l'encodage.
+    const url = await presignGet(video.storage_key_source, 6 * 3600);
+    return { ok: true, url };
+  } catch {
+    return { ok: false, error: "Source indisponible." };
+  }
 }
 
 /** URL présignée (1 h) pour télécharger le MP4 incrusté, si prêt. */

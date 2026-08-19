@@ -27,7 +27,13 @@ const csp = [
   "img-src 'self' data: blob: https://*.r2.cloudflarestorage.com https://*.supabase.co https://*.googleusercontent.com",
   "media-src 'self' blob: https://*.r2.cloudflarestorage.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co https://*.r2.cloudflarestorage.com",
+  // `blob:` est indispensable à l'export MP4 : le moteur lit la vidéo par
+  // requêtes de plage, y compris sur un fichier que la page a elle-même créé
+  // (fichier choisi localement, banc d'essai). Sans lui, `connect-src 'self'`
+  // bloque la lecture — un blob n'est pas considéré comme « self ». Aucun risque
+  // d'exfiltration : une URL blob ne désigne que de la donnée déjà en mémoire
+  // dans cette page, elle ne sort nulle part.
+  "connect-src 'self' blob: https://*.supabase.co https://*.r2.cloudflarestorage.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

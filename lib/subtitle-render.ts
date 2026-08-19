@@ -25,47 +25,101 @@ import {
   type SubtitleStyle,
 } from "@/lib/subtitle-style";
 import type { Segment, WordTiming } from "@/lib/video-types";
+import {
+  SIZE_FRAC,
+  OUTLINE_MULT,
+  BG_ALPHA,
+  MARGIN_FRAC,
+  SHADOW_MULT,
+  MIN_FONT_PX,
+} from "@/lib/subtitle-geometry";
 
 // ─────────────────────────────────────────────────────────────────
 //  Géométrie — miroir EXACT de code/worker/src/pipeline/burn.ts
 // ─────────────────────────────────────────────────────────────────
 
-/** Taille de police = fraction de la plus PETITE dimension de la vidéo.
- * Identique à SIZE_FRAC côté worker : cohérent en paysage comme en vertical. */
-const SIZE_FRAC: Record<SubtitleStyle["size"], number> = {
-  s: 0.045,
-  m: 0.055,
-  l: 0.07,
-};
-/** Épaisseur du contour, en fraction de la taille de police (worker : OUTLINE_MULT). */
-const OUTLINE_MULT: Record<SubtitleStyle["outlineWidth"], number> = {
-  thin: 0.06,
-  medium: 0.1,
-  thick: 0.16,
-};
-/** Opacité du fond (worker : BG_ALPHA_HEX, exprimé ici en alpha 0-1). */
-const BG_ALPHA: Record<SubtitleStyle["bgOpacity"], number> = {
-  full: 1,
-  medium: 0.62,
-  light: 0.38,
-};
-/** Marges latérales et verticale, en fraction de l'image (worker : 0.06). */
-const MARGIN_FRAC = 0.06;
 /** Interligne (worker : ScaledBorderAndShadow + interligne ASS par défaut). */
 const LINE_HEIGHT = 1.25;
 /** Rembourrage de la boîte, en fraction de la taille de police. */
 const BOX_PAD_X = 0.55;
 const BOX_PAD_Y = 0.2;
 
-/** Familles de polices, dans l'ordre de repli. Les polices web du site sont
- * chargées par next/font ; on retombe sur des génériques sûres. */
-const FONT_STACK: Record<SubtitleStyle["font"], string> = {
-  inter: 'var(--font-inter), "Inter", system-ui, sans-serif',
-  montserrat: 'var(--font-montserrat), "Montserrat", system-ui, sans-serif',
-  fraunces: 'var(--font-fraunces), "Fraunces", Georgia, serif',
-  anton: 'var(--font-anton), "Anton", Impact, system-ui, sans-serif',
-  caveat: 'var(--font-caveat), "Caveat", cursive',
+/**
+ * Familles de polices, dans l'ordre de repli.
+ *
+ * ⚠️ AUCUN `var(--font-…)` ICI. Un canvas n'est pas du CSS : `ctx.font` suit la
+ * grammaire du raccourci `font` et ne résout PAS les variables CSS. Une chaîne
+ * contenant `var(...)` est jugée invalide et l'affectation est IGNORÉE
+ * SILENCIEUSEMENT — le contexte garde alors sa valeur par défaut,
+ * `10px sans-serif`. C'est exactement ce qui se passait jusqu'ici : tous les
+ * sous-titres gravés par le navigateur sortaient en 10 px, quelle que soit la
+ * police, la taille ou la graisse choisies dans l'éditeur.
+ *
+ * Les vraies familles générées par next/font (`__Inter_e8ce0c`…) sont récupérées
+ * à l'exécution par `resolveFontFamilies()` et placées EN TÊTE de ces replis.
+ */
+const FONT_FALLBACK: Record<SubtitleStyle["font"], string> = {
+  inter: '"Inter", system-ui, sans-serif',
+  montserrat: '"Montserrat", system-ui, sans-serif',
+  fraunces: '"Fraunces", Georgia, serif',
+  anton: '"Anton", Impact, system-ui, sans-serif',
+  caveat: '"Caveat", cursive',
 };
+
+/** Variable CSS posée par next/font pour chaque police (cf. app/layout.tsx). */
+const FONT_CSS_VAR: Record<SubtitleStyle["font"], string> = {
+  inter: "--font-inter",
+  montserrat: "--font-montserrat",
+  fraunces: "--font-fraunces",
+  anton: "--font-anton",
+  caveat: "--font-caveat",
+};
+
+/** Familles de police valides pour un canvas, par police du style. */
+export type FontFamilies = Record<SubtitleStyle["font"], string>;
+
+/**
+ * Résout les familles réelles depuis les variables CSS du document.
+ *
+ * next/font ne publie pas le nom de famille qu'il génère : il le pose dans une
+ * variable CSS. On lit donc cette variable et on l'aplatit dans une chaîne que
+ * le canvas sait parser. Hors navigateur (rendu serveur, test), on renvoie les
+ * replis — qui restent valides.
+ */
+export function resolveFontFamilies(): FontFamilies {
+  const out = { ...FONT_FALLBACK };
+  if (typeof document === "undefined") return out;
+  const root = getComputedStyle(document.documentElement);
+  for (const key of Object.keys(FONT_CSS_VAR) as (keyof FontFamilies)[]) {
+    const real = root.getPropertyValue(FONT_CSS_VAR[key]).trim();
+    // La variable contient déjà un nom de famille cité si besoin.
+    if (real) out[key] = `${real}, ${FONT_FALLBACK[key]}`;
+  }
+  return out;
+}
+
+/**
+ * Garantit que la police est réellement DISPONIBLE avant le premier dessin.
+ *
+ * `document.fonts.ready` ne suffit pas : une police next/font n'est chargée que
+ * si la page l'utilise déjà. Sans cet appel, les premières images seraient
+ * gravées avec une police de repli, puis la vraie prendrait le relais en cours
+ * de route — un changement d'apparence au milieu de la vidéo.
+ */
+export async function ensureFontLoaded(
+  family: string,
+  weight: number,
+  italic: boolean,
+): Promise<void> {
+  if (typeof document === "undefined" || !document.fonts) return;
+  const spec = `${italic ? "italic " : ""}${weight} 64px ${family}`;
+  try {
+    await document.fonts.load(spec, "AÉÈÊÀÇÙàéîöu0123456789");
+    await document.fonts.ready;
+  } catch {
+    /* police indisponible : le repli du canvas s'applique, le rendu tient. */
+  }
+}
 
 /** Valeurs de dessin résolues pour un style + un locuteur donnés. */
 export type SubtitlePaint = {
@@ -97,6 +151,7 @@ export type SubtitlePaint = {
 export function resolveSubtitlePaint(
   style: SubtitleStyle,
   speakerHex: string | null = null,
+  families: FontFamilies = FONT_FALLBACK,
 ): SubtitlePaint {
   const accent = subtitleColorHex(style.color);
   const contrast = style.color === "white" ? "#1A1814" : "#F8F4E9";
@@ -118,7 +173,7 @@ export function resolveSubtitlePaint(
   }
 
   return {
-    fontFamily: FONT_STACK[style.font],
+    fontFamily: families[style.font],
     // « anton » est une police d'affichage : le worker la force en gras.
     fontWeight: style.bold || style.font === "anton" ? 800 : 600,
     italic: style.italic,
@@ -210,6 +265,24 @@ function isLit(
 }
 
 /**
+ * Pose la police sur le contexte, et VÉRIFIE qu'elle a bien été acceptée.
+ *
+ * Une chaîne `font` invalide est ignorée en silence par le canvas : le contexte
+ * reste à `10px sans-serif` et le sous-titre sort minuscule sans qu'aucune
+ * erreur ne soit levée. C'est le défaut qui a rendu illisibles tous les MP4
+ * gravés dans le navigateur. On contrôle donc l'affectation, et on retombe sur
+ * une famille générique plutôt que de graver une vidéo entière avec du 10 px.
+ */
+function setFont(ctx: Ctx2D, paint: SubtitlePaint, fontSize: number): void {
+  const prefix = `${paint.italic ? "italic " : ""}${paint.fontWeight} ${fontSize}px `;
+  ctx.font = prefix + paint.fontFamily;
+  // Le canvas normalise la valeur : si la taille demandée n'y figure pas,
+  // c'est que la chaîne a été rejetée.
+  if (ctx.font.includes(`${fontSize}px`)) return;
+  ctx.font = prefix + "sans-serif";
+}
+
+/**
  * Dessine UN sous-titre sur le contexte, aux coordonnées de l'image.
  *
  * Reproduit la géométrie du worker : police proportionnelle à la plus petite
@@ -220,13 +293,13 @@ export function drawSubtitle(ctx: Ctx2D, o: DrawOptions): void {
   if (!text.trim()) return;
 
   const minDim = Math.min(o.width, o.height);
-  const fontSize = Math.max(12, Math.round(o.paint.sizeFrac * minDim));
+  const fontSize = Math.max(MIN_FONT_PX, Math.round(o.paint.sizeFrac * minDim));
   const lineHeight = fontSize * LINE_HEIGHT;
   const marginX = o.width * MARGIN_FRAC;
   const marginY = o.height * MARGIN_FRAC;
 
   ctx.save();
-  ctx.font = `${o.paint.italic ? "italic " : ""}${o.paint.fontWeight} ${fontSize}px ${o.paint.fontFamily}`;
+  setFont(ctx, o.paint, fontSize);
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
   if (ctx.direction !== undefined) ctx.direction = o.rtl ? "rtl" : "ltr";
@@ -267,7 +340,7 @@ export function drawSubtitle(ctx: Ctx2D, o: DrawOptions): void {
     ctx.shadowColor = "rgba(0,0,0,0.65)";
     ctx.shadowBlur = fontSize * 0.12;
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = fontSize * 0.06;
+    ctx.shadowOffsetY = fontSize * SHADOW_MULT;
   }
 
   // 3) Texte, token par token (le karaoké colore certains tokens).
