@@ -906,6 +906,10 @@ type VideoForGen = {
   id: string;
   source_lang: string | null;
   target_lang: string | null;
+  /** Profil de découpe choisi à l'upload. Il DOIT suivre jusqu'à la mise en
+   * lignes : sans lui, une langue re-générée était remise en lignes à 42×2
+   * alors que la vidéo avait été découpée en 34×1. */
+  cut_profile: string | null;
 };
 
 /**
@@ -983,7 +987,7 @@ async function ensureLanguageSegments(
         {
           start: s.start,
           end: s.end,
-          text: wrapLines(translated[i] ?? s.text, lang),
+          text: wrapLines(translated[i] ?? s.text, lang, video.cut_profile),
           speaker: s.speaker,
         },
         lang,
@@ -1003,7 +1007,7 @@ async function ensureLanguageSegments(
 // (transcription_source/target, ~110 Ko chacune) ne sont PLUS chargées d'office :
 // la base de traduction vient de `video_subtitles`, et le repli legacy n'est lu
 // que si cette table est vide (vidéos d'avant la migration 024).
-const GEN_SELECT = "id, source_lang, target_lang, status";
+const GEN_SELECT = "id, source_lang, target_lang, status, cut_profile";
 
 /**
  * SONDE LÉGÈRE — quelles langues sont prêtes ? Rien d'autre.
